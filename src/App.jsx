@@ -6,6 +6,7 @@ import Users from "./pages/Users";
 import Loads from "./pages/Loads";
 import Drivers from "./pages/Drivers";
 import Vehicles from "./pages/Vehicles";
+import Matches from "./pages/Matches"; // ✅ EKLENDİ
 
 export default function App() {
   return (
@@ -28,6 +29,9 @@ export default function App() {
 
         {/* Vehicles */}
         <Route path="/araclar" element={<Vehicles />} />
+
+        {/* Matches */}
+        <Route path="/eslesmeler" element={<Matches />} /> {/* ✅ EKLENDİ */}
 
         {/* 404 fallback */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

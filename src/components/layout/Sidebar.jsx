@@ -25,8 +25,10 @@ export default function Sidebar() {
       // ✅ Araçlar aktif
       { to: "/araclar", label: "Araçlar", icon: Car },
 
+      // ✅ Eşleşmeler aktif (disabled kaldırıldı)
+      { to: "/eslesmeler", label: "Eşleşmeler", icon: Link2 },
+
       // ⏳ Sonra açılacaklar
-      { to: "/eslesmeler", label: "Eşleşmeler", icon: Link2, disabled: true },
       { to: "/ayarlar", label: "Ayarlar", icon: Settings, disabled: true },
     ],
     []
