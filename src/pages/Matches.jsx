@@ -1,11 +1,8 @@
 import { useMemo, useState } from "react";
 import { Filter, Link2, TrendingUp } from "lucide-react";
 import { matches as allMatches } from "../data/matches";
+import Modal from "../components/common/Modal";
 
-/**
- * Status UI mapping
- * - Keeps UI labels/styles in one place
- */
 const statusMap = {
   uygun: { label: "Uygun", badge: "bg-emerald-100 text-emerald-700" },
   kismi: { label: "Kısmi", badge: "bg-amber-100 text-amber-700" },
@@ -14,7 +11,11 @@ const statusMap = {
 
 function ScoreBar({ score }) {
   const color =
-    score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-rose-500";
+    score >= 80
+      ? "bg-emerald-500"
+      : score >= 50
+      ? "bg-amber-500"
+      : "bg-rose-500";
 
   return (
     <div className="flex items-center gap-2">
@@ -49,7 +50,9 @@ function FilterButton({ active, children, onClick }) {
       onClick={onClick}
       className={[
         "rounded-full px-3 py-1.5 text-sm transition",
-        active ? "bg-black text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200",
+        active
+          ? "bg-black text-white"
+          : "bg-gray-100 text-gray-700 hover:bg-gray-200",
       ].join(" ")}
     >
       {children}
@@ -57,9 +60,15 @@ function FilterButton({ active, children, onClick }) {
   );
 }
 
+function formatTimeMatch(timeMatch) {
+  if (timeMatch === "uygun") return "Uygun";
+  if (timeMatch === "kismi") return "Kısmi";
+  return "Uygun Değil";
+}
+
 export default function Matches() {
-  // Simple status filter for now (later: can be query params or server-side filtering)
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
   const filteredMatches = useMemo(() => {
     if (statusFilter === "all") return allMatches;
@@ -74,6 +83,24 @@ export default function Matches() {
       uygunDegil: allMatches.filter((m) => m.status === "uygun_degil").length,
     };
   }, []);
+
+  const modalTitle = selectedMatch
+    ? `Eşleşme Detayı – ${selectedMatch.id}`
+    : "";
+
+  const modalFooter = (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={() => setSelectedMatch(null)}
+        className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Kapat
+      </button>
+      <button className="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">
+        İncele
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6 p-4">
@@ -103,13 +130,22 @@ export default function Matches() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <Filter size={16} className="text-gray-400" />
-        <FilterButton active={statusFilter === "all"} onClick={() => setStatusFilter("all")}>
+        <FilterButton
+          active={statusFilter === "all"}
+          onClick={() => setStatusFilter("all")}
+        >
           Tümü
         </FilterButton>
-        <FilterButton active={statusFilter === "uygun"} onClick={() => setStatusFilter("uygun")}>
+        <FilterButton
+          active={statusFilter === "uygun"}
+          onClick={() => setStatusFilter("uygun")}
+        >
           Uygun
         </FilterButton>
-        <FilterButton active={statusFilter === "kismi"} onClick={() => setStatusFilter("kismi")}>
+        <FilterButton
+          active={statusFilter === "kismi"}
+          onClick={() => setStatusFilter("kismi")}
+        >
           Kısmi
         </FilterButton>
         <FilterButton
@@ -143,7 +179,9 @@ export default function Matches() {
                 return (
                   <tr
                     key={m.id}
+                    onClick={() => setSelectedMatch(m)}
                     className="border-b last:border-b-0 hover:bg-gray-50 transition cursor-pointer"
+                    title="Detay görmek için tıkla"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 font-medium">
@@ -158,7 +196,7 @@ export default function Matches() {
                     <td className="px-4 py-3">
                       <div className="font-medium">{m.route}</div>
                       <div className="mt-1 text-xs text-gray-500">
-                        Zaman: {m.timeMatch === "uygun" ? "Uygun" : m.timeMatch === "kismi" ? "Kısmi" : "Uygun Değil"}
+                        Zaman: {formatTimeMatch(m.timeMatch)}
                       </div>
                     </td>
 
@@ -171,10 +209,14 @@ export default function Matches() {
                         <span
                           className={[
                             "rounded-full px-2 py-0.5",
-                            m.vehicleTypeMatch ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700",
+                            m.vehicleTypeMatch
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-rose-100 text-rose-700",
                           ].join(" ")}
                         >
-                          {m.vehicleTypeMatch ? "Araç tipi uyumlu" : "Araç tipi uyumsuz"}
+                          {m.vehicleTypeMatch
+                            ? "Araç tipi uyumlu"
+                            : "Araç tipi uyumsuz"}
                         </span>
                       </div>
                     </td>
@@ -188,7 +230,9 @@ export default function Matches() {
 
                     <td className="px-4 py-3">
                       <div className="mb-2">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}>
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${status.badge}`}
+                        >
                           {status.label}
                         </span>
                       </div>
@@ -214,14 +258,111 @@ export default function Matches() {
 
       {/* Info box */}
       <div className="rounded-xl border bg-white p-4 text-sm text-gray-600">
-        <div className="font-medium text-gray-800 mb-1">Eşleşme Skoru Nasıl Hesaplanır?</div>
-        <ul className="list-disc pl-5 space-y-1">
+        <div className="mb-1 font-medium text-gray-800">
+          Eşleşme Skoru Nasıl Hesaplanır?
+        </div>
+        <ul className="list-disc space-y-1 pl-5">
           <li>Mesafe ve rota uyumu</li>
           <li>Araç tipi – yük türü uygunluğu</li>
           <li>Kapasite ve ağırlık toleransı</li>
           <li>Teslim zamanı ve operasyon uygunluğu</li>
         </ul>
       </div>
+
+      {/* Modal (Detail) */}
+      <Modal
+        open={!!selectedMatch}
+        title={modalTitle}
+        onClose={() => setSelectedMatch(null)}
+        footer={modalFooter}
+      >
+        {selectedMatch && (
+          <div className="space-y-4">
+            {/* quick badge + score */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-xs text-slate-500">Durum</div>
+                <div className="mt-1">
+                  <span
+                    className={[
+                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                      statusMap[selectedMatch.status]?.badge || "bg-gray-100 text-gray-700",
+                    ].join(" ")}
+                  >
+                    {statusMap[selectedMatch.status]?.label || selectedMatch.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-xs text-slate-500">Skor</div>
+                <div className="mt-1 text-2xl font-semibold text-slate-900">
+                  {selectedMatch.score}%
+                </div>
+                <div className="mt-2">
+                  <ScoreBar score={selectedMatch.score} />
+                </div>
+              </div>
+            </div>
+
+            {/* main grid */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="text-xs text-slate-500">Araç</div>
+                <div className="mt-1 font-semibold text-slate-900">
+                  {selectedMatch.vehiclePlate}
+                </div>
+                <div className="mt-1 text-sm text-slate-600">
+                  {selectedMatch.vehicleType} • Kapasite:{" "}
+                  {selectedMatch.vehicleCapacityKg} kg
+                </div>
+                <div className="mt-2">
+                  <span
+                    className={[
+                      "rounded-full px-2 py-0.5 text-xs",
+                      selectedMatch.vehicleTypeMatch
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-700",
+                    ].join(" ")}
+                  >
+                    {selectedMatch.vehicleTypeMatch
+                      ? "Araç tipi uyumlu"
+                      : "Araç tipi uyumsuz"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 p-3">
+                <div className="text-xs text-slate-500">Yük</div>
+                <div className="mt-1 font-semibold text-slate-900">
+                  {selectedMatch.loadTitle}
+                </div>
+                <div className="mt-1 text-sm text-slate-600">
+                  Ağırlık: {selectedMatch.loadWeightKg} kg
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-3">
+              <div className="text-xs text-slate-500">Güzergâh</div>
+              <div className="mt-1 font-semibold text-slate-900">
+                {selectedMatch.route}
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                Mesafe: {selectedMatch.distanceKm} km • Zaman:{" "}
+                {formatTimeMatch(selectedMatch.timeMatch)}
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3">
+              <div className="text-xs font-medium text-slate-900">Not</div>
+              <div className="mt-1 text-sm text-slate-700">
+                {selectedMatch.reason}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
