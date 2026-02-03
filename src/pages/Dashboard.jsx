@@ -1,68 +1,156 @@
+import { useMemo, useState } from "react";
 import PageHeader from "../components/layout/PageHeader";
 
+import KpiCard from "../components/dashboard/KpiCard.jsx";
+import StatusSummary from "../components/dashboard/StatusSummary.jsx";
+import ActivityList from "../components/dashboard/ActivityList.jsx";
+import QuickActions from "../components/dashboard/QuickActions.jsx";
+import DashboardToolbar from "../components/dashboard/DashboardToolbar.jsx";
+import RecentLoadsTable from "../components/dashboard/RecentLoadsTable.jsx";
+import PendingQueue from "../components/dashboard/PendingQueue.jsx";
+import AlertsPanel from "../components/dashboard/AlertsPanel.jsx";
+
+import "../components/dashboard/Dashboard.css";
+
 export default function Dashboard() {
+  const [range, setRange] = useState("7d");
+
+  const kpis = useMemo(() => {
+    if (range === "today") {
+      return [
+        { title: "Toplam Kullanıcı", value: "1.284", helper: "Bugün +8", icon: "👥" },
+        { title: "Aktif İlan", value: "312", helper: "Bugün +12", icon: "📦" },
+        { title: "Şoför Sayısı", value: "487", helper: "Online 54", icon: "👤" },
+        { title: "Eşleşme Oranı", value: "%62", helper: "Bugün +1 puan", icon: "🔗" },
+      ];
+    }
+    if (range === "30d") {
+      return [
+        { title: "Toplam Kullanıcı", value: "1.284", helper: "30 günde +9%", icon: "👥" },
+        { title: "Aktif İlan", value: "312", helper: "30 günde +168", icon: "📦" },
+        { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: "👤" },
+        { title: "Eşleşme Oranı", value: "%62", helper: "30 günde +5 puan", icon: "🔗" },
+      ];
+    }
+    return [
+      { title: "Toplam Kullanıcı", value: "1.284", helper: "Son 7 gün +4%", icon: "👥" },
+      { title: "Aktif İlan", value: "312", helper: "Son 7 gün +48", icon: "📦" },
+      { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: "👤" },
+      { title: "Eşleşme Oranı", value: "%62", helper: "Haftalık +3 puan", icon: "🔗" },
+    ];
+  }, [range]);
+
+  const statusItems = useMemo(
+    () => [
+      { key: "active", label: "Aktif", value: 312 },
+      { key: "pending", label: "Onay Bekliyor", value: 9 },
+      { key: "matched", label: "Eşleşti", value: 194 },
+      { key: "cancelled", label: "İptal", value: 3 },
+    ],
+    []
+  );
+
+  const activities = useMemo(
+    () => [
+      { id: 1, text: "Yeni ilan eklendi: İstanbul → Ankara", time: "2 dk önce" },
+      { id: 2, text: "Şoför doğrulandı: Ahmet K.", time: "18 dk önce" },
+      { id: 3, text: "Eşleşme tamamlandı: #LW-1024", time: "1 saat önce" },
+      { id: 4, text: "Araç durumu güncellendi: 34 ABC 123", time: "2 saat önce" },
+    ],
+    []
+  );
+
+  const recentLoads = useMemo(
+    () => [
+      {
+        id: 1,
+        code: "LW-1284",
+        route: "İstanbul → Ankara",
+        weight: "12 ton",
+        statusText: "Aktif",
+        statusTone: "tone-green",
+        date: "04.02.2026",
+      },
+      {
+        id: 2,
+        code: "LW-1283",
+        route: "İzmir → Bursa",
+        weight: "8 ton",
+        statusText: "Onay Bekliyor",
+        statusTone: "tone-amber",
+        date: "04.02.2026",
+      },
+      {
+        id: 3,
+        code: "LW-1282",
+        route: "Kocaeli → Adana",
+        weight: "20 ton",
+        statusText: "Eşleşti",
+        statusTone: "tone-blue",
+        date: "03.02.2026",
+      },
+      {
+        id: 4,
+        code: "LW-1281",
+        route: "Tekirdağ → İstanbul",
+        weight: "5 ton",
+        statusText: "İptal",
+        statusTone: "tone-red",
+        date: "03.02.2026",
+      },
+    ],
+    []
+  );
+
+  const pendingItems = useMemo(
+    () => [
+      { id: 1, title: "İlan Onayı", sub: "İzmir → Bursa • 8 ton", badge: "Onay", tone: "tone-amber" },
+      { id: 2, title: "Şoför Evrak Kontrol", sub: "Mehmet Y. • SRC / Ehliyet", badge: "Kontrol", tone: "tone-blue" },
+      { id: 3, title: "Araç Bakım Uyarısı", sub: "34 ABC 123 • Bakım tarihi yaklaşıyor", badge: "Uyarı", tone: "tone-red" },
+    ],
+    []
+  );
+
+  const alerts = useMemo(
+    () => [
+      { id: 1, title: "Evrak eksiği", sub: "2 şoför doğrulama bekliyor", level: "Orta", tone: "tone-amber" },
+      { id: 2, title: "Bakım gecikmesi", sub: "1 araç bakım tarihi geçmiş", level: "Kritik", tone: "tone-red" },
+      { id: 3, title: "İptal artışı", sub: "Son 24 saatte 3 iptal", level: "Düşük", tone: "tone-blue" },
+    ],
+    []
+  );
+
+  const openLoad = (x) => {
+    console.log("Detay:", x);
+  };
+
   return (
     <>
       <PageHeader
         breadcrumb="Ana Sayfa / Gösterge Paneli"
         title="Gösterge Paneli"
-        description="Genel sistem durumu ve özet bilgiler"
+        description="Genel sistem durumu ve operasyonel özet"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Toplam Kullanıcı" value="1.284" sub="Son 7 gün +4%" />
-        <StatCard title="Aktif İlan" value="312" sub="Bugün +12" />
-        <StatCard title="Şoför Sayısı" value="487" sub="Doğrulanmış 410" />
-        <StatCard title="Eşleşme Oranı" value="%62" sub="Haftalık +3 puan" />
-      </div>
+      <div className="lw-dashboard">
+        <DashboardToolbar range={range} onChangeRange={setRange} />
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 xl:col-span-2">
-          <div className="text-sm font-semibold text-slate-900">Son Aktiviteler</div>
-          <div className="mt-4 space-y-3">
-            <ActivityRow text="Yeni ilan eklendi: İstanbul → Ankara" time="2 dk önce" />
-            <ActivityRow text="Şoför doğrulandı: Ahmet K." time="18 dk önce" />
-            <ActivityRow text="Eşleşme tamamlandı: #LW-1024" time="1 saat önce" />
-          </div>
-        </div>
+        <div className="lw-grid">
+          <div className="lw-col-3"><KpiCard {...kpis[0]} /></div>
+          <div className="lw-col-3"><KpiCard {...kpis[1]} /></div>
+          <div className="lw-col-3"><KpiCard {...kpis[2]} /></div>
+          <div className="lw-col-3"><KpiCard {...kpis[3]} /></div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="text-sm font-semibold text-slate-900">Hızlı Özet</div>
-          <div className="mt-4 space-y-2 text-sm text-slate-600">
-            <div className="flex items-center justify-between">
-              <span>Bekleyen onay</span>
-              <span className="font-semibold text-slate-900">9</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>İptal edilen</span>
-              <span className="font-semibold text-slate-900">3</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Bugün giriş</span>
-              <span className="font-semibold text-slate-900">56</span>
-            </div>
-          </div>
+          <div className="lw-col-6"><StatusSummary items={statusItems} /></div>
+          <div className="lw-col-6"><ActivityList items={activities} /></div>
+
+          <div className="lw-col-8"><RecentLoadsTable items={recentLoads} onOpen={openLoad} /></div>
+          <div className="lw-col-4"><AlertsPanel items={alerts} /></div>
+
+          <div className="lw-col-8"><PendingQueue items={pendingItems} /></div>
+          <div className="lw-col-4"><QuickActions /></div>
         </div>
       </div>
     </>
-  );
-}
-
-function StatCard({ title, value, sub }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs text-slate-500">{title}</div>
-      <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
-      <div className="mt-1 text-xs text-slate-500">{sub}</div>
-    </div>
-  );
-}
-
-function ActivityRow({ text, time }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-      <div className="text-sm text-slate-700">{text}</div>
-      <div className="text-xs text-slate-500">{time}</div>
-    </div>
   );
 }

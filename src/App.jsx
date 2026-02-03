@@ -6,7 +6,8 @@ import Users from "./pages/Users";
 import Loads from "./pages/Loads";
 import Drivers from "./pages/Drivers";
 import Vehicles from "./pages/Vehicles";
-import Matches from "./pages/Matches"; // ✅ EKLENDİ
+import Matches from "./pages/Matches";
+import Settings from "./pages/Settings"; // ✅ EKLENDİ
 
 export default function App() {
   return (
@@ -31,7 +32,10 @@ export default function App() {
         <Route path="/araclar" element={<Vehicles />} />
 
         {/* Matches */}
-        <Route path="/eslesmeler" element={<Matches />} /> {/* ✅ EKLENDİ */}
+        <Route path="/eslesmeler" element={<Matches />} />
+
+        {/* Settings */}
+        <Route path="/ayarlar" element={<Settings />} /> {/* ✅ EKLENDİ */}
 
         {/* 404 fallback */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -39,3 +43,4 @@ export default function App() {
     </MainLayout>
   );
 }
+

@@ -21,15 +21,11 @@ export default function Sidebar() {
       { to: "/kullanicilar", label: "Kullanıcılar", icon: Users },
       { to: "/yuk-ilanlari", label: "Yük / İlanlar", icon: PackageSearch },
       { to: "/soforler", label: "Şoförler", icon: Truck },
-
-      // ✅ Araçlar aktif
       { to: "/araclar", label: "Araçlar", icon: Car },
-
-      // ✅ Eşleşmeler aktif (disabled kaldırıldı)
       { to: "/eslesmeler", label: "Eşleşmeler", icon: Link2 },
 
-      // ⏳ Sonra açılacaklar
-      { to: "/ayarlar", label: "Ayarlar", icon: Settings, disabled: true },
+      // ✅ Ayarlar artık aktif
+      { to: "/ayarlar", label: "Ayarlar", icon: Settings },
     ],
     []
   );
@@ -78,19 +74,6 @@ export default function Sidebar() {
         <nav className="space-y-1">
           {items.map((item) => {
             const Icon = item.icon;
-
-            if (item.disabled) {
-              return (
-                <div
-                  key={item.to}
-                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 opacity-40"
-                  title="Bu modül yakında eklenecek"
-                >
-                  <Icon size={18} />
-                  {!collapsed && <span className="text-sm">{item.label}</span>}
-                </div>
-              );
-            }
 
             return (
               <NavLink
