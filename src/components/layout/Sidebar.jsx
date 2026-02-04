@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -10,21 +10,34 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+
+  const [openUsers, setOpenUsers] = useState(
+    location.pathname.startsWith("/kullanicilar")
+  );
 
   const items = useMemo(
     () => [
       { to: "/dashboard", label: "Gösterge Paneli", icon: LayoutDashboard },
-      { to: "/kullanicilar", label: "Kullanıcılar", icon: Users },
+
+      {
+        label: "Kullanıcılar",
+        icon: Users,
+        children: [
+          { to: "/kullanicilar", label: "Tüm Kullanıcılar" },
+          { to: "/kullanicilar/dogrulama", label: "Doğrulama Bekleyenler" },
+        ],
+      },
+
       { to: "/yuk-ilanlari", label: "Yük / İlanlar", icon: PackageSearch },
       { to: "/soforler", label: "Şoförler", icon: Truck },
       { to: "/araclar", label: "Araçlar", icon: Car },
       { to: "/eslesmeler", label: "Eşleşmeler", icon: Link2 },
-
-      // ✅ Ayarlar artık aktif
       { to: "/ayarlar", label: "Ayarlar", icon: Settings },
     ],
     []
@@ -56,8 +69,6 @@ export default function Sidebar() {
         <button
           onClick={() => setCollapsed((p) => !p)}
           className="rounded-lg p-2 hover:bg-white/10"
-          aria-label="Sidebar daralt"
-          title="Sidebar daralt"
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
@@ -65,15 +76,62 @@ export default function Sidebar() {
 
       {/* Menü */}
       <div className="px-3">
-        {!collapsed && (
-          <div className="mb-3 px-2 text-[11px] uppercase tracking-wider text-white/50">
-            Menü
-          </div>
-        )}
-
         <nav className="space-y-1">
           {items.map((item) => {
             const Icon = item.icon;
+
+            if (item.children) {
+              const active = location.pathname.startsWith("/kullanicilar");
+
+              return (
+                <div key={item.label}>
+                  <button
+                    onClick={() => setOpenUsers((p) => !p)}
+                    className={[
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5",
+                      "hover:bg-white/10 transition",
+                      active ? "bg-white/15 ring-1 ring-white/10" : "",
+                    ].join(" ")}
+                  >
+                    <Icon size={18} />
+                    {!collapsed && (
+                      <>
+                        <span className="text-sm">{item.label}</span>
+                        <ChevronDown
+                          size={16}
+                          className={[
+                            "ml-auto transition",
+                            openUsers ? "rotate-180" : "",
+                          ].join(" ")}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {!collapsed && openUsers && (
+                    <div className="ml-11 mt-1 space-y-1">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to}
+                          className={({ isActive }) =>
+                            [
+                              "block rounded-xl px-3 py-2 text-sm",
+                              "hover:bg-white/10 transition",
+                              isActive
+                                ? "bg-white/15 ring-1 ring-white/10"
+                                : "text-white/80",
+                            ].join(" ")
+                          }
+                        >
+                          {child.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <NavLink
@@ -81,34 +139,18 @@ export default function Sidebar() {
                 to={item.to}
                 className={({ isActive }) =>
                   [
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition",
-                    "hover:bg-white/10",
+                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5",
+                    "hover:bg-white/10 transition",
                     isActive ? "bg-white/15 ring-1 ring-white/10" : "",
                   ].join(" ")
                 }
               >
-                <Icon size={18} className="opacity-90" />
+                <Icon size={18} />
                 {!collapsed && <span className="text-sm">{item.label}</span>}
               </NavLink>
             );
           })}
         </nav>
-      </div>
-
-      {/* Alt bilgi */}
-      <div className="mt-6 px-4">
-        <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-          {!collapsed ? (
-            <>
-              <div className="text-xs text-white/60">Hatırlatma</div>
-              <div className="mt-1 text-sm font-semibold">
-                Bekleyen onayları kontrol et
-              </div>
-            </>
-          ) : (
-            <div className="text-center text-xs text-white/60">İpucu</div>
-          )}
-        </div>
       </div>
     </aside>
   );
