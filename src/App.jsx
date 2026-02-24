@@ -8,7 +8,7 @@ import Vehicles from "./pages/Vehicles";
 import Matches from "./pages/Matches";
 import Settings from "./pages/Settings";
 
-// ✅ Kullanıcılar modülü 
+// Kullanıcı yönetim modülü - tüm kullanıcı sayfaları buradan gelir
 import UsersList from "./pages/users/UsersList";
 import PendingUsers from "./pages/users/PendingUsers";
 import UserDetail from "./pages/users/UserDetail";
@@ -17,7 +17,7 @@ export default function App() {
   return (
     <MainLayout>
       <Routes>
-        {/* Default: Ana sayfayı dashboard'a yönlendir */}
+        {/* Giriş yapınca dashboard'a gitmesi için */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         {/* Dashboard */}
@@ -41,7 +41,7 @@ export default function App() {
         {/* Ayarlar */}
         <Route path="/ayarlar" element={<Settings />} />
 
-        {/* 404 fallback */}
+        {/* Tanımlanmamış sayfalar için dashboard'a yönderleme */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </MainLayout>
