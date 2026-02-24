@@ -9,6 +9,7 @@ export function useConfirm() {
     danger: false,
   });
 
+  // Onay diyalogunu gösterir ve kullanıcının seçimini Promise ile döndürür
   const confirm = (config) => {
     return new Promise((resolve) => {
       setState({
@@ -28,6 +29,7 @@ export function useConfirm() {
     });
   };
 
+  // Diyalog kapatılırken state'i sıfırla
   return {
     ...state,
     confirm,

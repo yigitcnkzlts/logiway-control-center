@@ -1,3 +1,4 @@
+// Kart/Container komponenti - başlık, içerik ve alt slot'ları desteği
 export default function Card({
   children,
   header,
@@ -15,16 +16,19 @@ export default function Card({
       `}
       {...props}
     >
+      {/* Başlık kısmı - isteğe bağlı üst bölüm */}
       {header && (
         <div className="border-b border-slate-200 px-5 py-4 font-semibold text-slate-900">
           {header}
         </div>
       )}
 
+      {/* Kart içerik alanı */}
       <div className="px-5 py-4">
         {children}
       </div>
 
+      {/* Footer - isteğe bağlı alt bölüm */}
       {footer && (
         <div className="border-t border-slate-200 px-5 py-4 text-sm text-slate-600">
           {footer}

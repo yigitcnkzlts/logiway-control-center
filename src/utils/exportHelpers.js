@@ -55,8 +55,6 @@ export function exportToJSON(data, filename = "export.json") {
 }
 
 export function exportToExcel(data, filename = "export.xlsx") {
-  // Excel export için daha detaylı encoding gerekli
-  // Şimdilik CSV'ye yönlendir
   alert("Excel export henüz desteklenmiyor, CSV olarak indirilecek");
   const csvFilename = filename.replace(".xlsx", ".csv");
   exportToCSV(data, csvFilename);

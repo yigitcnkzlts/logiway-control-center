@@ -1,3 +1,4 @@
+// Çok satırlı metin alanı komponenti - resize engelleme desteği var
 export default function Textarea({
   className = "",
   placeholder = "",

@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
+// Dropdown select komponenti - açılır menü desteği
 export default function Select({
   options = [],
   value,
@@ -13,7 +14,7 @@ export default function Select({
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  // Açık olduğunda dışarıya tıklanca kapatılır
+  // Dışarıya tıklanca menü kapatılır
   useEffect(() => {
     function handleClickOutside(event) {
       if (ref.current && !ref.current.contains(event.target)) {
@@ -25,7 +26,7 @@ export default function Select({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Seçili değerin label'ını bul
+  // Seçili değerin label'ını bulur
   const selectedLabel = options.find((opt) => opt.value === value)?.label || placeholder;
 
   return (
@@ -43,12 +44,15 @@ export default function Select({
         `}
         {...props}
       >
+        {/* Seçili değeri göster */}
         <span className={value ? "text-slate-900" : "text-slate-400"}>
           {selectedLabel}
         </span>
+        {/* Aşağı ok ikonu */}
         <ChevronDown size={16} className={`text-slate-500 transition ${open ? "rotate-180" : ""}`} />
       </button>
 
+      {/* Açılır menü */}
       {open && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
           {options.length === 0 ? (

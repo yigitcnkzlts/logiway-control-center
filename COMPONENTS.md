@@ -3,6 +3,7 @@
 ## ✅ Tamamlanan Komponentler
 
 ### 🎨 Temel UI Komponentleri
+
 - **Button** - 4 varyant (primary, secondary, outline, danger)
 - **Input** - Form input alanları
 - **Select** - Dropdown seçim
@@ -13,6 +14,7 @@
 - **Card** - İçerik kartları
 
 ### 📊 Gelişmiş Komponentler
+
 - **Table** - Sıralama ve seçim desteği
 - **DataTable** - Arama, filtreleme, sıralama, pagination
 - **ProgressBar** - İlerleme göstergeleri
@@ -22,17 +24,20 @@
 - **Dropdown** - Açılır menüler
 
 ### 📢 Bildirim Sistemi
+
 - **Toast** - Success, Error, Warning, Info mesajları
 - **AlertBanner** - Sayfa başında uyarılar
 - **ConfirmDialog** - Onay diyalogları
 
 ### 🎯 Dashboard Komponentleri
+
 - **MetricCard** - İstatistik kartları
 - **SectionHeader** - Bölüm başlıkları
 - **PanelToolbar** - Panel araç çubukları
 - **ShimmerEffect** - Loading animasyonu
 
 ### 📦 Utility Komponentleri
+
 - **FormGroup** - Form alan gruplayıcısı
 - **FormModal** - Form modalı (Create/Edit)
 - **Tabs** - Sekme kontrolü
@@ -45,6 +50,7 @@
 - **Skeleton** - Loading placeholder'ları
 
 ### 🎨 Layout Komponentleri
+
 - **PanelLayout** - Panel temel layout'u
 - **Sidebar** - Profesyonel sidebar
 - **Navbar** - Üst navigasyon
@@ -53,21 +59,19 @@
 ## 🚀 Hızlı Başlangıç
 
 ### 1. Toast Kullanımı
+
 ```jsx
 import { useToast } from "../hooks/useToast";
 
 function MyComponent() {
   const toast = useToast();
 
-  return (
-    <button onClick={() => toast.success("Başarılı!")}>
-      Test Et
-    </button>
-  );
+  return <button onClick={() => toast.success("Başarılı!")}>Test Et</button>;
 }
 ```
 
 ### 2. DataTable Kullanımı
+
 ```jsx
 import DataTable from "../components/common/DataTable";
 
@@ -83,16 +87,16 @@ import DataTable from "../components/common/DataTable";
     {
       key: "status",
       label: "Durum",
-      options: [
-        { label: "Aktif", value: "active" },
-      ],
+      options: [{ label: "Aktif", value: "active" }],
     },
   ]}
-/>
+/>;
 ```
 
 ### 3. Panel Sayfası Template
+
 Tüm panel sayfaları için:
+
 - `src/pages/TemplatePanel.jsx` dosyasını inceyin
 - Kendi verilerinizle adapt edin
 - Toast, Modal, Export hepsi hazır!
@@ -117,6 +121,7 @@ src/
 ## 🎨 Renk Sistemi
 
 ### Status Renkleri
+
 - **Aktif**: Emerald (yeşil)
 - **Pasif**: Slate (gri)
 - **Beklemede**: Amber (sarı)
@@ -126,6 +131,7 @@ src/
 ## 🔧 Türkçe Commit Mesajları
 
 Tüm commit'ler Türkçe yazılmıştır:
+
 ```bash
 git log --oneline
 ```
