@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 export default function Stat({
   label,
   value,
-  trend = null, // { value: number, isPositive: boolean }
+  trend = null, 
   icon,
   className = "",
   color = "slate",
