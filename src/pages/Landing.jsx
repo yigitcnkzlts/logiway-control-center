@@ -52,7 +52,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="proof-strip"><span>Avrupa operasyonunun her adımında</span><div><b>7/24</b><small>sınır ötesi görünürlük</small></div><div><b>Tek panel</b><small>yük, araç ve sürücü yönetimi</small></div><div><b>Avrupa</b><small>ülke ve rota bazlı eşleştirme</small></div></section>
+      <section className="proof-strip"><span>Avrupa operasyonunun her adımında</span><div><b>7/24</b><small>sınır ötesi görünürlük</small></div><div><b>Tek hesap</b><small>web ve mobil için ortak operasyon</small></div><div><b>51 ülke</b><small>Türkiye dahil rota eşleştirme</small></div></section>
 
       <section className="features section" id="nasil"><div className="section-heading"><span>DAHA AZ KARMAŞA, DAHA ÇOK HAREKET</span><h2>Operasyonunuz<br/>tek bir ritimde çalışsın.</h2><p>Dağınık tablolar ve telefon trafiği yerine herkesin aynı bilgiyle hareket ettiği sade bir merkez.</p></div><div className="feature-grid">{features.map(([icon,title,text],i)=><article className="feature-card" key={title}><span className="feature-number">0{i+1}</span><span className="feature-icon">{icon}</span><h3>{title}</h3><p>{text}</p><Link to="/dashboard">Panelde incele <ArrowRight size={15}/></Link></article>)}</div></section>
 
