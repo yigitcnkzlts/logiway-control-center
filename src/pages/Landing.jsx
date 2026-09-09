@@ -27,7 +27,7 @@ export default function Landing() {
       <nav className={menuOpen ? "nav-links is-open" : "nav-links"} aria-label="Ana menü">
         <a href="#urun" onClick={() => setMenuOpen(false)}>Ürün</a><a href="#nasil" onClick={() => setMenuOpen(false)}>Nasıl çalışır?</a><a href="#fiyat" onClick={() => setMenuOpen(false)}>Fiyatlandırma</a><a href="#sss" onClick={() => setMenuOpen(false)}>SSS</a>
       </nav>
-      <div className="nav-actions"><Link to="/dashboard" className="text-link">Giriş yap</Link><Link to="/dashboard" className="nav-cta">Ücretsiz dene <ArrowRight size={16}/></Link></div>
+      <div className="nav-actions"><Link to="/giris" className="text-link">Giriş yap</Link><Link to="/giris" className="nav-cta">Ücretsiz dene <ArrowRight size={16}/></Link></div>
       <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menüyü aç" aria-expanded={menuOpen}>{menuOpen ? <X/> : <Menu/>}</button>
     </header>
 
@@ -37,7 +37,7 @@ export default function Landing() {
           <div className="eyebrow"><Sparkles size={14}/> Lojistiğin daha akıllı yolu</div>
           <h1>Yükünüz yolda.<br/><span>Kontrol sizde.</span></h1>
           <p>Yükleri, sürücüleri ve filonuzu tek merkezden yönetin. Boş kilometreyi azaltın, doğru eşleşmeyi hızlandırın.</p>
-          <div className="hero-actions"><Link to="/dashboard" className="primary-cta">Ücretsiz başlayın <ArrowRight size={18}/></Link><a href="#nasil" className="secondary-cta">Nasıl çalıştığını görün</a></div>
+          <div className="hero-actions"><Link to="/giris" className="primary-cta">Ücretsiz başlayın <ArrowRight size={18}/></Link><a href="#nasil" className="secondary-cta">Nasıl çalıştığını görün</a></div>
           <div className="trust-row"><span><Check size={15}/> Kredi kartı gerekmez</span><span><Check size={15}/> 14 gün ücretsiz</span><span><Check size={15}/> 5 dakikada kurulum</span></div>
         </div>
         <div className="hero-product" aria-label="Logiway operasyon paneli önizlemesi">
@@ -61,7 +61,7 @@ export default function Landing() {
       <section className="pricing section" id="fiyat"><div className="pricing-copy"><span className="section-kicker">BÜYÜDÜKÇE SİZİNLE BÜYÜR</span><h2>Net fiyat.<br/>Sürpriz yok.</h2><p>Küçük filolardan yoğun operasyon ekiplerine kadar ihtiyacınız olan her şey.</p><div className="price"><sup>₺</sup><strong>1.490</strong><span>/ ay<br/><small>+ KDV</small></span></div><Link to="/dashboard" className="primary-cta">14 gün ücretsiz deneyin <ArrowRight size={18}/></Link></div><div className="price-list"><h3>Profesyonel plana dahil</h3>{["Sınırsız yük ve ilan yönetimi","Akıllı sürücü–araç eşleştirme","Canlı operasyon paneli","Ekip rolleri ve yetkilendirme","Raporlama ve dışa aktarma","Öncelikli destek"].map(x=><div key={x}><Check size={17}/><span>{x}</span></div>)}<small>İstediğiniz zaman iptal edebilirsiniz.</small></div></section>
 
       <section className="faq section" id="sss"><div><span className="section-kicker">AKLINIZDA KALMASIN</span><h2>Sık sorulanlar.</h2></div><div className="faq-list">{faqs.map(([q,a],i)=><button key={q} onClick={()=>setOpenFaq(openFaq===i?-1:i)} className={openFaq===i?"faq-item open":"faq-item"} aria-expanded={openFaq===i}><span><strong>{q}</strong>{openFaq===i&&<p>{a}</p>}</span><ChevronDown size={19}/></button>)}</div></section>
-      <section className="final-cta"><div><span className="eyebrow"><Sparkles size={14}/> İlk seferinizi bugün yönetin</span><h2>Lojistik operasyonunuz<br/>bir adım öne geçsin.</h2></div><Link to="/dashboard" className="primary-cta light">Ücretsiz başlayın <ArrowRight size={18}/></Link></section>
+      <section className="final-cta"><div><span className="eyebrow"><Sparkles size={14}/> İlk seferinizi bugün yönetin</span><h2>Lojistik operasyonunuz<br/>bir adım öne geçsin.</h2></div><Link to="/giris" className="primary-cta light">Ücretsiz başlayın <ArrowRight size={18}/></Link></section>
     </main>
     <footer className="landing-footer"><Logo dark/><p>Yükleri, filoları ve ekipleri aynı yolda buluşturur.</p><span>© 2026 Logiway. Tüm hakları saklıdır.</span></footer>
   </div>;
