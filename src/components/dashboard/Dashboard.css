@@ -57,10 +57,11 @@
 
 /* KPI Card */
 .lw-kpi {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 14px;
-    padding: 14px;
+    border: 1px solid #dfe5dc;
+    border-radius: 16px;
+    padding: 18px;
     background: #fff;
+    box-shadow: 0 8px 28px rgba(16,42,32,.04);
 }
 
 .lw-kpi-top {
@@ -83,13 +84,16 @@
     border-radius: 10px;
     display: grid;
     place-items: center;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid #dce8d5;
+    background: #edf5e6;
+    color: #466c31;
 }
 
 .lw-kpi-value {
     margin-top: 10px;
     font-size: 28px;
-    font-weight: 700;
+    font-family: Manrope, sans-serif;
+    font-weight: 800;
     letter-spacing: -0.3px;
 }
 
@@ -101,10 +105,11 @@
 
 /* Card */
 .lw-card {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 14px;
-    padding: 14px;
+    border: 1px solid #dfe5dc;
+    border-radius: 16px;
+    padding: 18px;
     background: #fff;
+    box-shadow: 0 8px 28px rgba(16,42,32,.035);
 }
 
 .lw-card-header {
@@ -204,7 +209,7 @@
 
 .lw-btn-primary {
     border: 1px solid rgba(0, 0, 0, 0.12);
-    background: rgba(0, 0, 0, 0.9);
+    background: #102a20;
     color: #fff;
     padding: 10px 12px;
     border-radius: 12px;
@@ -264,8 +269,8 @@
 }
 
 .lw-seg-btn.is-active {
-    background: rgba(0, 0, 0, 0.90);
-    color: #fff;
+    background: #102a20;
+    color: #c8f368;
 }
 
 /* Table */

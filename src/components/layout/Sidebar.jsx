@@ -12,9 +12,8 @@ import {
   ChevronRight,
   ChevronDown,
   LogOut,
-  Bell,
   Activity,
-  TrendingUp,
+  Route,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -64,7 +63,7 @@ export default function Sidebar() {
   const currentUser = {
     name: "Admin Kullanıcı",
     role: "Sistem Yöneticisi",
-    avatar: "👤",
+    avatar: "AK",
   };
 
   // İstatistik kartları - yapı hazır, sonra backend bağlantısı yapacağız
@@ -79,7 +78,7 @@ export default function Sidebar() {
   return (
     <aside
       className={[
-        "min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white border-r border-white/10",
+        "min-h-screen bg-[#102a20] text-white border-r border-white/10 shadow-2xl shadow-emerald-950/10",
         "flex flex-col",
         collapsed ? "w-[88px]" : "w-72",
         "transition-[width] duration-200",
@@ -88,14 +87,14 @@ export default function Sidebar() {
       {/* Logo Section */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 font-bold text-white text-xs">
-            LW
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#c8f368] font-bold text-[#102a20] text-xs">
+            <Route size={19}/>
           </div>
 
           {!collapsed && (
             <div className="leading-tight">
-              <div className="text-sm font-semibold">Logiway</div>
-              <div className="text-xs text-white/60">Control Center</div>
+              <div className="text-sm font-bold tracking-tight">logiway</div>
+              <div className="text-xs text-white/50">Yönetim merkezi</div>
             </div>
           )}
         </div>
@@ -122,7 +121,7 @@ export default function Sidebar() {
                   <span className="text-xs text-white/70 font-medium">
                     {stat.label}
                   </span>
-                  <Icon size={14} className="text-blue-400" />
+                  <Icon size={14} className="text-[#c8f368]" />
                 </div>
                 <div className="text-lg font-bold text-white">{stat.value}</div>
               </div>
@@ -190,7 +189,7 @@ export default function Sidebar() {
                                     "block rounded-lg px-3 py-2 text-sm",
                                     "hover:bg-white/10 transition",
                                     isActive
-                                      ? "bg-blue-500/20 text-blue-300 border-l-2 border-blue-500"
+                                      ? "bg-white/10 text-[#c8f368] border-l-2 border-[#c8f368]"
                                       : "text-white/70 border-l-2 border-transparent",
                                   ].join(" ")
                                 }
@@ -242,7 +241,7 @@ export default function Sidebar() {
         {/* Kullanıcı Profili */}
         <div className="group">
           <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition cursor-pointer">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold">
+            <div className="h-8 w-8 rounded-full bg-[#c8f368] text-[#102a20] flex items-center justify-center text-xs font-bold">
               {currentUser.avatar}
             </div>
             {!collapsed && (

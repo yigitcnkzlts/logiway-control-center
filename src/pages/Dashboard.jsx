@@ -11,6 +11,7 @@ import PendingQueue from "../components/dashboard/PendingQueue.jsx";
 import AlertsPanel from "../components/dashboard/AlertsPanel.jsx";
 
 import "../components/dashboard/Dashboard.css";
+import { Link2, PackageSearch, Truck, Users } from "lucide-react";
 
 export default function Dashboard() {
   const [range, setRange] = useState("7d");
@@ -18,25 +19,25 @@ export default function Dashboard() {
   const kpis = useMemo(() => {
     if (range === "today") {
       return [
-        { title: "Toplam Kullanıcı", value: "1.284", helper: "Bugün +8", icon: "👥" },
-        { title: "Aktif İlan", value: "312", helper: "Bugün +12", icon: "📦" },
-        { title: "Şoför Sayısı", value: "487", helper: "Online 54", icon: "👤" },
-        { title: "Eşleşme Oranı", value: "%62", helper: "Bugün +1 puan", icon: "🔗" },
+        { title: "Toplam Kullanıcı", value: "1.284", helper: "Bugün +8", icon: <Users size={17}/> },
+        { title: "Aktif İlan", value: "312", helper: "Bugün +12", icon: <PackageSearch size={17}/> },
+        { title: "Şoför Sayısı", value: "487", helper: "Online 54", icon: <Truck size={17}/> },
+        { title: "Eşleşme Oranı", value: "%62", helper: "Bugün +1 puan", icon: <Link2 size={17}/> },
       ];
     }
     if (range === "30d") {
       return [
-        { title: "Toplam Kullanıcı", value: "1.284", helper: "30 günde +9%", icon: "👥" },
-        { title: "Aktif İlan", value: "312", helper: "30 günde +168", icon: "📦" },
-        { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: "👤" },
-        { title: "Eşleşme Oranı", value: "%62", helper: "30 günde +5 puan", icon: "🔗" },
+        { title: "Toplam Kullanıcı", value: "1.284", helper: "30 günde +9%", icon: <Users size={17}/> },
+        { title: "Aktif İlan", value: "312", helper: "30 günde +168", icon: <PackageSearch size={17}/> },
+        { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: <Truck size={17}/> },
+        { title: "Eşleşme Oranı", value: "%62", helper: "30 günde +5 puan", icon: <Link2 size={17}/> },
       ];
     }
     return [
-      { title: "Toplam Kullanıcı", value: "1.284", helper: "Son 7 gün +4%", icon: "👥" },
-      { title: "Aktif İlan", value: "312", helper: "Son 7 gün +48", icon: "📦" },
-      { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: "👤" },
-      { title: "Eşleşme Oranı", value: "%62", helper: "Haftalık +3 puan", icon: "🔗" },
+      { title: "Toplam Kullanıcı", value: "1.284", helper: "Son 7 gün +4%", icon: <Users size={17}/> },
+      { title: "Aktif İlan", value: "312", helper: "Son 7 gün +48", icon: <PackageSearch size={17}/> },
+      { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: <Truck size={17}/> },
+      { title: "Eşleşme Oranı", value: "%62", helper: "Haftalık +3 puan", icon: <Link2 size={17}/> },
     ];
   }, [range]);
 
