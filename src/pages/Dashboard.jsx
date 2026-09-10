@@ -1,157 +1,41 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, BadgeCheck, Bot, Building2, CircleDollarSign, Download, Eye, FileCheck2, Filter, Link2, PackageSearch, RefreshCw, Search, ShieldCheck, Sparkles, Truck, Users, X } from "lucide-react";
 import PageHeader from "../components/layout/PageHeader";
-
-import KpiCard from "../components/dashboard/KpiCard.jsx";
-import StatusSummary from "../components/dashboard/StatusSummary.jsx";
-import ActivityList from "../components/dashboard/ActivityList.jsx";
-import QuickActions from "../components/dashboard/QuickActions.jsx";
-import DashboardToolbar from "../components/dashboard/DashboardToolbar.jsx";
-import RecentLoadsTable from "../components/dashboard/RecentLoadsTable.jsx";
-import PendingQueue from "../components/dashboard/PendingQueue.jsx";
-import AlertsPanel from "../components/dashboard/AlertsPanel.jsx";
-
+import { getOwnerDashboard } from "../api/platformClient";
+import { dashboardAlerts, dashboardCompanies, dashboardMonths, dashboardTrips, dashboardUsers } from "../data/ownerDashboard";
 import "../components/dashboard/Dashboard.css";
-import { Link2, PackageSearch, Truck, Users } from "lucide-react";
 
-export default function Dashboard() {
-  const [range, setRange] = useState("7d");
+const tabs=["Genel bakış","Firmalar","Kayıtlar","Seferler","Kazançlar","Akıllı içgörüler"];
+const money=value=>new Intl.NumberFormat("tr-TR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(value);
+function exportRows(filename,rows){if(!rows.length)return;const headers=Object.keys(rows[0]);const csv=[headers.join(","),...rows.map(row=>headers.map(key=>`"${String(row[key]??"").replaceAll('"','""')}"`).join(","))].join("\n");const url=URL.createObjectURL(new Blob(["\ufeff",csv],{type:"text/csv;charset=utf-8"}));const link=document.createElement("a");link.href=url;link.download=filename;link.click();URL.revokeObjectURL(url)}
 
-  const kpis = useMemo(() => {
-    if (range === "today") {
-      return [
-        { title: "Toplam Kullanıcı", value: "1.284", helper: "Bugün +8", icon: <Users size={17}/> },
-        { title: "Aktif İlan", value: "312", helper: "Bugün +12", icon: <PackageSearch size={17}/> },
-        { title: "Şoför Sayısı", value: "487", helper: "Online 54", icon: <Truck size={17}/> },
-        { title: "Eşleşme Oranı", value: "%62", helper: "Bugün +1 puan", icon: <Link2 size={17}/> },
-      ];
-    }
-    if (range === "30d") {
-      return [
-        { title: "Toplam Kullanıcı", value: "1.284", helper: "30 günde +9%", icon: <Users size={17}/> },
-        { title: "Aktif İlan", value: "312", helper: "30 günde +168", icon: <PackageSearch size={17}/> },
-        { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: <Truck size={17}/> },
-        { title: "Eşleşme Oranı", value: "%62", helper: "30 günde +5 puan", icon: <Link2 size={17}/> },
-      ];
-    }
-    return [
-      { title: "Toplam Kullanıcı", value: "1.284", helper: "Son 7 gün +4%", icon: <Users size={17}/> },
-      { title: "Aktif İlan", value: "312", helper: "Son 7 gün +48", icon: <PackageSearch size={17}/> },
-      { title: "Şoför Sayısı", value: "487", helper: "Doğrulanmış 410", icon: <Truck size={17}/> },
-      { title: "Eşleşme Oranı", value: "%62", helper: "Haftalık +3 puan", icon: <Link2 size={17}/> },
-    ];
-  }, [range]);
-
-  const statusItems = useMemo(
-    () => [
-      { key: "active", label: "Aktif", value: 312 },
-      { key: "pending", label: "Onay Bekliyor", value: 9 },
-      { key: "matched", label: "Eşleşti", value: 194 },
-      { key: "cancelled", label: "İptal", value: 3 },
-    ],
-    []
-  );
-
-  const activities = useMemo(
-    () => [
-      { id: 1, text: "Yeni ilan eklendi: İstanbul → Ankara", time: "2 dk önce" },
-      { id: 2, text: "Şoför doğrulandı: Ahmet K.", time: "18 dk önce" },
-      { id: 3, text: "Eşleşme tamamlandı: #LW-1024", time: "1 saat önce" },
-      { id: 4, text: "Araç durumu güncellendi: 34 ABC 123", time: "2 saat önce" },
-    ],
-    []
-  );
-
-  const recentLoads = useMemo(
-    () => [
-      {
-        id: 1,
-        code: "LW-1284",
-        route: "İstanbul → Ankara",
-        weight: "12 ton",
-        statusText: "Aktif",
-        statusTone: "tone-green",
-        date: "04.02.2026",
-      },
-      {
-        id: 2,
-        code: "LW-1283",
-        route: "İzmir → Bursa",
-        weight: "8 ton",
-        statusText: "Onay Bekliyor",
-        statusTone: "tone-amber",
-        date: "04.02.2026",
-      },
-      {
-        id: 3,
-        code: "LW-1282",
-        route: "Kocaeli → Adana",
-        weight: "20 ton",
-        statusText: "Eşleşti",
-        statusTone: "tone-blue",
-        date: "03.02.2026",
-      },
-      {
-        id: 4,
-        code: "LW-1281",
-        route: "Tekirdağ → İstanbul",
-        weight: "5 ton",
-        statusText: "İptal",
-        statusTone: "tone-red",
-        date: "03.02.2026",
-      },
-    ],
-    []
-  );
-
-  const pendingItems = useMemo(
-    () => [
-      { id: 1, title: "İlan Onayı", sub: "İzmir → Bursa • 8 ton", badge: "Onay", tone: "tone-amber" },
-      { id: 2, title: "Şoför Evrak Kontrol", sub: "Mehmet Y. • SRC / Ehliyet", badge: "Kontrol", tone: "tone-blue" },
-      { id: 3, title: "Araç Bakım Uyarısı", sub: "34 ABC 123 • Bakım tarihi yaklaşıyor", badge: "Uyarı", tone: "tone-red" },
-    ],
-    []
-  );
-
-  const alerts = useMemo(
-    () => [
-      { id: 1, title: "Evrak eksiği", sub: "2 şoför doğrulama bekliyor", level: "Orta", tone: "tone-amber" },
-      { id: 2, title: "Bakım gecikmesi", sub: "1 araç bakım tarihi geçmiş", level: "Kritik", tone: "tone-red" },
-      { id: 3, title: "İptal artışı", sub: "Son 24 saatte 3 iptal", level: "Düşük", tone: "tone-blue" },
-    ],
-    []
-  );
-
-  const openLoad = (x) => {
-    console.log("Detay:", x);
-  };
-
-  return (
-    <>
-      <PageHeader
-        breadcrumb="Ana Sayfa / Gösterge Paneli"
-        title="Gösterge Paneli"
-        description="Genel sistem durumu ve operasyonel özet"
-      />
-
-      <div className="lw-dashboard">
-        <DashboardToolbar range={range} onChangeRange={setRange} />
-
-        <div className="lw-grid">
-          <div className="lw-col-3"><KpiCard {...kpis[0]} /></div>
-          <div className="lw-col-3"><KpiCard {...kpis[1]} /></div>
-          <div className="lw-col-3"><KpiCard {...kpis[2]} /></div>
-          <div className="lw-col-3"><KpiCard {...kpis[3]} /></div>
-
-          <div className="lw-col-6"><StatusSummary items={statusItems} /></div>
-          <div className="lw-col-6"><ActivityList items={activities} /></div>
-
-          <div className="lw-col-8"><RecentLoadsTable items={recentLoads} onOpen={openLoad} /></div>
-          <div className="lw-col-4"><AlertsPanel items={alerts} /></div>
-
-          <div className="lw-col-8"><PendingQueue items={pendingItems} /></div>
-          <div className="lw-col-4"><QuickActions /></div>
-        </div>
-      </div>
-    </>
-  );
+export default function Dashboard(){
+  const [active,setActive]=useState("Genel bakış");const [month,setMonth]=useState("2026-08");const [query,setQuery]=useState("");const [companyType,setCompanyType]=useState("Tümü");const [selected,setSelected]=useState(null);const [loading,setLoading]=useState(true);const [data,setData]=useState({months:dashboardMonths,companies:dashboardCompanies,users:dashboardUsers,trips:dashboardTrips,alerts:dashboardAlerts,source:"demo"});
+  useEffect(()=>{let mounted=true;getOwnerDashboard().then(result=>{if(mounted)setData(result)}).finally(()=>mounted&&setLoading(false));return()=>{mounted=false}},[]);
+  const selectedMonth=data.months.find(x=>x.key===month)||data.months.at(-1);const previous=data.months[Math.max(0,data.months.findIndex(x=>x.key===month)-1)]||selectedMonth;
+  const filteredCompanies=useMemo(()=>data.companies.filter(x=>(companyType==="Tümü"||x.type===companyType)&&`${x.name} ${x.country} ${x.id}`.toLowerCase().includes(query.toLowerCase())),[data.companies,companyType,query]);
+  const filteredUsers=useMemo(()=>data.users.filter(x=>`${x.name} ${x.email} ${x.company} ${x.role}`.toLowerCase().includes(query.toLowerCase())),[data.users,query]);
+  const filteredTrips=useMemo(()=>data.trips.filter(x=>(month==="all"||x.month===month)&&`${x.route} ${x.shipper} ${x.carrier} ${x.driver}`.toLowerCase().includes(query.toLowerCase())),[data.trips,month,query]);
+  const completionRate=Math.round(selectedMonth.trips/selectedMonth.loads*100);const carrierCount=data.companies.filter(x=>x.type!=="Yük veren").length;const shipperCount=data.companies.filter(x=>x.type==="Yük veren").length;const vehicleCount=data.companies.reduce((sum,x)=>sum+x.vehicles,0);const newRegistrations=data.users.filter(x=>String(x.id).startsWith("USR-")&&x.createdAt).length;
+  const kpis=[{label:"Kayıtlı kullanıcı",value:(1284+newRegistrations).toLocaleString("tr-TR"),change:`+${selectedMonth.newUsers}`,icon:<Users/>},{label:"Yük veren firma",value:String(shipperCount),change:"+18%",icon:<Building2/>},{label:"Taşıyıcı / filo",value:String(carrierCount),change:"+24%",icon:<Truck/>},{label:"Kayıtlı araç",value:String(vehicleCount),change:"+31",icon:<Truck/>},{label:`${selectedMonth.label.split(" ")[0]} yük ilanı`,value:String(selectedMonth.loads),change:`+${selectedMonth.loads-previous.loads}`,icon:<PackageSearch/>},{label:"Tamamlanan sefer",value:String(selectedMonth.trips),change:`%${completionRate}`,icon:<Link2/>},{label:"İşlem hacmi",value:money(selectedMonth.gmv),change:"+17,9%",icon:<CircleDollarSign/>},{label:"Platform kazancı",value:money(selectedMonth.revenue),change:"+18,0%",icon:<ArrowUpRight/>}];
+  const insights=[{title:"Norveç → İtalya fırsatı",text:"Son 30 günde frigorifik talebi %22 arttı. Bu koridordaki uygun şoförlere otomatik bildirim önerilir.",impact:"+34 olası eşleşme",tone:"good"},{title:"İptal riski yükseliyor",text:"Türkiye → Almanya yüklerinde dar yükleme penceresi iptallerin ana nedeni. En az 2 saatlik pencere önerin.",impact:"Risk: Orta",tone:"warning"},{title:"Gelir optimizasyonu",text:"Benelüks çıkışlı dönüş yükleri zincirlendiğinde ortalama boş kilometre %14 ve maliyet %8 azalabilir.",impact:"Aylık +12.400 €",tone:"good"},{title:"Belge süresi uyarısı",text:"7 sürücünün sigorta veya mesleki yeterlilik belgesi 30 gün içinde sona eriyor.",impact:"7 işlem gerekli",tone:"critical"}];
+  function refresh(){setLoading(true);getOwnerDashboard().then(setData).finally(()=>setLoading(false))}
+  return <><PageHeader breadcrumb="Sahip Paneli / Avrupa Operasyonu" title="Logiway Kontrol Kulesi" description="Kayıtlar, firmalar, seferler, kazançlar ve riskler tek ekranda"/><div className="owner-dashboard"><div className="owner-command"><div className="owner-tabs">{tabs.map(tab=><button key={tab} className={active===tab?"active":""} onClick={()=>setActive(tab)}>{tab}</button>)}</div><div className="owner-command-actions"><span className={`data-source ${data.source}`}>{data.source==="live"?"CANLI API":"API DEMO MODU"}</span><button onClick={refresh} aria-label="Verileri yenile"><RefreshCw className={loading?"spin":""}/></button><label><select value={month} onChange={e=>setMonth(e.target.value)}><option value="all">Tüm aylar</option>{data.months.map(x=><option value={x.key} key={x.key}>{x.label}</option>)}</select></label></div></div>
+  {active==="Genel bakış"&&<><section className="owner-kpis">{kpis.map((kpi,index)=><article key={kpi.label} className={index===7?"highlight":""}><span>{kpi.icon}</span><div><small>{kpi.label}</small><strong>{kpi.value}</strong><em>{kpi.change} önceki döneme göre</em></div></article>)}</section><section className="owner-overview-grid"><MonthlyChart months={data.months} selected={month} onSelect={setMonth}/><div className="owner-panel health-panel"><PanelTitle icon={<ShieldCheck/>} title="Platform sağlığı" text={`${selectedMonth.label} operasyon kalitesi`}/><Metric label="Zamanında teslim" value={selectedMonth.onTime} suffix="%"/><Metric label="Doğrulanmış taşıyıcı" value={88} suffix="%"/><Metric label="Başarılı ödeme" value={97} suffix="%"/><Metric label="İtirazsız sefer" value={94} suffix="%"/></div></section><section className="owner-overview-grid lower"><div className="owner-panel"><PanelTitle icon={<Bot/>} title="Akıllı yönetici özeti" text="Operasyon verilerinden açıklanabilir öneriler"/>{insights.slice(0,3).map(x=><Insight key={x.title} {...x}/>)}</div><div className="owner-panel"><PanelTitle icon={<AlertTriangle/>} title="İşlem bekleyenler" text="Öncelik sırasına göre"/>{data.alerts.map(x=><Insight key={x.title} {...x}/>)}</div></section></>}
+  {active==="Firmalar"&&<section className="owner-panel table-panel"><PanelTitle icon={<Building2/>} title="Kayıtlı şirketler" text="Yük veren, lojistik firması ve filo sahipleri" action={<button onClick={()=>exportRows("logiway-firmalar.csv",filteredCompanies)}><Download/> Dışa aktar</button>}/><TableTools query={query} setQuery={setQuery}><select value={companyType} onChange={e=>setCompanyType(e.target.value)}><option>Tümü</option><option>Yük veren</option><option>Lojistik firması</option><option>Filo sahibi</option></select></TableTools><OwnerTable headers={["Firma","Tür / ülke","Üye","Araç","Sefer","Hacim","Durum",""]}>{filteredCompanies.map(x=><tr key={x.id}><td><strong>{x.name}</strong><small>{x.id} · {x.joined}</small></td><td>{x.type}<small>{x.country}</small></td><td>{x.members}</td><td>{x.vehicles}</td><td>{x.trips}</td><td><strong>{x.volume}</strong></td><td><Status value={x.status}/></td><td><button className="icon-action" onClick={()=>setSelected({...x,kind:"Firma"})}><Eye/></button></td></tr>)}</OwnerTable></section>}
+  {active==="Kayıtlar"&&<section className="owner-panel table-panel"><PanelTitle icon={<Users/>} title="Kayıt olan kullanıcılar" text="Rol, firma, ülke ve doğrulama durumu" action={<button onClick={()=>exportRows("logiway-kullanicilar.csv",filteredUsers)}><Download/> Dışa aktar</button>}/><TableTools query={query} setQuery={setQuery}/><OwnerTable headers={["Kullanıcı","Rol","Firma","Ülke","Katılım","Durum",""]}>{filteredUsers.map(x=><tr key={x.id}><td><strong>{x.name}</strong><small>{x.email} · {x.id}</small></td><td>{x.role}</td><td>{x.company}</td><td>{x.country}</td><td>{x.joined}</td><td><Status value={x.status}/></td><td><button className="icon-action" onClick={()=>setSelected({...x,kind:"Kullanıcı"})}><Eye/></button></td></tr>)}</OwnerTable></section>}
+  {active==="Seferler"&&<section className="owner-panel table-panel"><PanelTitle icon={<Truck/>} title="Aylık sefer geçmişi" text="Yük veren, taşıyıcı, şoför ve platform payı" action={<button onClick={()=>exportRows("logiway-seferler.csv",filteredTrips)}><Download/> Dışa aktar</button>}/><TableTools query={query} setQuery={setQuery}/><OwnerTable headers={["Sefer / tarih","Rota","Yük veren","Taşıyıcı / şoför","Tutar","Kazanç","Durum"]}>{filteredTrips.map(x=><tr key={x.id}><td><strong>{x.id}</strong><small>{x.date}</small></td><td><strong>{x.route}</strong></td><td>{x.shipper}</td><td>{x.carrier}<small>{x.driver}</small></td><td>{x.amount}</td><td><strong>{x.margin}</strong></td><td><Status value={x.status}/></td></tr>)}</OwnerTable></section>}
+  {active==="Kazançlar"&&<EarningsView months={data.months} companies={data.companies}/>}
+  {active==="Akıllı içgörüler"&&<section className="ai-workspace"><div className="ai-hero"><span><Sparkles/></span><div><small>LOGIWAY INTELLIGENCE</small><h2>Verinizden aksiyon çıkarın.</h2><p>Kurallı analiz motoru rota, gelir, iptal ve belge verilerini tarayarak nedenleriyle birlikte öneri üretir.</p></div><b>Son analiz: şimdi</b></div><div className="ai-grid">{insights.map(x=><Insight key={x.title} {...x}/>)}</div><div className="owner-panel ai-guard"><ShieldCheck/><div><strong>Güvenli yapay zekâ yaklaşımı</strong><p>Öneriler karar desteğidir; fiyat, ödeme, hesap kapatma ve doğrulama işlemleri insan onayı olmadan uygulanmaz.</p></div></div></section>}
+  {selected&&<DetailDrawer item={selected} onClose={()=>setSelected(null)}/>}</div></>
 }
+
+function PanelTitle({icon,title,text,action}){return <div className="owner-panel-title"><span>{icon}</span><div><h2>{title}</h2><p>{text}</p></div>{action}</div>}
+function Metric({label,value,suffix}){return <div className="health-metric"><div><span>{label}</span><strong>{value}{suffix}</strong></div><div><i style={{width:`${value}%`}}/></div></div>}
+function Insight({tone,title,text,impact}){return <article className={`owner-insight ${tone}`}><span>{tone==="good"?<ArrowUpRight/>:tone==="critical"?<AlertTriangle/>:<ArrowDownRight/>}</span><div><strong>{title}</strong><p>{text}</p>{impact&&<em>{impact}</em>}</div></article>}
+function Status({value}){return <span className={`owner-status ${value==="Doğrulandı"||value==="Aktif"||value==="Tamamlandı"?"ok":value==="İptal"?"bad":"waiting"}`}>{value}</span>}
+function TableTools({query,setQuery,children}){return <div className="table-tools"><label><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ara…"/></label>{children&&<label className="filter-select"><Filter/>{children}</label>}</div>}
+function OwnerTable({headers,children}){return <div className="owner-table-wrap"><table><thead><tr>{headers.map((x,i)=><th key={`${x}-${i}`}>{x}</th>)}</tr></thead><tbody>{children}</tbody></table></div>}
+function MonthlyChart({months,selected,onSelect}){const max=Math.max(...months.map(x=>x.trips));const peak=months.reduce((best,x)=>x.trips>best.trips?x:best,months[0]);return <div className="owner-panel chart-panel"><PanelTitle icon={<Link2/>} title="Son 12 aylık platform performansı" text="Tamamlanan sefer ve platform kazancı"/><div className="month-chart">{months.map(x=><button key={x.key} onClick={()=>onSelect(x.key)} className={selected===x.key?"active":""}><span><i style={{height:`${x.trips/max*100}%`}}/></span><strong>{x.trips}</strong><small>{x.label.split(" ")[0].slice(0,3)}</small></button>)}</div><div className="chart-summary"><span><i/> Tamamlanan sefer</span><strong>{peak.label} zirvesi: {peak.trips} sefer · {money(peak.revenue)} gelir</strong></div></div>}
+function EarningsView({months,companies}){return <><section className="owner-kpis finance"><article><span><CircleDollarSign/></span><div><small>Toplam işlem hacmi</small><strong>{money(months.reduce((s,x)=>s+x.gmv,0))}</strong><em>Son 12 ay</em></div></article><article><span><ArrowUpRight/></span><div><small>Platform geliri</small><strong>{money(months.reduce((s,x)=>s+x.revenue,0))}</strong><em>Ortalama komisyon %5</em></div></article><article><span><FileCheck2/></span><div><small>Bekleyen ödeme</small><strong>38.450 €</strong><em>12 sefer</em></div></article><article><span><BadgeCheck/></span><div><small>Başarılı tahsilat</small><strong>%97,4</strong><em>Son 90 gün</em></div></article></section><section className="owner-overview-grid"><MonthlyChart months={months} selected={months.at(-1).key} onSelect={()=>{}}/><div className="owner-panel"><PanelTitle icon={<Building2/>} title="En yüksek hacimli firmalar" text="Toplam sefer değeri"/>{[...companies].sort((a,b)=>b.trips-a.trips).slice(0,5).map((x,i)=><div className="earning-rank" key={x.id}><span>{i+1}</span><div><strong>{x.name}</strong><small>{x.type} · {x.trips} sefer</small></div><b>{x.volume}</b></div>)}</div></section></>}
+function DetailDrawer({item,onClose}){return <div className="owner-drawer-backdrop" onClick={onClose}><aside className="owner-drawer" onClick={e=>e.stopPropagation()}><button className="drawer-close" onClick={onClose}><X/></button><span className="drawer-kind">{item.kind} detayı</span><h2>{item.name}</h2><Status value={item.status}/><div className="drawer-facts">{Object.entries(item).filter(([key])=>!["kind","name","status"].includes(key)).map(([key,value])=><div key={key}><small>{key}</small><strong>{value}</strong></div>)}</div><button className="drawer-primary"><ShieldCheck/> Yetki ve doğrulama kaydını aç</button></aside></div>}

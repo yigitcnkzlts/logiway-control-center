@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, BarChart3, Check, ChevronDown, Clock3, Gauge, Menu, PackageCheck, Route, ShieldCheck, Sparkles, Truck, X, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, Building2, Check, ChevronDown, Clock3, Gauge, Menu, PackageCheck, Route, ShieldCheck, Sparkles, Truck, UserRound, X, Zap } from "lucide-react";
 import "./Landing.css";
 
 const features = [
@@ -34,9 +34,9 @@ export default function Landing() {
     <main>
       <section className="hero" id="urun">
         <div className="hero-copy">
-          <div className="eyebrow"><Sparkles size={14}/> Avrupa lojistiğinin daha akıllı yolu</div>
-          <h1>Yükünüz yolda.<br/><span>Kontrol sizde.</span></h1>
-          <p>Avrupa genelindeki yükleri, sürücüleri ve filonuzu tek merkezden yönetin. Boş dönüşü azaltın, doğru sınır ötesi eşleşmeyi hızlandırın.</p>
+          <div className="eyebrow"><Sparkles size={14}/> Türkiye ve 51 Avrupa ülkesinde</div>
+          <h1>Doğru yük.<br/><span>Doğru araç. Tek rota.</span></h1>
+          <p>Yük verenler ilanını yayınlar, şoförler rotasına uygun işi bulur. Logiway konum, araç ve kapasite verilerini puanlayarak iki tarafı aynı seferde buluşturur.</p>
           <div className="hero-actions"><Link to="/giris" className="primary-cta">Ücretsiz başlayın <ArrowRight size={18}/></Link><a href="#nasil" className="secondary-cta">Nasıl çalıştığını görün</a></div>
           <div className="trust-row"><span><Check size={15}/> Kredi kartı gerekmez</span><span><Check size={15}/> 14 gün ücretsiz</span><span><Check size={15}/> 5 dakikada kurulum</span></div>
         </div>
@@ -54,9 +54,11 @@ export default function Landing() {
 
       <section className="proof-strip"><span>Avrupa operasyonunun her adımında</span><div><b>7/24</b><small>sınır ötesi görünürlük</small></div><div><b>Tek hesap</b><small>web ve mobil için ortak operasyon</small></div><div><b>51 ülke</b><small>Türkiye dahil rota eşleştirme</small></div></section>
 
-      <section className="features section" id="nasil"><div className="section-heading"><span>DAHA AZ KARMAŞA, DAHA ÇOK HAREKET</span><h2>Operasyonunuz<br/>tek bir ritimde çalışsın.</h2><p>Dağınık tablolar ve telefon trafiği yerine herkesin aynı bilgiyle hareket ettiği sade bir merkez.</p></div><div className="feature-grid">{features.map(([icon,title,text],i)=><article className="feature-card" key={title}><span className="feature-number">0{i+1}</span><span className="feature-icon">{icon}</span><h3>{title}</h3><p>{text}</p><Link to="/dashboard">Panelde incele <ArrowRight size={15}/></Link></article>)}</div></section>
+      <section className="audience section" aria-label="Logiway çalışma alanları"><div className="audience-intro"><span className="section-kicker">İKİ TARAF, TEK PAZAR</span><h2>Rolünü seç,<br/>işe hemen başla.</h2><p>Her kullanıcı yalnızca kendi operasyonuna ait araçları görür; eşleşme gerçekleştiğinde sefer iki tarafa da işlenir.</p></div><Link to="/giris/yuk-veren" className="audience-card"><span><Building2/></span><small>YÜK VERENLER İÇİN</small><h3>Yükünü yayınla</h3><p>Detaylı kalkış ve teslimat konumu gir, doğrulanmış şoförlerin tekliflerini karşılaştır.</p><b>Yük veren panelini aç <ArrowRight/></b></Link><Link to="/giris/sofor" className="audience-card dark"><span><UserRound/></span><small>ŞOFÖRLER İÇİN</small><h3>Rotana uygun yükü bul</h3><p>Bulunduğun ülkeyi ve gitmek istediğin rotayı seç, eşleşme puanına göre teklif ver.</p><b>Şoför panelini aç <ArrowRight/></b></Link></section>
 
-      <section className="workflow section"><div className="workflow-card"><div className="workflow-copy"><span className="section-kicker">BAŞTAN SONA GÖRÜNÜRLÜK</span><h2>Bir yük ilanından<br/>teslimata kadar.</h2><p>Logiway doğru aracı bulur, rotayı izler ve ekibinize yalnızca gerçekten önemli olanı gösterir.</p><Link to="/dashboard" className="light-cta">Canlı demoyu aç <ArrowRight size={17}/></Link></div><div className="workflow-steps">{[["01","Yükü oluştur","Rota, ağırlık ve teslimat bilgisini girin."],["02","Akıllı eşleşme","Uygun sürücü ve araçlar otomatik sıralansın."],["03","Canlı takip","Süreci tek ekrandan güvenle yönetin."]].map(([n,t,d],i)=><div className={i===1?"workflow-step active":"workflow-step"} key={n}><span>{n}</span><div><strong>{t}</strong><small>{d}</small></div>{i===1&&<Zap size={18}/>}</div>)}</div></div></section>
+      <section className="features section" id="nasil"><div className="section-heading"><span>DAHA AZ KARMAŞA, DAHA ÇOK HAREKET</span><h2>Operasyonunuz<br/>tek bir ritimde çalışsın.</h2><p>Dağınık tablolar ve telefon trafiği yerine herkesin aynı bilgiyle hareket ettiği sade bir merkez.</p></div><div className="feature-grid">{features.map(([icon,title,text],i)=><article className="feature-card" key={title}><span className="feature-number">0{i+1}</span><span className="feature-icon">{icon}</span><h3>{title}</h3><p>{text}</p><Link to="/giris">Çalışma alanını aç <ArrowRight size={15}/></Link></article>)}</div></section>
+
+      <section className="workflow section"><div className="workflow-card"><div className="workflow-copy"><span className="section-kicker">BAŞTAN SONA GÖRÜNÜRLÜK</span><h2>Bir yük ilanından<br/>teslimata kadar.</h2><p>Logiway doğru aracı bulur, teklifleri iki tarafa ulaştırır ve kabul edilen işi ortak sefere dönüştürür.</p><Link to="/giris" className="light-cta">Çalışan akışı deneyin <ArrowRight size={17}/></Link></div><div className="workflow-steps">{[["01","Yükü oluştur","Rota, ağırlık ve teslimat bilgisini girin."],["02","Teklifleri eşleştir","Uygun sürücü ve araçlar puanla sıralansın."],["03","Seferi başlat","Kabul edilen iş iki tarafın geçmişine işlensin."]].map(([n,t,d],i)=><div className={i===1?"workflow-step active":"workflow-step"} key={n}><span>{n}</span><div><strong>{t}</strong><small>{d}</small></div>{i===1&&<Zap size={18}/>}</div>)}</div></div></section>
 
       <section className="pricing section" id="fiyat"><div className="pricing-copy"><span className="section-kicker">BÜYÜDÜKÇE SİZİNLE BÜYÜR</span><h2>Net fiyat.<br/>Sürpriz yok.</h2><p>Küçük filolardan yoğun Avrupa operasyon ekiplerine kadar ihtiyacınız olan her şey.</p><div className="price"><sup>€</sup><strong>49</strong><span>/ ay<br/><small>+ vergi</small></span></div><Link to="/giris" className="primary-cta">14 gün ücretsiz deneyin <ArrowRight size={18}/></Link></div><div className="price-list"><h3>Profesyonel plana dahil</h3>{["Sınırsız yük ve ilan yönetimi","Avrupa koridoru eşleştirme","Canlı operasyon paneli","Ekip rolleri ve yetkilendirme","Çok para birimli raporlama","Öncelikli destek"].map(x=><div key={x}><Check size={17}/><span>{x}</span></div>)}<small>İstediğiniz zaman iptal edebilirsiniz.</small></div></section>
 
