@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Bell, Check, ChevronRight, FileText, MapPin, MessageCircle, Paperclip, Phone, Search, Send, ShieldCheck, Truck, UserRound, X } from "lucide-react";
+import { listNotifications, markNotificationRead } from "../../api/operationsClient";
+import { isApiConfigured, isDemoMode } from "../../api/apiClient";
 
 const demoConversations = [
   { id: "conv-1", company: "ABC Logistics", reference: "LW-3012 · Tekirdağ → Berlin", verified: true, unread: 2, last: "Aracı yükleme için planladık.", time: "10:42", kind: "load", referenceId: "LW-3012", loadId: "LW-3012", offerId: "OF-8821", shipmentId: null },
@@ -49,13 +51,16 @@ export function GlobalSearch({ onClose }) {
   return <div className="command-panel"><label><Search/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Yük, firma, plaka veya sevkiyat ara..."/><button onClick={onClose}><X/></button></label><div>{results.map(([type, title, detail]) => <button key={`${type}-${title}`} onClick={onClose}><span>{type}</span><strong>{title}</strong><small>{detail}</small><ChevronRight/></button>)}{!results.length && <p>Aramanızla eşleşen kayıt bulunamadı.</p>}</div><footer>Arama sonuçları erişim rolünüze göre sınırlandırılır.</footer></div>;
 }
 
-export function NotificationCenter({ onNavigate }) {
-  const items = [
+export function NotificationCenter({ onNavigate, demo = !isApiConfigured() || isDemoMode() }) {
+  const demoItems = [
     { title: "Yeni teklif geldi", detail: "LW-3012 için ABC Logistics teklif verdi", target: "Teklifler", time: "4 dk" },
     { title: "Yeni mesaj geldi", detail: "ABC Logistics size bir mesaj gönderdi", target: "Mesajlar", time: "18 dk" },
     { title: "Şoför atandı", detail: "SHP-2847 · Ahmet Yılmaz", target: "Aktif Sevkiyatlar", time: "1 sa" },
   ];
-  return <div className="notification-panel"><header><div><strong>Bildirimler</strong><small>{items.length} okunmamış</small></div><button>Tümünü okundu işaretle</button></header>{items.map((item) => <button key={item.title} onClick={() => onNavigate(item.target)}><i/><span><strong>{item.title}</strong><small>{item.detail}</small></span><time>{item.time}</time></button>)}<footer>Bildirim API entegrasyonu bekleniyor · demo içerik</footer></div>;
+  const [state,setState]=useState({items:demo?demoItems:[],loading:!demo,error:""});
+  useEffect(()=>{if(demo)return;let active=true;listNotifications().then(result=>active&&setState({items:result.items,loading:false,error:""})).catch(()=>active&&setState({items:[],loading:false,error:"Bildirimler yüklenemedi."}));return()=>{active=false}},[demo]);
+  async function open(item){if(!demo&&item.id&&!item.readAt){try{await markNotificationRead(item.id)}catch{return}}const payload=item.payloadJson||{};onNavigate(item.target||({OFFER:"Teklifler",SHIPMENT:"Aktif Sevkiyatlar",MESSAGE:"Mesajlar"}[payload.entityType]||"Özet"))}
+  return <div className="notification-panel"><header><div><strong>Bildirimler</strong><small>{state.items.filter(item=>!item.readAt).length} okunmamış</small></div></header>{state.loading&&<p className="panel-state">Bildirimler yükleniyor…</p>}{state.error&&<p className="panel-state error">{state.error}</p>}{state.items.map((item) => <button key={item.id||item.title} onClick={() => open(item)}><i/><span><strong>{item.title}</strong><small>{item.body||item.detail}</small></span><time>{item.time||new Date(item.createdAt).toLocaleDateString("tr-TR")}</time></button>)}{!state.loading&&!state.error&&!state.items.length&&<p className="panel-state">Yeni bildiriminiz yok.</p>}<footer>{demo?"Demo bildirimleri":"Son bildirimler"}</footer></div>;
 }
 
 export function ActionCenter({ role, onNavigate }) {

@@ -36,4 +36,9 @@ export async function submitLiveOffer(job){
   return request(`/api/v1/loads/${job.id}/offers`,{method:"POST",body:JSON.stringify({offererType:company?"COMPANY":"DRIVER",offererId:company?.id||null,amount:Number(job.expectedPrice)||Number(String(job.price).replace(/[^0-9]/g,""))||1,currency:job.currency||"EUR",message:"Web panelinden gönderilen taşıma teklifi",vehicleId:vehicle.id,driverProfileId:driver.id,estimatedTransitHours:48,availableAt:new Date().toISOString()})});
 }
 export async function acceptLiveOffer(id){return request(`/api/v1/offers/${id}/accept`,{method:"POST"})}
+export async function counterLiveOffer(id,{amount,message,expectedOfferVersion}){return request(`/api/v1/offers/${id}/counter`,{method:"POST",body:JSON.stringify({amount:Number(amount),message:message||null,expectedOfferVersion})})}
+export async function rejectLiveOffer(id){return request(`/api/v1/offers/${id}/reject`,{method:"POST"})}
+export async function withdrawLiveOffer(id){return request(`/api/v1/offers/${id}/withdraw`,{method:"POST"})}
+export async function loadOfferRounds(id){return request(`/api/v1/offers/${id}/rounds`)}
+export async function transitionShipment(id,status){return request(`/api/v1/shipments/${id}/status`,{method:"POST",body:JSON.stringify({status})})}
 export async function cancelLiveLoad(id){return request(`/api/v1/loads/${id}/cancel`,{method:"POST"})}
