@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bell,
   Shield,
@@ -62,6 +62,27 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
+function loadSettings() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return deepClone(defaultSettings);
+
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      ...deepClone(defaultSettings),
+      ...parsed,
+      general: { ...deepClone(defaultSettings.general), ...(parsed.general || {}) },
+      notifications: { ...deepClone(defaultSettings.notifications), ...(parsed.notifications || {}) },
+      security: { ...deepClone(defaultSettings.security), ...(parsed.security || {}) },
+      matching: { ...deepClone(defaultSettings.matching), ...(parsed.matching || {}) },
+      roles: { ...deepClone(defaultSettings.roles), ...(parsed.roles || {}) },
+      system: { ...deepClone(defaultSettings.system), ...(parsed.system || {}) },
+    };
+  } catch {
+    return deepClone(defaultSettings);
+  }
+}
+
 // Sayısal değerleri mantıklı aralıkta tutmak için
 function clamp(n, min, max) {
   const x = Number(n);
@@ -78,52 +99,8 @@ export default function Settings() {
   const [saveError, setSaveError] = useState("");
 
   // Mevcut ayarlar ve en son kaydedilmiş snapshot
-  const [settings, setSettings] = useState(() => deepClone(defaultSettings));
-  const [initialSnapshot, setInitialSnapshot] = useState(() =>
-    deepClone(defaultSettings)
-  );
-
-  // Sayfa açılınca localStorage'dan ayar varsa çekiyorum
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-
-    try {
-      const parsed = JSON.parse(raw);
-
-      // Eski sürüm/eksik alanlar varsa default ile merge ediyorum
-      const merged = {
-        ...deepClone(defaultSettings),
-        ...parsed,
-        general: {
-          ...deepClone(defaultSettings.general),
-          ...(parsed.general || {}),
-        },
-        notifications: {
-          ...deepClone(defaultSettings.notifications),
-          ...(parsed.notifications || {}),
-        },
-        security: {
-          ...deepClone(defaultSettings.security),
-          ...(parsed.security || {}),
-        },
-        matching: {
-          ...deepClone(defaultSettings.matching),
-          ...(parsed.matching || {}),
-        },
-        roles: { ...deepClone(defaultSettings.roles), ...(parsed.roles || {}) },
-        system: {
-          ...deepClone(defaultSettings.system),
-          ...(parsed.system || {}),
-        },
-      };
-
-      setSettings(merged);
-      setInitialSnapshot(deepClone(merged));
-    } catch {
-      // Bozuk JSON varsa takılmadan default ile devam
-    }
-  }, []);
+  const [settings, setSettings] = useState(loadSettings);
+  const [initialSnapshot, setInitialSnapshot] = useState(loadSettings);
 
   // Kullanıcı bir şey değiştirmiş mi kontrolü (Kaydet/Geri Al için)
   const isDirty = useMemo(() => {

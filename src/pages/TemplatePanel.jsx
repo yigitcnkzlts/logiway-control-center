@@ -34,7 +34,7 @@ const TABLE_COLUMNS = [
   {
     key: "actions",
     label: "İşlemler",
-    render: (_, row) => (
+    render: () => (
       <div className="flex gap-2">
         <button
           onClick={(e) => {
@@ -87,12 +87,6 @@ export default function TemplatePanel() {
     setFormOpen(true);
   };
 
-  const handleEdit = (item) => {
-    setEditingId(item.id);
-    setFormValues(item);
-    setFormOpen(true);
-  };
-
   const handleSave = (values) => {
     if (editingId) {
       // Update
@@ -111,10 +105,6 @@ export default function TemplatePanel() {
     }
     setFormOpen(false);
     setFormValues({});
-  };
-
-  const handleDelete = (item) => {
-    setDeleteConfirm(item);
   };
 
   const confirmDelete = () => {

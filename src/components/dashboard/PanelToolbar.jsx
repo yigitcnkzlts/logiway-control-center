@@ -22,6 +22,7 @@ export default function PanelToolbar({
               {filters.map((filter, idx) => (
                 <div
                   key={idx}
+                  onClick={() => onFilterChange?.(filter)}
                   className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition cursor-pointer border border-slate-200"
                 >
                   {filter.label}

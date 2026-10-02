@@ -359,10 +359,7 @@ export default function Vehicles() {
             pageSize={pageSize}
             total={total}
             onPageChange={setPage}
-            onPageSizeChange={(n) => {
-              setPageSize(n);
-              setPage(1);
-            }}
+            onPageSizeChange={onChangePageSize}
           />
         </div>
       </div>

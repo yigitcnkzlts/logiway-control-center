@@ -75,7 +75,7 @@ export default function Table({
                 colSpan={columns.length + (selectable ? 1 : 0)}
                 className="px-4 py-8 text-center text-slate-500"
               >
-                Veri bulunamadı
+                {isLoading ? "Yükleniyor..." : "Veri bulunamadı"}
               </td>
             </tr>
           ) : (
