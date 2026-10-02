@@ -1,0 +1,15 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+
+guc:
+  security:
+    jwt:
+      secret: test-secret-must-be-at-least-32-bytes-long!!
+      access-token-minutes: 15
+      refresh-token-days: 7
+      mfa-token-minutes: 5
+    encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    hsts-enabled: false
+  storage:
+    local-path: ./target/test-uploads

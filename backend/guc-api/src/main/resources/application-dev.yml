@@ -1,0 +1,17 @@
+# Local / Docker Compose profile. Secrets MUST come from environment or .env — never commit real values.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/guclogistics}
+    username: ${DB_USER:guc}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+guc:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+    encryption-key: ${ENCRYPTION_KEY}
+    hsts-enabled: false

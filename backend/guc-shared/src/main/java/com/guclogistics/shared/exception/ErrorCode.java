@@ -1,0 +1,18 @@
+package com.guclogistics.shared.exception;
+
+public enum ErrorCode {
+    VALIDATION_FAILED,
+    UNAUTHORIZED,
+    FORBIDDEN,
+    NOT_FOUND,
+    CONFLICT,
+    RATE_LIMITED,
+    ACCOUNT_LOCKED,
+    MFA_REQUIRED,
+    MFA_INVALID,
+    INVALID_CREDENTIALS,
+    TOKEN_INVALID,
+    TOKEN_REUSE_DETECTED,
+    BUSINESS_RULE_VIOLATION,
+    INTERNAL_ERROR
+}
