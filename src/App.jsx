@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "./layout/MainLayout";
 import ToastProvider from "./context/ToastContext";
 import ToastContainer from "./components/common/ToastContainer";
@@ -13,43 +13,38 @@ import PendingUsers from "./pages/users/PendingUsers";
 import UserDetail from "./pages/users/UserDetail";
 import Landing from "./pages/Landing";
 import { CompanyPortal, DriverPortal, PortalLogin, RoleSelect, ShipperPortal } from "./pages/Portal";
-import { isBackendConfigured } from "./api/authClient";
+import { hasAnyRole, isAuthenticated } from "./api/authClient";
 
-const publicRoutes = ["/", "/giris", "/giris/yuk-veren", "/giris/lojistik", "/giris/sofor", "/yuk-veren/panel", "/lojistik/panel", "/sofor/panel"];
-
-function PortalGate({role,children}){
-  if(isBackendConfigured()&&!localStorage.getItem("guc-access-token"))return <Navigate to={`/giris/${role}`} replace/>;
+function ProtectedRoute({ children, roles, loginPath = "/giris" }) {
+  if (!isAuthenticated()) return <Navigate to={loginPath} replace />;
+  if (roles && !hasAnyRole(roles)) return <Navigate to="/giris" replace />;
   return children;
 }
 
-function AdminGate({children}){
-  if(!isBackendConfigured())return children;
-  try{const session=JSON.parse(localStorage.getItem("guc-session")||"{}");return session.roles?.includes("ADMIN")?children:<Navigate to="/giris" replace/>}catch{return <Navigate to="/giris" replace/>}
-}
+const adminPage = (page, roles = ["ADMIN"]) => (
+  <ProtectedRoute roles={roles}><MainLayout>{page}</MainLayout></ProtectedRoute>
+);
 
 export default function App() {
-  const { pathname } = useLocation();
-  const isPublic = publicRoutes.includes(pathname);
   return <ToastProvider>
-    {isPublic ? <Routes>
-      <Route path="/" element={<Landing/>}/>
-      <Route path="/giris" element={<RoleSelect/>}/>
-      <Route path="/giris/:role" element={<PortalLogin/>}/>
-      <Route path="/yuk-veren/panel" element={<PortalGate role="yuk-veren"><ShipperPortal/></PortalGate>}/>
-      <Route path="/lojistik/panel" element={<PortalGate role="lojistik"><CompanyPortal/></PortalGate>}/>
-      <Route path="/sofor/panel" element={<PortalGate role="sofor"><DriverPortal/></PortalGate>}/>
-    </Routes> : <MainLayout><Routes>
-      <Route path="/dashboard" element={<AdminGate><Dashboard/></AdminGate>}/>
-      <Route path="/kullanicilar" element={<UsersList/>}/>
-      <Route path="/kullanicilar/dogrulama" element={<PendingUsers/>}/>
-      <Route path="/kullanicilar/:id" element={<UserDetail/>}/>
-      <Route path="/yuk-ilanlari" element={<Loads/>}/>
-      <Route path="/soforler" element={<Drivers/>}/>
-      <Route path="/araclar" element={<Vehicles/>}/>
-      <Route path="/eslesmeler" element={<Matches/>}/>
-      <Route path="/ayarlar" element={<Settings/>}/>
-      <Route path="*" element={<Navigate to="/dashboard" replace/>}/>
-    </Routes></MainLayout>}
-    <ToastContainer/>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/giris" element={<RoleSelect />} />
+      <Route path="/giris/:role" element={<PortalLogin />} />
+      <Route path="/yuk-veren/panel" element={<ProtectedRoute loginPath="/giris/yuk-veren" roles={["SHIPPER"]}><ShipperPortal /></ProtectedRoute>} />
+      <Route path="/lojistik/panel" element={<ProtectedRoute loginPath="/giris/lojistik" roles={["LOGISTICS_COMPANY", "FLEET_OWNER"]}><CompanyPortal /></ProtectedRoute>} />
+      <Route path="/sofor/panel" element={<ProtectedRoute loginPath="/giris/sofor" roles={["INDEPENDENT_DRIVER"]}><DriverPortal /></ProtectedRoute>} />
+      <Route path="/dashboard" element={adminPage(<Dashboard />)} />
+      <Route path="/kullanicilar" element={adminPage(<UsersList />)} />
+      <Route path="/kullanicilar/dogrulama" element={adminPage(<PendingUsers />, ["ADMIN", "MODERATOR"])} />
+      <Route path="/kullanicilar/:id" element={adminPage(<UserDetail />)} />
+      <Route path="/yuk-ilanlari" element={adminPage(<Loads />)} />
+      <Route path="/soforler" element={adminPage(<Drivers />)} />
+      <Route path="/araclar" element={adminPage(<Vehicles />)} />
+      <Route path="/eslesmeler" element={adminPage(<Matches />)} />
+      <Route path="/ayarlar" element={adminPage(<Settings />)} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+    <ToastContainer />
   </ToastProvider>;
 }
