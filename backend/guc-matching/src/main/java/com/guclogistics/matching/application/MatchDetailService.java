@@ -33,6 +33,8 @@ public class MatchDetailService {
                 JOIN companies sc ON sc.id=l.shipper_company_id
                 LEFT JOIN companies cc ON o.offerer_type='COMPANY' AND cc.id=o.offerer_id
                 WHERE m.id=?1 AND (l.created_by_user_id=?2 OR o.created_by_user_id=?2
+                  OR EXISTS (SELECT 1 FROM driver_profiles dp
+                    WHERE dp.id=o.driver_profile_id AND dp.user_id=?2)
                   OR EXISTS (SELECT 1 FROM company_members cm WHERE cm.user_id=?2
                     AND (cm.company_id=l.shipper_company_id OR
                       (o.offerer_type='COMPANY' AND cm.company_id=o.offerer_id))))

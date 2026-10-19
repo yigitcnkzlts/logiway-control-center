@@ -18,10 +18,10 @@ export async function listMatchMessages(matchId) {
   return apiJson(`/api/v1/matches/${matchId}/messages`);
 }
 
-export async function sendMatchMessage(matchId, content, senderRole) {
+export async function sendMatchMessage(matchId, content) {
   return apiJson(`/api/v1/matches/${matchId}/messages`, {
     method: "POST",
-    body: JSON.stringify({ body: content, senderRole }),
+    body: JSON.stringify({ body: content }),
   });
 }
 

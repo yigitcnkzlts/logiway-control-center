@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { listMatchMessages, sendMatchMessage } from "../../api/operationsClient";
 import { isApiConfigured, isDemoMode } from "../../api/apiClient";
+import { getSession } from "../../api/authClient";
+import { loadMyMatches } from "../../api/marketplaceClient";
 
 // ── Demo data ──────────────────────────────────────────────────────────────
 const DEMO_CONVERSATIONS = [
@@ -289,7 +291,7 @@ function ConversationView({ conv, messages, onSend, onBack, onOpenDetail, sendin
  */
 export default function MessagesCenter({ demo: demoProp, conversations: convProp, onOpenShipment }) {
   const demo = demoProp ?? (!isApiConfigured() || isDemoMode());
-  const [conversations] = useState(convProp || DEMO_CONVERSATIONS);
+  const [conversations, setConversations] = useState(convProp || (demo ? DEMO_CONVERSATIONS : []));
   const [selected, setSelected]   = useState(conversations[0]?.id || null);
   const [messages, setMessages]   = useState(DEMO_MESSAGES);
   const [sending, setSending]     = useState(false);
@@ -297,6 +299,28 @@ export default function MessagesCenter({ demo: demoProp, conversations: convProp
   const [query, setQuery]         = useState("");
 
   const current = conversations.find((c) => c.id === selected);
+
+  useEffect(() => {
+    if (demo || convProp) return;
+    loadMyMatches().then((matches) => {
+      const normalized = matches.map((match) => ({
+        id: `match-${match.id}`,
+        matchId: match.id,
+        company: "Eşleşen operasyon ortağı",
+        reference: String(match.id).slice(0, 8).toUpperCase(),
+        route: "Eşleşme sohbeti",
+        verified: true,
+        unread: 0,
+        last: "Güvenli sohbeti başlatın.",
+        time: match.matchedAt ? new Date(match.matchedAt).toLocaleDateString("tr-TR") : "",
+        kind: "shipment",
+        businessStatus: match.status === "ACTIVE" ? "Aktif eşleşme" : match.status,
+        amount: "",
+      }));
+      setConversations(normalized);
+      setSelected((value) => value || normalized[0]?.id || null);
+    }).catch(() => setConversations([]));
+  }, [demo, convProp]);
 
   // Load live messages when a conversation is selected
   useEffect(() => {
@@ -308,7 +332,7 @@ export default function MessagesCenter({ demo: demoProp, conversations: convProp
       .then((data) => {
         const normalized = (Array.isArray(data) ? data : data.content || []).map((m) => ({
           id: m.id,
-          mine: m.senderRole === "SHIPPER",
+          mine: String(m.senderUserId) === String(getSession()?.userId),
           text: m.body || m.content || "",
           time: m.createdAt
             ? new Date(m.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
@@ -337,7 +361,7 @@ export default function MessagesCenter({ demo: demoProp, conversations: convProp
     setSending(true);
     try {
       if (!demo && current.matchId) {
-        await sendMatchMessage(current.matchId, text, "SHIPPER");
+        await sendMatchMessage(current.matchId, text);
       }
       // Mark as sent
       setMessages((prev) => ({
