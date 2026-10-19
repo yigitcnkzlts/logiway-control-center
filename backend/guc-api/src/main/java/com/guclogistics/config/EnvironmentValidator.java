@@ -36,6 +36,21 @@ public class EnvironmentValidator {
     @Value("${spring.data.redis.host:}")
     private String redisHost;
 
+    @Value("${guc.notifications.email.enabled:false}")
+    private boolean emailNotificationsEnabled;
+
+    @Value("${guc.notifications.email.from:}")
+    private String emailFrom;
+
+    @Value("${spring.mail.host:}")
+    private String smtpHost;
+
+    @Value("${spring.mail.username:}")
+    private String smtpUsername;
+
+    @Value("${spring.mail.password:}")
+    private String smtpPassword;
+
     public EnvironmentValidator(Environment environment) {
         this.environment = environment;
     }
@@ -74,6 +89,15 @@ public class EnvironmentValidator {
             }
             if (containsWeak(datasourcePassword)) {
                 errors.add("DB_PASSWORD appears to be a weak/default value (prod)");
+            }
+            if (emailNotificationsEnabled) {
+                require(errors, "EMAIL_FROM / guc.notifications.email.from", emailFrom);
+                require(errors, "SMTP_HOST / spring.mail.host", smtpHost);
+                require(errors, "SMTP_USERNAME / spring.mail.username", smtpUsername);
+                require(errors, "SMTP_PASSWORD / spring.mail.password", smtpPassword);
+                if ("localhost".equalsIgnoreCase(smtpHost)) {
+                    errors.add("SMTP_HOST cannot be localhost when email notifications are enabled (prod)");
+                }
             }
         }
 

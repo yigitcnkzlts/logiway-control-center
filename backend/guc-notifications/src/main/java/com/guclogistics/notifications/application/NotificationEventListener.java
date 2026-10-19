@@ -4,19 +4,43 @@ import com.guclogistics.identity.domain.event.SuspiciousLoginDetectedEvent;
 import com.guclogistics.identity.domain.event.UserLoggedInEvent;
 import com.guclogistics.shared.events.matching.MatchCreatedEvent;
 import com.guclogistics.shared.events.offers.OfferAcceptedEvent;
+import com.guclogistics.shared.events.offers.OfferSubmittedEvent;
 import com.guclogistics.shared.events.verification.VerificationApprovedEvent;
 import com.guclogistics.shared.events.verification.VerificationRejectedEvent;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
+    private final EntityManager entityManager;
+
+    @EventListener
+    public void onOfferSubmitted(OfferSubmittedEvent event) {
+        try {
+            UUID loadOwnerUserId = (UUID) entityManager.createNativeQuery(
+                    "SELECT created_by_user_id FROM loads WHERE id=?1")
+                    .setParameter(1, event.loadId())
+                    .getSingleResult();
+            notificationService.notify(
+                    loadOwnerUserId,
+                    "OFFER_SUBMITTED",
+                    "Yeni teklif geldi",
+                    "Yük ilanınıza yeni bir taşıma teklifi gönderildi.",
+                    Map.of("offerId", event.offerId().toString(), "loadId", event.loadId().toString())
+            );
+        } catch (NoResultException ignored) {
+            // The load may have been removed; never guess a recipient.
+        }
+    }
 
     @EventListener
     public void onSuspiciousLogin(SuspiciousLoginDetectedEvent event) {

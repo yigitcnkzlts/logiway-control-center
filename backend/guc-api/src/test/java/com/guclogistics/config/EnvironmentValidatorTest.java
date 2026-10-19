@@ -53,6 +53,22 @@ class EnvironmentValidatorTest {
         assertThatCode(validator::validate).doesNotThrowAnyException();
     }
 
+    @Test
+    void enabledEmailWithoutSmtpFailsInProd() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        ReflectionTestUtils.setField(validator, "emailNotificationsEnabled", true);
+        ReflectionTestUtils.setField(validator, "emailFrom", "no-reply@logiway.example");
+        ReflectionTestUtils.setField(validator, "smtpHost", "");
+        ReflectionTestUtils.setField(validator, "smtpUsername", "");
+        ReflectionTestUtils.setField(validator, "smtpPassword", "");
+
+        assertThatThrownBy(validator::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("SMTP_HOST")
+                .hasMessageContaining("SMTP_USERNAME")
+                .hasMessageContaining("SMTP_PASSWORD");
+    }
+
     private void setValidConfig() {
         ReflectionTestUtils.setField(validator, "jwtSecret", VALID_JWT);
         ReflectionTestUtils.setField(validator, "encryptionKey", VALID_ENCRYPTION_KEY);
@@ -60,6 +76,7 @@ class EnvironmentValidatorTest {
         ReflectionTestUtils.setField(validator, "datasourceUsername", "guc");
         ReflectionTestUtils.setField(validator, "datasourcePassword", "strong-password-123");
         ReflectionTestUtils.setField(validator, "redisHost", "localhost");
+        ReflectionTestUtils.setField(validator, "emailNotificationsEnabled", false);
         when(environment.getActiveProfiles()).thenReturn(new String[]{"test"});
     }
 }

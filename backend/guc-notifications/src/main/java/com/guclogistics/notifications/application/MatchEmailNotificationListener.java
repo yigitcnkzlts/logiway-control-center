@@ -2,6 +2,9 @@ package com.guclogistics.notifications.application;
 
 import com.guclogistics.identity.infrastructure.persistence.UserJpaRepository;
 import com.guclogistics.shared.events.matching.MatchCreatedEvent;
+import com.guclogistics.shared.events.offers.OfferSubmittedEvent;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +24,7 @@ import java.util.UUID;
 public class MatchEmailNotificationListener {
     private final JavaMailSender mailSender;
     private final UserJpaRepository users;
+    private final EntityManager entityManager;
 
     @Value("${guc.notifications.email.from}")
     private String from;
@@ -31,6 +35,20 @@ public class MatchEmailNotificationListener {
                 "Yükünüz için uygun taşıyıcıyla eşleşme tamamlandı. Logiway'e girerek iletişim bilgilerini ve güvenli sohbeti açabilirsiniz.");
         send(event.offerCreatedByUserId(), "Teklifiniz eşleşti",
                 "Teklifiniz kabul edildi ve eşleşme oluşturuldu. Logiway'e girerek iletişim bilgilerini ve güvenli sohbeti açabilirsiniz.");
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOfferSubmitted(OfferSubmittedEvent event) {
+        try {
+            UUID loadOwnerUserId = (UUID) entityManager.createNativeQuery(
+                    "SELECT created_by_user_id FROM loads WHERE id=?1")
+                    .setParameter(1, event.loadId())
+                    .getSingleResult();
+            send(loadOwnerUserId, "Yük ilanınıza yeni teklif geldi",
+                    "Yük ilanınıza yeni bir taşıma teklifi gönderildi. Teklifi incelemek için Logiway'e giriş yapabilirsiniz.");
+        } catch (NoResultException ignored) {
+            log.warn("Offer email recipient could not be resolved for load {}", event.loadId());
+        }
     }
 
     private void send(UUID userId, String subject, String body) {
