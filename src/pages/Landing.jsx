@@ -11,7 +11,7 @@ const features = [
 const faqs = [
   ["Logiway kimler için?", "Nakliye firmaları, filo yöneticileri, yük sahipleri ve operasyon ekipleri için tasarlandı."],
   ["Kurulum ne kadar sürer?", "Ekibinizi ve araçlarınızı ekledikten sonra aynı gün operasyon takibine başlayabilirsiniz."],
-  ["Mobil uygulamayla birlikte çalışır mı?", "Evet. Web paneli operasyon ekibine, mobil deneyim ise sahadaki sürücülere göre kurgulandı."],
+  ["Telefondan kullanılabilir mi?", "Evet. Web arayüzü masaüstü ve mobil ekranlara uyum sağlayacak şekilde tasarlandı."],
 ];
 
 function Logo({ dark = false }) {
@@ -27,7 +27,7 @@ export default function Landing() {
       <nav className={menuOpen ? "nav-links is-open" : "nav-links"} aria-label="Ana menü">
         <a href="#urun" onClick={() => setMenuOpen(false)}>Ürün</a><a href="#nasil" onClick={() => setMenuOpen(false)}>Nasıl çalışır?</a><a href="#fiyat" onClick={() => setMenuOpen(false)}>Çözümler</a><a href="#sss" onClick={() => setMenuOpen(false)}>SSS</a>
       </nav>
-      <div className="nav-actions"><Link to="/giris" className="text-link">Giriş yap</Link><Link to="/giris" className="nav-cta">Ücretsiz dene <ArrowRight size={16}/></Link></div>
+      <div className="nav-actions"><Link to="/giris" className="text-link">Giriş yap</Link><Link to="/giris" className="nav-cta">Logiway’i keşfet <ArrowRight size={16}/></Link></div>
       <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menüyü aç" aria-expanded={menuOpen}>{menuOpen ? <X/> : <Menu/>}</button>
     </header>
 
@@ -37,7 +37,7 @@ export default function Landing() {
           <div className="eyebrow"><Sparkles size={14}/> Yük Veren ↔ Taşıyıcı Firma</div>
           <h1>Yükünüzü yayınlayın.<br/><span>Doğru taşıyıcıyı bulun.</span></h1>
           <p>Yük verenlerle doğrulanmış taşıyıcı firmaları aynı pazarda buluşturun; tekliften araç ve şoför atamasına, canlı takipten teslimata kadar sevkiyatı tek merkezden yönetin.</p>
-          <div className="hero-actions"><Link to="/giris" className="primary-cta">Ücretsiz başlayın <ArrowRight size={18}/></Link><a href="#nasil" className="secondary-cta">Nasıl çalıştığını görün</a></div>
+          <div className="hero-actions"><Link to="/giris" className="primary-cta">Çalışma alanını aç <ArrowRight size={18}/></Link><a href="#nasil" className="secondary-cta">Nasıl çalıştığını görün</a></div>
           <div className="trust-row"><span><Check size={15}/> Doğrulanmış iş akışı</span><span><Check size={15}/> Role özel çalışma alanları</span><span><Check size={15}/> Tek merkezden operasyon</span></div>
         </div>
         <div className="hero-product" aria-label="Logiway operasyon paneli önizlemesi">
@@ -63,7 +63,7 @@ export default function Landing() {
       <section className="pricing section pricing-simple" id="fiyat"><div className="pricing-copy"><span className="section-kicker">İHTİYACINIZA GÖRE ÖLÇEKLENİR</span><h2>Operasyonunuza uygun<br/>planı keşfedin.</h2><p>Yük verenlerden bağımsız taşıyıcılara ve çok araçlı lojistik firmalarına kadar Logiway farklı operasyon yapılarına uyum sağlar.</p><div className="hero-actions"><Link to="/giris" className="primary-cta">Logiway’i Keşfet <ArrowRight size={18}/></Link><a href="#nasil" className="secondary-cta">Nasıl çalışır?</a></div></div></section>
 
       <section className="faq section" id="sss"><div><span className="section-kicker">AKLINIZDA KALMASIN</span><h2>Sık sorulanlar.</h2></div><div className="faq-list">{faqs.map(([q,a],i)=><button key={q} onClick={()=>setOpenFaq(openFaq===i?-1:i)} className={openFaq===i?"faq-item open":"faq-item"} aria-expanded={openFaq===i}><span><strong>{q}</strong>{openFaq===i&&<p>{a}</p>}</span><ChevronDown size={19}/></button>)}</div></section>
-      <section className="final-cta"><div><span className="eyebrow"><Sparkles size={14}/> İlk seferinizi bugün yönetin</span><h2>Lojistik operasyonunuz<br/>bir adım öne geçsin.</h2></div><Link to="/giris" className="primary-cta light">Ücretsiz başlayın <ArrowRight size={18}/></Link></section>
+      <section className="final-cta"><div><span className="eyebrow"><Sparkles size={14}/> İlk seferinizi bugün yönetin</span><h2>Lojistik operasyonunuz<br/>bir adım öne geçsin.</h2></div><Link to="/giris" className="primary-cta light">Logiway’i keşfet <ArrowRight size={18}/></Link></section>
     </main>
     <footer className="landing-footer"><Logo dark/><p>Yükleri, filoları ve ekipleri aynı yolda buluşturur.</p><span>© 2026 Logiway. Tüm hakları saklıdır.</span></footer>
   </div>;
