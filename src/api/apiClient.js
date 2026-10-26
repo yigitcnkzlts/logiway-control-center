@@ -1,5 +1,7 @@
 const API_URL=(import.meta.env.VITE_GUC_API_URL||"").replace(/\/$/,"");
-const DEMO_MODE=import.meta.env.VITE_USE_MOCK_DATA==="true";
+// Shared demo access is intentionally disabled for production builds, even if
+// the public flag is set accidentally. Use `vite --mode demo` for demo builds.
+const DEMO_MODE=import.meta.env.VITE_USE_MOCK_DATA==="true"&&import.meta.env.MODE!=="production";
 const REQUEST_TIMEOUT_MS=Number(import.meta.env.VITE_API_TIMEOUT_MS||15000);
 let refreshPromise=null;
 

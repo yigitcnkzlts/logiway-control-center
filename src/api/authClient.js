@@ -1,4 +1,5 @@
 import { apiJson, clearSession, isApiConfigured, isDemoMode, saveTokens } from "./apiClient";
+import { createDemoSession, validateDemoCredentials } from "./demoAuth";
 
 function fingerprint(){
   const key="logiway-device-id";let value=localStorage.getItem(key);
@@ -27,11 +28,16 @@ const COUNTRY_CODES={"Almanya":"DE","Andorra":"AD","Arnavutluk":"AL","Avusturya"
 
 export const isBackendConfigured=()=>isApiConfigured()&&!isDemoMode();
 export const getSession=()=>{try{return JSON.parse(localStorage.getItem("guc-session")||"null")}catch{return null}};
-export const isAuthenticated=()=>isDemoMode()||Boolean(localStorage.getItem("guc-access-token")&&getSession());
-export const hasAnyRole=roles=>isDemoMode()||roles.some(role=>getSession()?.roles?.includes(role));
+export const isAuthenticated=()=>isDemoMode()?Boolean(getSession()?.demo):Boolean(localStorage.getItem("guc-access-token")&&getSession());
+export const hasAnyRole=roles=>roles.some(role=>getSession()?.roles?.includes(role));
 
-export async function loginUser({email,password}){
-  if(isDemoMode())return {mode:"demo"};
+export async function loginUser({email,password,role}){
+  if(isDemoMode()){
+    if(!validateDemoCredentials(email,password))throw new Error("E-posta veya şifre hatalı.");
+    const session=createDemoSession(role);
+    localStorage.setItem("guc-session",JSON.stringify(session));
+    return {...session,mode:"demo"};
+  }
   const tokens=await post("/api/v1/auth/login",{email,password,deviceFingerprint:fingerprint(),platform:"WEB",deviceName:navigator.userAgent.slice(0,120)});
   if(tokens.mfaRequired)return {...tokens,mode:"mfa"};
   saveSession(tokens);await hydrateCompany();return {...tokens,mode:"live"};
@@ -44,7 +50,11 @@ export async function verifyMfa({mfaToken,code}){
 }
 
 export async function registerUser({email,password,phone,role,company,country}){
-  if(isDemoMode())return {mode:"demo"};
+  if(isDemoMode()){
+    const session=createDemoSession(role);
+    localStorage.setItem("guc-session",JSON.stringify(session));
+    return {...session,mode:"demo"};
+  }
   const roleCode=role==="sofor"?"INDEPENDENT_DRIVER":role==="lojistik"?"LOGISTICS_COMPANY":"SHIPPER";
   const tokens=await post("/api/v1/auth/register",{email,password,phone,role:roleCode,companyName:company,companyCountry:COUNTRY_CODES[country]||"TR",deviceFingerprint:fingerprint(),platform:"WEB",deviceName:navigator.userAgent.slice(0,120),locale:"tr",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone});
   saveSession(tokens);
