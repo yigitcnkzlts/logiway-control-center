@@ -45,6 +45,8 @@ services:
         value: /app/data/uploads
       - key: EMAIL_NOTIFICATIONS_ENABLED
         value: false
+      - key: MANAGEMENT_HEALTH_MAIL_ENABLED
+        value: false
 
   - type: keyvalue
     name: logiway-redis
