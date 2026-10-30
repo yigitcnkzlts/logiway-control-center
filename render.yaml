@@ -1,0 +1,63 @@
+services:
+  - type: web
+    name: logiway-api
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: 10000
+      - key: DB_URL
+        fromDatabase:
+          name: logiway-postgres
+          property: connectionString
+      - key: DB_USER
+        fromDatabase:
+          name: logiway-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: logiway-postgres
+          property: password
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: logiway-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: logiway-redis
+          property: port
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGIN_PATTERNS
+        value: https://logiway-control-center.vercel.app,https://*.vercel.app
+      - key: GUC_STORAGE_PATH
+        value: /app/data/uploads
+      - key: EMAIL_NOTIFICATIONS_ENABLED
+        value: false
+
+  - type: keyvalue
+    name: logiway-redis
+    region: frankfurt
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: logiway-postgres
+    region: frankfurt
+    plan: free
+    databaseName: guclogistics
+    user: guclogistics
+    postgresMajorVersion: "16"
+    ipAllowList: []

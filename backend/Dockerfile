@@ -8,7 +8,9 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 RUN addgroup -S logiway && adduser -S logiway -G logiway
 COPY --from=build /workspace/backend/guc-api/target/guc-api-*.jar /app/app.jar
+COPY backend/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN mkdir -p /app/data/uploads && chown -R logiway:logiway /app
+RUN chmod +x /app/docker-entrypoint.sh
 USER logiway
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
