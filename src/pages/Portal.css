@@ -620,12 +620,67 @@ button:focus:not(:focus-visible){outline:none}
 .auth-error svg{width:17px;flex-shrink:0}
 .demo-note strong{color:#516c43}
 
+/* Yük Veren authentication */
+.login-page--shipper{grid-template-columns:minmax(390px,.88fr) minmax(520px,1.12fr);background:#fff}
+.login-page--shipper .login-aside{padding:48px clamp(42px,5vw,76px);background:linear-gradient(145deg,#0d261c 0%,#133629 58%,#1d4636 100%)}
+.login-page--shipper .login-aside:before{content:"";position:absolute;inset:auto -120px -180px auto;width:440px;height:440px;border:1px solid #c8f36826;border-radius:50%;box-shadow:0 0 0 54px #c8f3680a,0 0 0 108px #c8f36808}
+.login-page--shipper .login-aside h1{max-width:470px;font-size:clamp(38px,4vw,54px)}
+.login-page--shipper .login-aside p{max-width:500px;font-size:15px}
+.login-page--shipper .aside-icon{width:64px;height:64px;border:1px solid #ffffff12;background:#ffffff0d}
+.login-page--shipper .aside-icon svg{width:29px;height:29px;stroke-width:1.7}
+.login-page--shipper .login-main{padding:34px clamp(38px,7vw,104px) 46px;background:linear-gradient(180deg,#fff 0%,#fbfcfa 100%)}
+.login-page--shipper .login-main form{max-width:500px}
+.login-page--shipper .login-main h2{font-size:clamp(30px,3vw,40px);line-height:1.12;text-wrap:balance}
+.login-page--shipper .login-main input,.login-page--shipper .login-main select{height:52px;border-color:#cfd8cc;background:#fcfdfb;font-size:14px;transition:border-color .15s,box-shadow .15s,background .15s}
+.login-page--shipper .login-main input:hover,.login-page--shipper .login-main select:hover{border-color:#aebda9;background:#fff}
+.login-page--shipper .login-main input:focus-visible,.login-page--shipper .login-main select:focus-visible{border-color:#557745;box-shadow:0 0 0 4px #8fb57426;background:#fff}
+.login-page--shipper .auth-tabs button:focus-visible,.login-page--shipper button:focus-visible,.login-page--shipper a:focus-visible{outline:3px solid #7da164;outline-offset:3px}
+.login-page--shipper .password-field button{top:6px}
+.login-page--shipper .login-button{height:52px;border-radius:13px;box-shadow:0 10px 24px #102a201a;transition:background .15s,transform .15s,box-shadow .15s}
+.login-page--shipper .login-button:hover:not(:disabled){background:#1e4334;transform:translateY(-1px);box-shadow:0 14px 28px #102a2024}
+.login-page--shipper .login-button:disabled{transform:none;box-shadow:none}
+.shipper-form-heading{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.shipper-step-count{padding:6px 9px;border-radius:99px;background:#edf3e9;color:#49663a;font-size:10px;font-weight:800}
+.shipper-stepper{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 24px}
+.shipper-stepper span{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #dce3d9;border-radius:11px;color:#869189;font-size:11px;font-weight:700}
+.shipper-stepper b{width:23px;height:23px;border-radius:50%;background:#edf0eb;display:grid;place-items:center;font-size:10px}
+.shipper-stepper .active{border-color:#799969;background:#f3f7f0;color:#294621}
+.shipper-stepper .active b,.shipper-stepper .done b{background:#102a20;color:#c8f368}
+.shipper-register-step{display:none}
+.shipper-register-step.active{display:block}
+.password-checklist{display:flex;flex-wrap:wrap;gap:7px;margin:-7px 0 22px}
+.password-checklist span{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:7px;background:#f0f2ef;color:#849087;font-size:10px;font-weight:650}
+.password-checklist span svg{color:#aab3ad}
+.password-checklist span.valid{background:#e8f3e2;color:#456934}
+.password-checklist span.valid svg{color:#5f8d48}
+.legal-notice{display:flex;align-items:flex-start;gap:10px;margin:22px 0;padding:13px;border:1px solid #dce4d8;border-radius:11px;background:#f6f9f4;color:#53655a}
+.legal-notice>svg{flex:0 0 auto;color:#5d7e4d}
+.legal-notice span{display:flex;flex-direction:column;gap:3px}
+.legal-notice strong{font-size:11px}
+.legal-notice small{font-size:10px;line-height:1.5}
+.shipper-form-actions{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.shipper-back-button{height:52px;padding:0 17px;border:1px solid #d2dbcf;border-radius:13px;background:#fff;color:#40534a;display:flex;align-items:center;gap:6px;font-weight:750;cursor:pointer}
+.shipper-form-actions .login-button{margin:0}
+.login-page--shipper .auth-error{align-items:flex-start;border:1px solid #f0c9c4}
+
 @media(max-width:1000px){
+  .login-page--shipper{grid-template-columns:minmax(330px,.8fr) minmax(450px,1.2fr)}
+  .login-page--shipper .login-aside{padding:38px}
+  .login-page--shipper .login-main{padding-inline:40px}
   .role-page main{max-width:760px}
   .role-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   .role-card:last-child{grid-column:1/-1;min-height:390px}
 }
 @media(max-width:760px){
+  .login-page--shipper{grid-template-columns:1fr}
+  .login-page--shipper .login-aside{min-height:285px;padding:26px 24px}
+  .login-page--shipper .login-aside ul{display:none}
+  .login-page--shipper .login-aside h1{font-size:34px;margin:18px 0 10px}
+  .login-page--shipper .login-aside p{margin-bottom:0}
+  .login-page--shipper .login-main{padding:26px 20px 42px}
+  .login-page--shipper .login-main h2{font-size:30px}
+  .shipper-form-actions{grid-template-columns:1fr}
+  .shipper-form-actions .shipper-back-button{justify-content:center;order:2}
   .role-page main{padding:32px 18px 48px}
   .role-intro{text-align:left}
   .role-intro h1{font-size:38px;margin-top:13px}
