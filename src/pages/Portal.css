@@ -639,28 +639,11 @@ button:focus:not(:focus-visible){outline:none}
 .login-page--shipper .login-button{height:52px;border-radius:13px;box-shadow:0 10px 24px #102a201a;transition:background .15s,transform .15s,box-shadow .15s}
 .login-page--shipper .login-button:hover:not(:disabled){background:#1e4334;transform:translateY(-1px);box-shadow:0 14px 28px #102a2024}
 .login-page--shipper .login-button:disabled{transform:none;box-shadow:none}
-.shipper-form-heading{display:flex;align-items:center;justify-content:space-between;gap:18px}
-.shipper-step-count{padding:6px 9px;border-radius:99px;background:#edf3e9;color:#49663a;font-size:10px;font-weight:800}
-.shipper-stepper{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 24px}
-.shipper-stepper span{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #dce3d9;border-radius:11px;color:#869189;font-size:11px;font-weight:700}
-.shipper-stepper b{width:23px;height:23px;border-radius:50%;background:#edf0eb;display:grid;place-items:center;font-size:10px}
-.shipper-stepper .active{border-color:#799969;background:#f3f7f0;color:#294621}
-.shipper-stepper .active b,.shipper-stepper .done b{background:#102a20;color:#c8f368}
-.shipper-register-step{display:none}
-.shipper-register-step.active{display:block}
 .password-checklist{display:flex;flex-wrap:wrap;gap:7px;margin:-7px 0 22px}
 .password-checklist span{display:flex;align-items:center;gap:4px;padding:5px 7px;border-radius:7px;background:#f0f2ef;color:#849087;font-size:10px;font-weight:650}
 .password-checklist span svg{color:#aab3ad}
 .password-checklist span.valid{background:#e8f3e2;color:#456934}
 .password-checklist span.valid svg{color:#5f8d48}
-.legal-notice{display:flex;align-items:flex-start;gap:10px;margin:22px 0;padding:13px;border:1px solid #dce4d8;border-radius:11px;background:#f6f9f4;color:#53655a}
-.legal-notice>svg{flex:0 0 auto;color:#5d7e4d}
-.legal-notice span{display:flex;flex-direction:column;gap:3px}
-.legal-notice strong{font-size:11px}
-.legal-notice small{font-size:10px;line-height:1.5}
-.shipper-form-actions{display:grid;grid-template-columns:auto 1fr;gap:10px}
-.shipper-back-button{height:52px;padding:0 17px;border:1px solid #d2dbcf;border-radius:13px;background:#fff;color:#40534a;display:flex;align-items:center;gap:6px;font-weight:750;cursor:pointer}
-.shipper-form-actions .login-button{margin:0}
 .login-page--shipper .auth-error{align-items:flex-start;border:1px solid #f0c9c4}
 
 @media(max-width:1000px){
@@ -679,8 +662,6 @@ button:focus:not(:focus-visible){outline:none}
   .login-page--shipper .login-aside p{margin-bottom:0}
   .login-page--shipper .login-main{padding:26px 20px 42px}
   .login-page--shipper .login-main h2{font-size:30px}
-  .shipper-form-actions{grid-template-columns:1fr}
-  .shipper-form-actions .shipper-back-button{justify-content:center;order:2}
   .role-page main{padding:32px 18px 48px}
   .role-intro{text-align:left}
   .role-intro h1{font-size:38px;margin-top:13px}

@@ -1,343 +1,3570 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, BarChart3, Bell, Building2, Check, ChevronRight, ClipboardList, Clock3, CreditCard, Eye, EyeOff, FileCheck2, FileText, Languages, LogOut, Map, MapPin, MessageCircle, Navigation, Package, PackageCheck, PauseCircle, Plus, Route, Search, ShieldCheck, Timer, TrendingUp, Truck, UploadCloud, UserRound, Users, Wallet, Warehouse, Weight, X } from "lucide-react";
-import { getLoads, getMatches, getOffers, loadToJob, saveLoads, saveOffers, subscribeMarketplace } from "../services/marketplaceStore";
-import { demoCompanyDashboard, getCompanyDashboard } from "../api/companyDashboardClient";
-import { getSession, isBackendConfigured, loginUser, registerUser, verifyMfa } from "../api/authClient";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  Bell,
+  Building2,
+  Check,
+  ChevronRight,
+  ClipboardList,
+  Clock3,
+  CreditCard,
+  Eye,
+  EyeOff,
+  FileCheck2,
+  FileText,
+  Languages,
+  LogOut,
+  Map,
+  MapPin,
+  MessageCircle,
+  Navigation,
+  Package,
+  PackageCheck,
+  PauseCircle,
+  Plus,
+  Route,
+  Search,
+  ShieldCheck,
+  Timer,
+  TrendingUp,
+  Truck,
+  UploadCloud,
+  UserRound,
+  Users,
+  Wallet,
+  Warehouse,
+  Weight,
+  X,
+} from "lucide-react";
+import {
+  getLoads,
+  getMatches,
+  getOffers,
+  loadToJob,
+  saveLoads,
+  saveOffers,
+  subscribeMarketplace,
+} from "../services/marketplaceStore";
+import {
+  demoCompanyDashboard,
+  getCompanyDashboard,
+} from "../api/companyDashboardClient";
+import {
+  getSession,
+  isBackendConfigured,
+  loginUser,
+  registerUser,
+  verifyMfa,
+} from "../api/authClient";
 import { clearSession, isDemoMode } from "../api/apiClient";
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_PATTERN, PASSWORD_REQUIREMENTS } from "../api/authValidation";
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_PATTERN,
+  PASSWORD_REQUIREMENTS,
+} from "../api/authValidation";
 import { DEMO_CREDENTIALS } from "../api/demoAuth";
-import { acceptLiveOffer, cancelLiveLoad, createAndPublishLoad, liveMarketplaceEnabled, loadMarketplace, loadMyLoads, loadMyMatches, myOffers as loadMyOffers, offersForLoad, submitLiveOffer } from "../api/marketplaceClient";
-import { ActionCenter, DriverWorkspace, LoadDetailDrawer, MarketplaceFilters, MessagesCenter, NotificationCenter, ShipmentDetail } from "../features/operations/OperationsPanels";
+import {
+  acceptLiveOffer,
+  cancelLiveLoad,
+  createAndPublishLoad,
+  liveMarketplaceEnabled,
+  loadMarketplace,
+  loadMyLoads,
+  loadMyMatches,
+  myOffers as loadMyOffers,
+  offersForLoad,
+  submitLiveOffer,
+} from "../api/marketplaceClient";
+import {
+  ActionCenter,
+  DriverWorkspace,
+  LoadDetailDrawer,
+  MarketplaceFilters,
+  MessagesCenter,
+  NotificationCenter,
+  ShipmentDetail,
+} from "../features/operations/OperationsPanels";
 import OfferComparison from "../features/offers/OfferComparison";
 import { CommandPalette } from "../features/operations/CommandPalette";
 import { SavedLoads, BookmarkButton } from "../features/marketplace/SavedLoads";
 import { SavedFilters } from "../features/marketplace/SavedFilters";
-import { RecentSearchBadges, RecentlyViewed } from "../features/marketplace/RecentActivity";
+import {
+  RecentSearchBadges,
+  RecentlyViewed,
+} from "../features/marketplace/RecentActivity";
 import { usePreferences } from "../hooks/usePreferences";
 import "./Portal.css";
 
-const EUROPEAN_COUNTRIES=["Almanya","Andorra","Arnavutluk","Avusturya","Azerbaycan","Belarus","Belçika","Birleşik Krallık","Bosna-Hersek","Bulgaristan","Çekya","Danimarka","Ermenistan","Estonya","Finlandiya","Fransa","Gürcistan","Hırvatistan","Hollanda","İrlanda","İspanya","İsveç","İsviçre","İtalya","İzlanda","Karadağ","Kazakistan","Kıbrıs","Kosova","Kuzey Makedonya","Letonya","Lihtenştayn","Litvanya","Lüksemburg","Macaristan","Malta","Moldova","Monako","Norveç","Polonya","Portekiz","Romanya","Rusya","San Marino","Sırbistan","Slovakya","Slovenya","Türkiye","Ukrayna","Vatikan","Yunanistan"];
-const makeRecordId=prefix=>`${prefix}-${Date.now().toString().slice(-6)}`;
+const EUROPEAN_COUNTRIES = [
+  "Almanya",
+  "Andorra",
+  "Arnavutluk",
+  "Avusturya",
+  "Azerbaycan",
+  "Belarus",
+  "Belçika",
+  "Birleşik Krallık",
+  "Bosna-Hersek",
+  "Bulgaristan",
+  "Çekya",
+  "Danimarka",
+  "Ermenistan",
+  "Estonya",
+  "Finlandiya",
+  "Fransa",
+  "Gürcistan",
+  "Hırvatistan",
+  "Hollanda",
+  "İrlanda",
+  "İspanya",
+  "İsveç",
+  "İsviçre",
+  "İtalya",
+  "İzlanda",
+  "Karadağ",
+  "Kazakistan",
+  "Kıbrıs",
+  "Kosova",
+  "Kuzey Makedonya",
+  "Letonya",
+  "Lihtenştayn",
+  "Litvanya",
+  "Lüksemburg",
+  "Macaristan",
+  "Malta",
+  "Moldova",
+  "Monako",
+  "Norveç",
+  "Polonya",
+  "Portekiz",
+  "Romanya",
+  "Rusya",
+  "San Marino",
+  "Sırbistan",
+  "Slovakya",
+  "Slovenya",
+  "Türkiye",
+  "Ukrayna",
+  "Vatikan",
+  "Yunanistan",
+];
+const makeRecordId = (prefix) => `${prefix}-${Date.now().toString().slice(-6)}`;
 
 const seedLoads = [
-  { id:"LW-2847", cargo:"Soğuk zincir somon", from:"Bergen, Norveç", to:"Milano, İtalya", vehicle:"Frigorifik", weight:"18 ton", price:"4.850 €", date:"12 Eyl", status:"Teklif alıyor", offers:6 },
-  { id:"LW-2844", cargo:"Paletli otomotiv parçası", from:"Göteborg, İsveç", to:"Münih, Almanya", vehicle:"Tır", weight:"21 ton", price:"3.900 €", date:"13 Eyl", status:"Teklif alıyor", offers:3 },
-  { id:"LW-2838", cargo:"Ambalajlı makine ekipmanı", from:"Rotterdam, Hollanda", to:"Torino, İtalya", vehicle:"Tır", weight:"22 ton", price:"3.650 €", date:"14 Eyl", status:"Planlandı", offers:9 },
+  {
+    id: "LW-2847",
+    cargo: "Soğuk zincir somon",
+    from: "Bergen, Norveç",
+    to: "Milano, İtalya",
+    vehicle: "Frigorifik",
+    weight: "18 ton",
+    price: "4.850 €",
+    date: "12 Eyl",
+    status: "Teklif alıyor",
+    offers: 6,
+  },
+  {
+    id: "LW-2844",
+    cargo: "Paletli otomotiv parçası",
+    from: "Göteborg, İsveç",
+    to: "Münih, Almanya",
+    vehicle: "Tır",
+    weight: "21 ton",
+    price: "3.900 €",
+    date: "13 Eyl",
+    status: "Teklif alıyor",
+    offers: 3,
+  },
+  {
+    id: "LW-2838",
+    cargo: "Ambalajlı makine ekipmanı",
+    from: "Rotterdam, Hollanda",
+    to: "Torino, İtalya",
+    vehicle: "Tır",
+    weight: "22 ton",
+    price: "3.650 €",
+    date: "14 Eyl",
+    status: "Planlandı",
+    offers: 9,
+  },
 ];
 const jobs = [
-  { id:"LW-2847", cargo:"Soğuk zincir somon", from:"Bergen, Norveç", to:"Milano, İtalya", originCountry:"Norveç", destinationCountry:"İtalya", vehicle:"Frigorifik", weight:"18 ton", price:"4.850 €", date:"12 Eylül", distance:"2.430 km", company:"NordCargo AS", match:98 },
-  { id:"LW-2844", cargo:"Paletli otomotiv parçası", from:"Oslo, Norveç", to:"Verona, İtalya", originCountry:"Norveç", destinationCountry:"İtalya", vehicle:"Tır", weight:"21 ton", price:"4.400 €", date:"13 Eylül", distance:"2.050 km", company:"Scandic Freight", match:95 },
-  { id:"LW-2838", cargo:"Ambalajlı makine ekipmanı", from:"Göteborg, İsveç", to:"Torino, İtalya", originCountry:"İsveç", destinationCountry:"İtalya", vehicle:"Tır", weight:"22 ton", price:"3.650 €", date:"14 Eylül", distance:"1.780 km", company:"EuroLink AB", match:89 },
-  { id:"LW-2832", cargo:"Mobilya ve ev eşyası", from:"Trondheim, Norveç", to:"Hamburg, Almanya", originCountry:"Norveç", destinationCountry:"Almanya", vehicle:"Tır", weight:"16 ton", price:"3.200 €", date:"15 Eylül", distance:"1.520 km", company:"Norse Move AS", match:86 },
+  {
+    id: "LW-2847",
+    cargo: "Soğuk zincir somon",
+    from: "Bergen, Norveç",
+    to: "Milano, İtalya",
+    originCountry: "Norveç",
+    destinationCountry: "İtalya",
+    vehicle: "Frigorifik",
+    weight: "18 ton",
+    price: "4.850 €",
+    date: "12 Eylül",
+    distance: "2.430 km",
+    company: "NordCargo AS",
+    match: 98,
+  },
+  {
+    id: "LW-2844",
+    cargo: "Paletli otomotiv parçası",
+    from: "Oslo, Norveç",
+    to: "Verona, İtalya",
+    originCountry: "Norveç",
+    destinationCountry: "İtalya",
+    vehicle: "Tır",
+    weight: "21 ton",
+    price: "4.400 €",
+    date: "13 Eylül",
+    distance: "2.050 km",
+    company: "Scandic Freight",
+    match: 95,
+  },
+  {
+    id: "LW-2838",
+    cargo: "Ambalajlı makine ekipmanı",
+    from: "Göteborg, İsveç",
+    to: "Torino, İtalya",
+    originCountry: "İsveç",
+    destinationCountry: "İtalya",
+    vehicle: "Tır",
+    weight: "22 ton",
+    price: "3.650 €",
+    date: "14 Eylül",
+    distance: "1.780 km",
+    company: "EuroLink AB",
+    match: 89,
+  },
+  {
+    id: "LW-2832",
+    cargo: "Mobilya ve ev eşyası",
+    from: "Trondheim, Norveç",
+    to: "Hamburg, Almanya",
+    originCountry: "Norveç",
+    destinationCountry: "Almanya",
+    vehicle: "Tır",
+    weight: "16 ton",
+    price: "3.200 €",
+    date: "15 Eylül",
+    distance: "1.520 km",
+    company: "Norse Move AS",
+    match: 86,
+  },
 ];
 const roleInfo = {
-  "yuk-veren": { title:"Yük Veren", description:"Tüm taşıma operasyonunuzu tek merkezden yönetin.", features:["Yük ilanı oluşturma","Teklifleri karşılaştırma","Sevkiyat takibi"], icon:Building2 },
-  lojistik: { title:"Lojistik Firması", description:"Filonuzu verimli işlerle buluşturun ve büyütün.", features:["Yük bulma","Araç ve şoför yönetimi","Sefer ve kazanç yönetimi"], icon:Users },
-  sofor: { title:"Şoför", description:"Yoldaki işlerinize hızlı ve kolay erişin.", features:["Uygun yükleri görüntüleme","Teklif gönderme","Sefer yönetimi"], icon:Truck },
+  "yuk-veren": {
+    title: "Yük Veren",
+    description: "Tüm taşıma operasyonunuzu tek merkezden yönetin.",
+    features: [
+      "Yük ilanı oluşturma",
+      "Teklifleri karşılaştırma",
+      "Sevkiyat takibi",
+    ],
+    icon: Building2,
+  },
+  lojistik: {
+    title: "Lojistik Firması",
+    description: "Filonuzu verimli işlerle buluşturun ve büyütün.",
+    features: [
+      "Yük bulma",
+      "Araç ve şoför yönetimi",
+      "Sefer ve kazanç yönetimi",
+    ],
+    icon: Users,
+  },
+  sofor: {
+    title: "Şoför",
+    description: "Yoldaki işlerinize hızlı ve kolay erişin.",
+    features: [
+      "Uygun yükleri görüntüleme",
+      "Teklif gönderme",
+      "Sefer yönetimi",
+    ],
+    icon: Truck,
+  },
 };
 const roleSelectionInfo = {
   "yuk-veren": {
-    title:"Yük Veren",
-    description:"Taşıma ihtiyaçlarınızı tek merkezden yönetin ve doğru taşıyıcıyla hızlıca eşleşin.",
-    features:["Yük ilanı oluşturma","Teklifleri karşılaştırma","Sevkiyat takibi"],
-    buttonLabel:"Yük Veren olarak devam et",
-    icon:PackageCheck,
+    title: "Yük Veren",
+    description:
+      "Taşıma ihtiyaçlarınızı tek merkezden yönetin ve doğru taşıyıcıyla hızlıca eşleşin.",
+    features: [
+      "Yük ilanı oluşturma",
+      "Teklifleri karşılaştırma",
+      "Sevkiyat takibi",
+    ],
+    buttonLabel: "Yük Veren olarak devam et",
+    icon: PackageCheck,
   },
   lojistik: {
-    title:"Lojistik Firması",
-    description:"Filonuzu verimli işlerle buluşturun, tekliflerinizi yönetin ve operasyonunuzu büyütün.",
-    features:["Uygun yükleri bulma","Araç ve şoför yönetimi","Sefer ve kazanç yönetimi"],
-    buttonLabel:"Lojistik Firması olarak devam et",
-    icon:Warehouse,
+    title: "Lojistik Firması",
+    description:
+      "Filonuzu verimli işlerle buluşturun, tekliflerinizi yönetin ve operasyonunuzu büyütün.",
+    features: [
+      "Uygun yükleri bulma",
+      "Araç ve şoför yönetimi",
+      "Sefer ve kazanç yönetimi",
+    ],
+    buttonLabel: "Lojistik Firması olarak devam et",
+    icon: Warehouse,
   },
   sofor: {
-    title:"Şoför",
-    description:"Yoldaki işlerinize hızlı erişin, seferlerinizi takip edin ve teslimat sürecini yönetin.",
-    features:["Uygun yükleri görüntüleme","Teklif gönderme","Sefer yönetimi"],
-    buttonLabel:"Şoför olarak devam et",
-    icon:Truck,
+    title: "Şoför",
+    description:
+      "Yoldaki işlerinize hızlı erişin, seferlerinizi takip edin ve teslimat sürecini yönetin.",
+    features: [
+      "Uygun yükleri görüntüleme",
+      "Teklif gönderme",
+      "Sefer yönetimi",
+    ],
+    buttonLabel: "Şoför olarak devam et",
+    icon: Truck,
   },
 };
 const seedOffers = [
-  { id:1, load:"LW-2847", driver:"Lars Johansen", vehicle:"Frigorifik · NO DR 847", score:"4.9", trips:184, amount:"4.650 €", eta:"Bugün 14:30" },
-  { id:2, load:"LW-2847", driver:"Marco Bianchi", vehicle:"Frigorifik · IT MB 144", score:"4.8", trips:126, amount:"4.780 €", eta:"Bugün 16:00" },
-  { id:3, load:"LW-2844", driver:"Erik Lund", vehicle:"Tır · SE EL 615", score:"4.7", trips:98, amount:"3.760 €", eta:"Yarın 09:00" },
+  {
+    id: 1,
+    load: "LW-2847",
+    driver: "Lars Johansen",
+    vehicle: "Frigorifik · NO DR 847",
+    score: "4.9",
+    trips: 184,
+    amount: "4.650 €",
+    eta: "Bugün 14:30",
+  },
+  {
+    id: 2,
+    load: "LW-2847",
+    driver: "Marco Bianchi",
+    vehicle: "Frigorifik · IT MB 144",
+    score: "4.8",
+    trips: 126,
+    amount: "4.780 €",
+    eta: "Bugün 16:00",
+  },
+  {
+    id: 3,
+    load: "LW-2844",
+    driver: "Erik Lund",
+    vehicle: "Tır · SE EL 615",
+    score: "4.7",
+    trips: 98,
+    amount: "3.760 €",
+    eta: "Yarın 09:00",
+  },
 ];
 
-function Brand(){return <Link className="portal-brand" to="/"><span><Route size={19}/></span>logiway</Link>}
+function Brand() {
+  return (
+    <Link className="portal-brand" to="/">
+      <span>
+        <Route size={19} />
+      </span>
+      logiway
+    </Link>
+  );
+}
 
-export function RoleSelect(){return <div className="role-page"><header><Brand/><Link to="/" className="back-link"><ArrowLeft size={16}/> Ana sayfa</Link></header><main><div className="role-intro"><span>LOGIWAY&apos;E HOŞ GELDİNİZ</span><h1>Çalışma alanınızı seçin.</h1><p>Rolünüze uygun paneli seçin ve lojistik operasyonlarınızı yönetmeye başlayın.</p></div><div className="role-cards">{Object.entries(roleSelectionInfo).map(([key,info],index)=>{const Icon=info.icon;return <article className={`role-card role-card--${key}`} key={key}><div className="role-card-top"><span className="role-icon" aria-hidden="true"><Icon/></span><span className="role-card-number" aria-hidden="true">0{index+1}</span></div><div className="role-card-copy"><h2>{info.title}</h2><p>{info.description}</p><ul>{info.features.map(feature=><li key={feature}><Check size={15}/>{feature}</li>)}</ul></div><Link to={`/giris/${key}`} className="role-continue">{info.buttonLabel} <ArrowRight size={17}/></Link></article>})}</div><Link to="/dashboard" className="admin-access"><ShieldCheck size={18}/><span><strong>Yönetici girişi</strong><small>Operasyon kontrol merkezi</small></span><ChevronRight size={18}/></Link></main></div>}
+export function RoleSelect() {
+  return (
+    <div className="role-page">
+      <header>
+        <Brand />
+        <Link to="/" className="back-link">
+          <ArrowLeft size={16} /> Ana sayfa
+        </Link>
+      </header>
+      <main>
+        <div className="role-intro">
+          <span>LOGIWAY&apos;E HOŞ GELDİNİZ</span>
+          <h1>Çalışma alanınızı seçin.</h1>
+          <p>
+            Rolünüze uygun paneli seçin ve lojistik operasyonlarınızı yönetmeye
+            başlayın.
+          </p>
+        </div>
+        <div className="role-cards">
+          {Object.entries(roleSelectionInfo).map(([key, info], index) => {
+            const Icon = info.icon;
+            return (
+              <article className={`role-card role-card--${key}`} key={key}>
+                <div className="role-card-top">
+                  <span className="role-icon" aria-hidden="true">
+                    <Icon />
+                  </span>
+                  <span className="role-card-number" aria-hidden="true">
+                    0{index + 1}
+                  </span>
+                </div>
+                <div className="role-card-copy">
+                  <h2>{info.title}</h2>
+                  <p>{info.description}</p>
+                  <ul>
+                    {info.features.map((feature) => (
+                      <li key={feature}>
+                        <Check size={15} />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <Link to={`/giris/${key}`} className="role-continue">
+                  {info.buttonLabel} <ArrowRight size={17} />
+                </Link>
+              </article>
+            );
+          })}
+        </div>
+        <Link to="/dashboard" className="admin-access">
+          <ShieldCheck size={18} />
+          <span>
+            <strong>Yönetici girişi</strong>
+            <small>Operasyon kontrol merkezi</small>
+          </span>
+          <ChevronRight size={18} />
+        </Link>
+      </main>
+    </div>
+  );
+}
 
-export function PortalLogin(){
-  const {role}=useParams();const navigate=useNavigate();const info=roleInfo[role];const [busy,setBusy]=useState(false);const [register,setRegister]=useState(false);const [error,setError]=useState("");const [mfaToken,setMfaToken]=useState("");const [showPassword,setShowPassword]=useState(false);const [shipperStep,setShipperStep]=useState(1);const [shipperPassword,setShipperPassword]=useState("");const shipperFormRef=useRef(null);
-  if(!info)return <Navigate to="/giris" replace/>;const Icon=info.icon;
-  async function submit(e){
-    e.preventDefault();if(busy)return;setBusy(true);setError("");const form=e.currentTarget;const f=new FormData(form);const submittedEmail=form.elements.namedItem("email")?.value||f.get("email");const submittedPassword=form.elements.namedItem("password")?.value||f.get("password");
-    try{
-      if(mfaToken){
-        await verifyMfa({mfaToken,code:f.get("mfaCode")});
-      }else if(register){
-        const result=await registerUser({email:submittedEmail,password:submittedPassword,phone:f.get("phone"),role,company:f.get("displayName"),country:f.get("country")});
-        if(result.mode==="demo"){const current=JSON.parse(localStorage.getItem("logiway-registrations")||"[]");const accountRole=role==="sofor"?"Şoför":role==="lojistik"?"Lojistik firması":"Yük veren";const entry={id:makeRecordId("USR"),name:f.get("displayName"),email:submittedEmail,phone:f.get("phone"),role:accountRole,company:role==="sofor"?(f.get("company")||"Bağımsız taşıyıcı"):f.get("displayName"),country:f.get("country"),vehicle:f.get("vehicle")||"—",status:"İnceleniyor",joined:new Date().toLocaleDateString("tr-TR"),createdAt:new Date().toISOString()};localStorage.setItem("logiway-registrations",JSON.stringify([entry,...current]));window.dispatchEvent(new CustomEvent("logiway-marketplace-change"))}
-      }else{
-        const result=await loginUser({email:submittedEmail,password:submittedPassword,role});if(result.mode==="mfa"){setMfaToken(result.mfaToken);return}
+export function PortalLogin() {
+  const { role } = useParams();
+  const navigate = useNavigate();
+  const info = roleInfo[role];
+  const [busy, setBusy] = useState(false);
+  const [register, setRegister] = useState(false);
+  const [error, setError] = useState("");
+  const [mfaToken, setMfaToken] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [shipperPassword, setShipperPassword] = useState("");
+  if (!info) return <Navigate to="/giris" replace />;
+  const Icon = info.icon;
+  async function submit(e) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    const form = e.currentTarget;
+    const f = new FormData(form);
+    const submittedEmail =
+      form.elements.namedItem("email")?.value || f.get("email");
+    const submittedPassword =
+      form.elements.namedItem("password")?.value || f.get("password");
+    try {
+      if (mfaToken) {
+        await verifyMfa({ mfaToken, code: f.get("mfaCode") });
+      } else if (register) {
+        const result = await registerUser({
+          email: submittedEmail,
+          password: submittedPassword,
+          phone: f.get("phone"),
+          role,
+          company: f.get("displayName"),
+          country: f.get("country"),
+        });
+        if (result.mode === "demo") {
+          const current = JSON.parse(
+            localStorage.getItem("logiway-registrations") || "[]",
+          );
+          const accountRole =
+            role === "sofor"
+              ? "Şoför"
+              : role === "lojistik"
+                ? "Lojistik firması"
+                : "Yük veren";
+          const entry = {
+            id: makeRecordId("USR"),
+            name: f.get("displayName"),
+            email: submittedEmail,
+            phone: f.get("phone"),
+            role: accountRole,
+            company:
+              role === "sofor"
+                ? f.get("company") || "Bağımsız taşıyıcı"
+                : f.get("displayName"),
+            country: f.get("country"),
+            vehicle: f.get("vehicle") || "—",
+            status: "İnceleniyor",
+            joined: new Date().toLocaleDateString("tr-TR"),
+            createdAt: new Date().toISOString(),
+          };
+          localStorage.setItem(
+            "logiway-registrations",
+            JSON.stringify([entry, ...current]),
+          );
+          window.dispatchEvent(new CustomEvent("logiway-marketplace-change"));
+        }
+      } else {
+        const result = await loginUser({
+          email: submittedEmail,
+          password: submittedPassword,
+          role,
+        });
+        if (result.mode === "mfa") {
+          setMfaToken(result.mfaToken);
+          return;
+        }
       }
       navigate(`/${role}/panel`);
-    }catch(reason){setError(reason.message||"Giriş tamamlanamadı.")}finally{setBusy(false)}
+    } catch (reason) {
+      setError(reason.message || "Giriş tamamlanamadı.");
+    } finally {
+      setBusy(false);
+    }
   }
-  function selectAuthMode(nextRegister){setRegister(nextRegister);setError("");setMfaToken("");setShipperStep(1);setShipperPassword("");}
-  function continueShipperRegistration(){
-    const form=shipperFormRef.current;const email=form?.elements.namedItem("email");const password=form?.elements.namedItem("password");
-    if(!email?.reportValidity()||!password?.reportValidity())return;
-    setError("");setShipperStep(2);
+  function selectAuthMode(nextRegister) {
+    setRegister(nextRegister);
+    setError("");
+    setMfaToken("");
+    setShipperPassword("");
   }
-  const demoCredentials=isDemoMode()&&!register?DEMO_CREDENTIALS:{email:"",password:""};
-  if(role==="yuk-veren")return <div className="login-page login-page--shipper"><div className="login-aside"><Brand/><div><span className="aside-icon"><Building2/></span><h1>Yük Veren Paneli</h1><p>Yüklerinizi yayınlayın, taşıyıcı tekliflerini karşılaştırın ve sevkiyatlarınızı tek yerden yönetin.</p><ul>{roleInfo[role].features.map(feature=><li key={feature}><Check/> {feature}</li>)}</ul></div><small>© 2026 Logiway</small></div><main className="login-main"><Link to="/giris" className="back-link"><ArrowLeft size={16}/> Rol seçimine dön</Link><form ref={shipperFormRef} key={register?"shipper-register":"shipper-login"} onSubmit={submit} noValidate={false}>{!mfaToken&&<div className="auth-tabs" role="tablist" aria-label="Hesap işlemi"><button type="button" role="tab" aria-selected={!register} className={!register?"active":""} onClick={()=>selectAuthMode(false)}>Giriş yap</button><button type="button" role="tab" aria-selected={register} className={register?"active":""} onClick={()=>selectAuthMode(true)}>Hesap oluştur</button></div>}{mfaToken?<><span className="form-kicker">GÜVENLİK DOĞRULAMASI</span><h2>Doğrulama kodunu girin.</h2><p>Authenticator uygulamanızdaki 6 haneli kodu kullanın.</p><label>Tek kullanımlık kod<input required name="mfaCode" inputMode="numeric" autoComplete="one-time-code" minLength="6" maxLength="12" placeholder="000000" autoFocus/></label></>:register?<><div className="shipper-form-heading"><span className="form-kicker">YÜK VEREN KAYDI</span><span className="shipper-step-count">Adım {shipperStep} / 2</span></div><h2>Yük Veren hesabınızı oluşturun</h2><p>{shipperStep===1?"Güvenli hesap bilgilerinizi oluşturun.":"Firmanızın backend tarafından desteklenen bilgilerini tamamlayın."}</p><div className="shipper-stepper" aria-label="Kayıt adımları"><span className={shipperStep===1?"active":"done"}><b>1</b> Hesap bilgileri</span><span className={shipperStep===2?"active":""}><b>2</b> Firma bilgileri</span></div><section className={shipperStep===1?"shipper-register-step active":"shipper-register-step"} aria-hidden={shipperStep!==1}><label>E-posta adresi<input required name="email" type="email" maxLength="320" autoComplete="email" placeholder="ornek@firma.com" disabled={shipperStep!==1}/></label><label>Şifre<div className="password-field"><input required name="password" type={showPassword?"text":"password"} minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} pattern={PASSWORD_PATTERN} title={PASSWORD_REQUIREMENTS} autoComplete="new-password" value={shipperPassword} onChange={event=>setShipperPassword(event.target.value)} disabled={shipperStep!==1}/><button type="button" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword?"Şifreyi gizle":"Şifreyi göster"}>{showPassword?<EyeOff/>:<Eye/>}</button></div></label><PasswordChecklist password={shipperPassword}/><button type="button" className="login-button" onClick={continueShipperRegistration}>Firma bilgilerine devam et <ArrowRight size={18}/></button></section><section className={shipperStep===2?"shipper-register-step active":"shipper-register-step"} aria-hidden={shipperStep!==2}><label>Firma unvanı<input required name="displayName" minLength="2" maxLength="255" autoComplete="organization" placeholder="Firmanızın resmi unvanı" disabled={shipperStep!==2}/></label><label>Telefon numarası<input name="phone" type="tel" maxLength="32" autoComplete="tel" inputMode="tel" placeholder="05xx xxx xx xx" disabled={shipperStep!==2}/></label><label>Firma ülkesi<select required name="country" defaultValue="Türkiye" autoComplete="country-name" disabled={shipperStep!==2}>{EUROPEAN_COUNTRIES.map(x=><option key={x}>{x}</option>)}</select></label><div className="legal-notice"><ShieldCheck size={18}/><span><strong>Yasal bilgilendirme</strong><small>KVKK ve kullanım koşulları onay kaydı henüz backend tarafından desteklenmediği için bu ekranda onay alınmaz.</small></span></div><div className="shipper-form-actions"><button type="button" className="shipper-back-button" onClick={()=>setShipperStep(1)} disabled={busy}><ArrowLeft size={17}/> Geri</button><button className="login-button" disabled={busy} aria-busy={busy}>{busy?<><span className="button-spinner"/> Hesabınız oluşturuluyor…</>:<>Hesabımı oluştur <ArrowRight size={18}/></>}</button></div></section></>:<><span className="form-kicker">YÜK VEREN GİRİŞİ</span><h2>Yük Veren hesabınıza giriş yapın</h2><p>Yüklerinizi ve sevkiyatlarınızı yönetmek için hesabınıza erişin.</p><label>E-posta adresi<input required name="email" type="email" maxLength="320" autoComplete="email" placeholder="ornek@firma.com" defaultValue={demoCredentials.email}/></label><label>Şifre<div className="password-field"><input required name="password" type={showPassword?"text":"password"} maxLength={PASSWORD_MAX_LENGTH} autoComplete="current-password" defaultValue={demoCredentials.password}/><button type="button" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword?"Şifreyi gizle":"Şifreyi göster"}>{showPassword?<EyeOff/>:<Eye/>}</button></div></label></>}{error&&<div className="auth-error" role="alert"><AlertTriangle/> <span>{error}</span></div>}{(!register||mfaToken)&&<button className="login-button" disabled={busy} aria-busy={busy}>{busy?<><span className="button-spinner"/> İşlem yapılıyor…</>:<>{mfaToken?"Güvenli girişi tamamla":"Giriş yap"}<ArrowRight size={18}/></>}</button>}{mfaToken&&<button type="button" className="mfa-back" onClick={()=>setMfaToken("")}>E-posta ve şifre ekranına dön</button>}<div className="demo-note">{isBackendConfigured()?"Güvenli API bağlantısı etkin.":isDemoMode()?<>Demo hesabı: <strong>{DEMO_CREDENTIALS.email}</strong> · Şifre: <strong>{DEMO_CREDENTIALS.password}</strong></>:"Canlı backend bağlantısı bekleniyor."}</div></form></main></div>;
-  return <div className="login-page"><div className="login-aside"><Brand/><div><span className="aside-icon"><Icon/></span><h1>{info.title} çalışma alanı</h1><p>{info.description}</p><ul>{info.features.map(feature=><li key={feature}><Check/> {feature}</li>)}</ul></div><small>© 2026 Logiway</small></div><main className="login-main"><Link to="/giris" className="back-link"><ArrowLeft size={16}/> Rol seçimine dön</Link><form key={register?"register":"login"} onSubmit={submit}>{!mfaToken&&<div className="auth-tabs"><button type="button" className={!register?"active":""} onClick={()=>{setRegister(false);setError("")}}>Giriş yap</button><button type="button" className={register?"active":""} onClick={()=>{setRegister(true);setError("")}}>Hesap oluştur</button></div>}<span className="form-kicker">{info.title.toUpperCase()} {mfaToken?"GÜVENLİK DOĞRULAMASI":register?"KAYDI":"GİRİŞİ"}</span><h2>{mfaToken?"Doğrulama kodunu girin.":register?"Bilgilerinizi tamamlayın.":"Tekrar hoş geldiniz."}</h2><p>{mfaToken?"Authenticator uygulamanızdaki 6 haneli kodu kullanın.":register?"Size uygun çalışma alanını birkaç adımda hazırlayalım.":"Çalışma alanınıza erişmek için bilgilerinizi girin."}</p>{mfaToken?<label>Tek kullanımlık kod<input required name="mfaCode" inputMode="numeric" autoComplete="one-time-code" minLength="6" maxLength="12" placeholder="000000" autoFocus/></label>:<>{register&&<><label>{role==="sofor"?"Ad soyad":"Firma unvanı"}<input required name="displayName" minLength="2" maxLength="255" placeholder={role==="sofor"?"Adınız ve soyadınız":"Firma adı"}/></label><label>Telefon numarası<input required name="phone" type="tel" maxLength="32" placeholder="05xx xxx xx xx"/></label><label>Ülke<select required name="country" defaultValue="Türkiye">{EUROPEAN_COUNTRIES.map(x=><option key={x}>{x}</option>)}</select></label>{role==="sofor"&&<><label>Taşıyıcı firma<input name="company" maxLength="255" placeholder="Firma adı veya bağımsız taşıyıcı"/></label><label>Araç ve plaka<input required name="vehicle" placeholder="Örn. Tır · 34 ABC 123"/></label></>}</>}<label>E-posta adresi<input required name="email" type="email" maxLength="320" autoComplete="email" defaultValue={demoCredentials.email}/></label><label>Şifre<div className="password-field"><input required name="password" type={showPassword?"text":"password"} minLength={register?PASSWORD_MIN_LENGTH:undefined} maxLength={PASSWORD_MAX_LENGTH} pattern={register?PASSWORD_PATTERN:undefined} title={register?PASSWORD_REQUIREMENTS:undefined} aria-describedby={register?"password-requirements":undefined} autoComplete={register?"new-password":"current-password"} defaultValue={demoCredentials.password}/><button type="button" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword?"Şifreyi gizle":"Şifreyi göster"}>{showPassword?<EyeOff/>:<Eye/>}</button></div>{register&&<small id="password-requirements" className="password-requirements">{PASSWORD_REQUIREMENTS}</small>}</label></>}{error&&<div className="auth-error" role="alert"><AlertTriangle/> {error}</div>}<button className="login-button" disabled={busy} aria-busy={busy}>{busy?<><span className="button-spinner"/> İşlem yapılıyor…</>:<>{mfaToken?"Güvenli girişi tamamla":register?"Hesabımı oluştur":"Giriş yap"}<ArrowRight size={18}/></>}</button>{mfaToken&&<button type="button" className="mfa-back" onClick={()=>setMfaToken("")}>E-posta ve şifre ekranına dön</button>}<div className="demo-note">{isBackendConfigured()?"Güvenli API bağlantısı etkin.":isDemoMode()?<>Demo hesabı: <strong>{DEMO_CREDENTIALS.email}</strong> · Şifre: <strong>{DEMO_CREDENTIALS.password}</strong></>:"Canlı backend bağlantısı bekleniyor."}</div></form></main></div>
+  const demoCredentials =
+    isDemoMode() && !register ? DEMO_CREDENTIALS : { email: "", password: "" };
+  if (role === "yuk-veren")
+    return (
+      <div className="login-page login-page--shipper">
+        <div className="login-aside">
+          <Brand />
+          <div>
+            <span className="aside-icon">
+              <Building2 />
+            </span>
+            <h1>Yük Veren Paneli</h1>
+            <p>
+              Yüklerinizi yayınlayın, taşıyıcı tekliflerini karşılaştırın ve
+              sevkiyatlarınızı tek yerden yönetin.
+            </p>
+            <ul>
+              {roleInfo[role].features.map((feature) => (
+                <li key={feature}>
+                  <Check /> {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <small>© 2026 Logiway</small>
+        </div>
+        <main className="login-main">
+          <Link to="/giris" className="back-link">
+            <ArrowLeft size={16} /> Rol seçimine dön
+          </Link>
+          <form
+            key={register ? "shipper-register" : "shipper-login"}
+            onSubmit={submit}
+          >
+            {!mfaToken && (
+              <div
+                className="auth-tabs"
+                role="tablist"
+                aria-label="Hesap işlemi"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!register}
+                  className={!register ? "active" : ""}
+                  onClick={() => selectAuthMode(false)}
+                >
+                  Giriş yap
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={register}
+                  className={register ? "active" : ""}
+                  onClick={() => selectAuthMode(true)}
+                >
+                  Hesap oluştur
+                </button>
+              </div>
+            )}
+            {mfaToken ? (
+              <>
+                <span className="form-kicker">GÜVENLİK DOĞRULAMASI</span>
+                <h2>Doğrulama kodunu girin.</h2>
+                <p>Authenticator uygulamanızdaki 6 haneli kodu kullanın.</p>
+                <label>
+                  Tek kullanımlık kod
+                  <input
+                    required
+                    name="mfaCode"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    minLength="6"
+                    maxLength="12"
+                    placeholder="000000"
+                    autoFocus
+                  />
+                </label>
+              </>
+            ) : register ? (
+              <>
+                <span className="form-kicker">YÜK VEREN KAYDI</span>
+                <h2>Yük Veren hesabınızı oluşturun</h2>
+                <p>Firma ve hesap bilgilerinizi eksiksiz tamamlayın.</p>
+                <label>
+                  Firma unvanı
+                  <input
+                    required
+                    name="displayName"
+                    minLength="2"
+                    maxLength="255"
+                    autoComplete="organization"
+                    placeholder="Firmanızın resmi unvanı"
+                  />
+                </label>
+                <label>
+                  Telefon numarası
+                  <input
+                    name="phone"
+                    type="tel"
+                    maxLength="32"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    placeholder="05xx xxx xx xx"
+                  />
+                </label>
+                <label>
+                  Ülke
+                  <select
+                    required
+                    name="country"
+                    defaultValue="Türkiye"
+                    autoComplete="country-name"
+                  >
+                    {EUROPEAN_COUNTRIES.map((x) => (
+                      <option key={x}>{x}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  E-posta adresi
+                  <input
+                    required
+                    name="email"
+                    type="email"
+                    maxLength="320"
+                    autoComplete="email"
+                    placeholder="ornek@firma.com"
+                  />
+                </label>
+                <label>
+                  Şifre
+                  <div className="password-field">
+                    <input
+                      required
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      minLength={PASSWORD_MIN_LENGTH}
+                      maxLength={PASSWORD_MAX_LENGTH}
+                      pattern={PASSWORD_PATTERN}
+                      title={PASSWORD_REQUIREMENTS}
+                      autoComplete="new-password"
+                      value={shipperPassword}
+                      onChange={(event) =>
+                        setShipperPassword(event.target.value)
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={
+                        showPassword ? "Şifreyi gizle" : "Şifreyi göster"
+                      }
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
+                </label>
+                <PasswordChecklist password={shipperPassword} />
+              </>
+            ) : (
+              <>
+                <span className="form-kicker">YÜK VEREN GİRİŞİ</span>
+                <h2>Yük Veren hesabınıza giriş yapın</h2>
+                <p>
+                  Yüklerinizi ve sevkiyatlarınızı yönetmek için hesabınıza
+                  erişin.
+                </p>
+                <label>
+                  E-posta adresi
+                  <input
+                    required
+                    name="email"
+                    type="email"
+                    maxLength="320"
+                    autoComplete="email"
+                    placeholder="ornek@firma.com"
+                    defaultValue={demoCredentials.email}
+                  />
+                </label>
+                <label>
+                  Şifre
+                  <div className="password-field">
+                    <input
+                      required
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      maxLength={PASSWORD_MAX_LENGTH}
+                      autoComplete="current-password"
+                      defaultValue={demoCredentials.password}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={
+                        showPassword ? "Şifreyi gizle" : "Şifreyi göster"
+                      }
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
+                </label>
+              </>
+            )}
+            {error && (
+              <div className="auth-error" role="alert">
+                <AlertTriangle /> <span>{error}</span>
+              </div>
+            )}
+            <button className="login-button" disabled={busy} aria-busy={busy}>
+                {busy ? (
+                  <>
+                    <span className="button-spinner" /> {register ? "Hesabınız oluşturuluyor…" : "İşlem yapılıyor…"}
+                  </>
+                ) : (
+                  <>
+                    {mfaToken ? "Güvenli girişi tamamla" : register ? "Hesabımı oluştur" : "Giriş yap"}
+                    <ArrowRight size={18} />
+                  </>
+                )}
+            </button>
+            {mfaToken && (
+              <button
+                type="button"
+                className="mfa-back"
+                onClick={() => setMfaToken("")}
+              >
+                E-posta ve şifre ekranına dön
+              </button>
+            )}
+            <div className="demo-note">
+              {isBackendConfigured() ? (
+                "Güvenli API bağlantısı etkin."
+              ) : isDemoMode() ? (
+                <>
+                  Demo hesabı: <strong>{DEMO_CREDENTIALS.email}</strong> ·
+                  Şifre: <strong>{DEMO_CREDENTIALS.password}</strong>
+                </>
+              ) : (
+                "Canlı backend bağlantısı bekleniyor."
+              )}
+            </div>
+          </form>
+        </main>
+      </div>
+    );
+  return (
+    <div className="login-page">
+      <div className="login-aside">
+        <Brand />
+        <div>
+          <span className="aside-icon">
+            <Icon />
+          </span>
+          <h1>{info.title} çalışma alanı</h1>
+          <p>{info.description}</p>
+          <ul>
+            {info.features.map((feature) => (
+              <li key={feature}>
+                <Check /> {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <small>© 2026 Logiway</small>
+      </div>
+      <main className="login-main">
+        <Link to="/giris" className="back-link">
+          <ArrowLeft size={16} /> Rol seçimine dön
+        </Link>
+        <form key={register ? "register" : "login"} onSubmit={submit}>
+          {!mfaToken && (
+            <div className="auth-tabs">
+              <button
+                type="button"
+                className={!register ? "active" : ""}
+                onClick={() => {
+                  setRegister(false);
+                  setError("");
+                }}
+              >
+                Giriş yap
+              </button>
+              <button
+                type="button"
+                className={register ? "active" : ""}
+                onClick={() => {
+                  setRegister(true);
+                  setError("");
+                }}
+              >
+                Hesap oluştur
+              </button>
+            </div>
+          )}
+          <span className="form-kicker">
+            {info.title.toUpperCase()}{" "}
+            {mfaToken ? "GÜVENLİK DOĞRULAMASI" : register ? "KAYDI" : "GİRİŞİ"}
+          </span>
+          <h2>
+            {mfaToken
+              ? "Doğrulama kodunu girin."
+              : register
+                ? "Bilgilerinizi tamamlayın."
+                : "Tekrar hoş geldiniz."}
+          </h2>
+          <p>
+            {mfaToken
+              ? "Authenticator uygulamanızdaki 6 haneli kodu kullanın."
+              : register
+                ? "Size uygun çalışma alanını birkaç adımda hazırlayalım."
+                : "Çalışma alanınıza erişmek için bilgilerinizi girin."}
+          </p>
+          {mfaToken ? (
+            <label>
+              Tek kullanımlık kod
+              <input
+                required
+                name="mfaCode"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                minLength="6"
+                maxLength="12"
+                placeholder="000000"
+                autoFocus
+              />
+            </label>
+          ) : (
+            <>
+              {register && (
+                <>
+                  <label>
+                    {role === "sofor" ? "Ad soyad" : "Firma unvanı"}
+                    <input
+                      required
+                      name="displayName"
+                      minLength="2"
+                      maxLength="255"
+                      placeholder={
+                        role === "sofor" ? "Adınız ve soyadınız" : "Firma adı"
+                      }
+                    />
+                  </label>
+                  <label>
+                    Telefon numarası
+                    <input
+                      required
+                      name="phone"
+                      type="tel"
+                      maxLength="32"
+                      placeholder="05xx xxx xx xx"
+                    />
+                  </label>
+                  <label>
+                    Ülke
+                    <select required name="country" defaultValue="Türkiye">
+                      {EUROPEAN_COUNTRIES.map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {role === "sofor" && (
+                    <>
+                      <label>
+                        Taşıyıcı firma
+                        <input
+                          name="company"
+                          maxLength="255"
+                          placeholder="Firma adı veya bağımsız taşıyıcı"
+                        />
+                      </label>
+                      <label>
+                        Araç ve plaka
+                        <input
+                          required
+                          name="vehicle"
+                          placeholder="Örn. Tır · 34 ABC 123"
+                        />
+                      </label>
+                    </>
+                  )}
+                </>
+              )}
+              <label>
+                E-posta adresi
+                <input
+                  required
+                  name="email"
+                  type="email"
+                  maxLength="320"
+                  autoComplete="email"
+                  defaultValue={demoCredentials.email}
+                />
+              </label>
+              <label>
+                Şifre
+                <div className="password-field">
+                  <input
+                    required
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    minLength={register ? PASSWORD_MIN_LENGTH : undefined}
+                    maxLength={PASSWORD_MAX_LENGTH}
+                    pattern={register ? PASSWORD_PATTERN : undefined}
+                    title={register ? PASSWORD_REQUIREMENTS : undefined}
+                    aria-describedby={
+                      register ? "password-requirements" : undefined
+                    }
+                    autoComplete={
+                      register ? "new-password" : "current-password"
+                    }
+                    defaultValue={demoCredentials.password}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={
+                      showPassword ? "Şifreyi gizle" : "Şifreyi göster"
+                    }
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
+                {register && (
+                  <small
+                    id="password-requirements"
+                    className="password-requirements"
+                  >
+                    {PASSWORD_REQUIREMENTS}
+                  </small>
+                )}
+              </label>
+            </>
+          )}
+          {error && (
+            <div className="auth-error" role="alert">
+              <AlertTriangle /> {error}
+            </div>
+          )}
+          <button className="login-button" disabled={busy} aria-busy={busy}>
+            {busy ? (
+              <>
+                <span className="button-spinner" /> İşlem yapılıyor…
+              </>
+            ) : (
+              <>
+                {mfaToken
+                  ? "Güvenli girişi tamamla"
+                  : register
+                    ? "Hesabımı oluştur"
+                    : "Giriş yap"}
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+          {mfaToken && (
+            <button
+              type="button"
+              className="mfa-back"
+              onClick={() => setMfaToken("")}
+            >
+              E-posta ve şifre ekranına dön
+            </button>
+          )}
+          <div className="demo-note">
+            {isBackendConfigured() ? (
+              "Güvenli API bağlantısı etkin."
+            ) : isDemoMode() ? (
+              <>
+                Demo hesabı: <strong>{DEMO_CREDENTIALS.email}</strong> · Şifre:{" "}
+                <strong>{DEMO_CREDENTIALS.password}</strong>
+              </>
+            ) : (
+              "Canlı backend bağlantısı bekleniyor."
+            )}
+          </div>
+        </form>
+      </main>
+    </div>
+  );
 }
 
-function PasswordChecklist({password}){
-  const checks=[[password.length>=PASSWORD_MIN_LENGTH,"En az 12 karakter"],[/[A-Z]/.test(password),"Büyük harf"],[/[a-z]/.test(password),"Küçük harf"],[/\d/.test(password),"Rakam"],[/[^A-Za-z0-9]/.test(password),"Özel karakter"]];
-  return <div className="password-checklist" aria-live="polite">{checks.map(([valid,label])=><span className={valid?"valid":""} key={label}><Check size={13}/>{label}</span>)}</div>
+function PasswordChecklist({ password }) {
+  const checks = [
+    [password.length >= PASSWORD_MIN_LENGTH, "En az 12 karakter"],
+    [/[A-Z]/.test(password), "Büyük harf"],
+    [/[a-z]/.test(password), "Küçük harf"],
+    [/\d/.test(password), "Rakam"],
+    [/[^A-Za-z0-9]/.test(password), "Özel karakter"],
+  ];
+  return (
+    <div className="password-checklist" aria-live="polite">
+      {checks.map(([valid, label]) => (
+        <span className={valid ? "valid" : ""} key={label}>
+          <Check size={13} />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
-function PortalShell({role,children,active,onSelect}){
-  const routerNavigate=useNavigate();
-  const info=roleInfo[role];const Icon=info.icon;
-  const [lang,setLang]=useState(()=>localStorage.getItem("logiway-language")||"TR");
-  const [overlay,setOverlay]=useState(null);
-  const session=getSession()||{};
-  const companyName=session.companyName||"Firma çalışma alanı";
-  const {prefs,addRecentSearch,clearRecentSearches}=usePreferences();
+function PortalShell({ role, children, active, onSelect }) {
+  const routerNavigate = useNavigate();
+  const info = roleInfo[role];
+  const Icon = info.icon;
+  const [lang, setLang] = useState(
+    () => localStorage.getItem("logiway-language") || "TR",
+  );
+  const [overlay, setOverlay] = useState(null);
+  const session = getSession() || {};
+  const companyName = session.companyName || "Firma çalışma alanı";
+  const { prefs, addRecentSearch, clearRecentSearches } = usePreferences();
 
   // Ctrl+K / Cmd+K → open command palette
-  useEffect(()=>{
-    function onKey(e){
-      if((e.ctrlKey||e.metaKey)&&e.key==="k"){e.preventDefault();setOverlay(v=>v==="search"?null:"search");}
-      if(e.key==="Escape"&&overlay){setOverlay(null);}
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setOverlay((v) => (v === "search" ? null : "search"));
+      }
+      if (e.key === "Escape" && overlay) {
+        setOverlay(null);
+      }
     }
-    window.addEventListener("keydown",onKey);
-    return()=>window.removeEventListener("keydown",onKey);
-  },[overlay]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [overlay]);
 
-  const labels={EN:{"Özet":"Overview","İlanlarım":"My loads","Teklifler":"Offers","Geçmiş":"History","Belgeler":"Documents","Ödemeler":"Payments","Uygun işler":"Available jobs","Seferlerim":"My trips","Kazançlar":"Earnings","Canlı rota":"Live route","Takograf":"Tachograph"},DE:{"Özet":"Übersicht","İlanlarım":"Meine Ladungen","Teklifler":"Angebote","Geçmiş":"Verlauf","Belgeler":"Dokumente","Ödemeler":"Zahlungen","Uygun işler":"Verfügbare Aufträge","Seferlerim":"Meine Fahrten","Kazançlar":"Einnahmen","Canlı rota":"Live-Route","Takograf":"Tachograph"},IT:{"Özet":"Panoramica","İlanlarım":"I miei carichi","Teklifler":"Offerte","Geçmiş":"Storico","Belgeler":"Documenti","Ödemeler":"Pagamenti","Uygun işler":"Lavori disponibili","Seferlerim":"I miei viaggi","Kazançlar":"Guadagni","Canlı rota":"Percorso live","Takograf":"Tachigrafo"}};
-  const menu=role==="yuk-veren"?[["Özet",<ClipboardList size={18}/>],["İlanlarım",<Package size={18}/>],["Teklifler",<Wallet size={18}/>],["Aktif Sevkiyatlar",<Route size={18}/>],["Mesajlar",<MessageCircle size={18}/>],["Geçmiş",<Clock3 size={18}/>],["Belgeler",<FileText size={18}/>],["Ödemeler",<CreditCard size={18}/>],["Firma & Ekip",<Users size={18}/>]]:role==="lojistik"?[["Firma özeti",<BarChart3 size={18}/>],["Yük pazarı",<Package size={18}/>],["Kaydedilen Yükler",<Wallet size={18}/>],["Tekliflerim",<Wallet size={18}/>],["Sevkiyatlar",<Route size={18}/>],["Mesajlar",<MessageCircle size={18}/>],["Araçlar",<Truck size={18}/>],["Şoförler",<Users size={18}/>],["Canlı Harita",<Map size={18}/>],["Kazançlar",<TrendingUp size={18}/>],["Faturalar",<CreditCard size={18}/>],["Belgeler",<FileText size={18}/>],["Ekip",<Users size={18}/>]]:[["Atanmış iş",<Package size={18}/>],["Rota",<Map size={18}/>],["Mesajlar",<MessageCircle size={18}/>],["Belgeler",<FileText size={18}/>]];
-  function changeLanguage(e){setLang(e.target.value);localStorage.setItem("logiway-language",e.target.value)}
-  const quickLabel=role==="yuk-veren"?"Yeni yük ilanı":role==="lojistik"?"Yük Bul":"Durum güncelle";
-  function navigate(target){setOverlay(null);onSelect(target)}
-  function logout(){clearSession();routerNavigate("/giris",{replace:true})}
-  function handleSearch(q){addRecentSearch(q);}
+  const labels = {
+    EN: {
+      Özet: "Overview",
+      İlanlarım: "My loads",
+      Teklifler: "Offers",
+      Geçmiş: "History",
+      Belgeler: "Documents",
+      Ödemeler: "Payments",
+      "Uygun işler": "Available jobs",
+      Seferlerim: "My trips",
+      Kazançlar: "Earnings",
+      "Canlı rota": "Live route",
+      Takograf: "Tachograph",
+    },
+    DE: {
+      Özet: "Übersicht",
+      İlanlarım: "Meine Ladungen",
+      Teklifler: "Angebote",
+      Geçmiş: "Verlauf",
+      Belgeler: "Dokumente",
+      Ödemeler: "Zahlungen",
+      "Uygun işler": "Verfügbare Aufträge",
+      Seferlerim: "Meine Fahrten",
+      Kazançlar: "Einnahmen",
+      "Canlı rota": "Live-Route",
+      Takograf: "Tachograph",
+    },
+    IT: {
+      Özet: "Panoramica",
+      İlanlarım: "I miei carichi",
+      Teklifler: "Offerte",
+      Geçmiş: "Storico",
+      Belgeler: "Documenti",
+      Ödemeler: "Pagamenti",
+      "Uygun işler": "Lavori disponibili",
+      Seferlerim: "I miei viaggi",
+      Kazançlar: "Guadagni",
+      "Canlı rota": "Percorso live",
+      Takograf: "Tachigrafo",
+    },
+  };
+  const menu =
+    role === "yuk-veren"
+      ? [
+          ["Özet", <ClipboardList size={18} />],
+          ["İlanlarım", <Package size={18} />],
+          ["Teklifler", <Wallet size={18} />],
+          ["Aktif Sevkiyatlar", <Route size={18} />],
+          ["Mesajlar", <MessageCircle size={18} />],
+          ["Geçmiş", <Clock3 size={18} />],
+          ["Belgeler", <FileText size={18} />],
+          ["Ödemeler", <CreditCard size={18} />],
+          ["Firma & Ekip", <Users size={18} />],
+        ]
+      : role === "lojistik"
+        ? [
+            ["Firma özeti", <BarChart3 size={18} />],
+            ["Yük pazarı", <Package size={18} />],
+            ["Kaydedilen Yükler", <Wallet size={18} />],
+            ["Tekliflerim", <Wallet size={18} />],
+            ["Sevkiyatlar", <Route size={18} />],
+            ["Mesajlar", <MessageCircle size={18} />],
+            ["Araçlar", <Truck size={18} />],
+            ["Şoförler", <Users size={18} />],
+            ["Canlı Harita", <Map size={18} />],
+            ["Kazançlar", <TrendingUp size={18} />],
+            ["Faturalar", <CreditCard size={18} />],
+            ["Belgeler", <FileText size={18} />],
+            ["Ekip", <Users size={18} />],
+          ]
+        : [
+            ["Atanmış iş", <Package size={18} />],
+            ["Rota", <Map size={18} />],
+            ["Mesajlar", <MessageCircle size={18} />],
+            ["Belgeler", <FileText size={18} />],
+          ];
+  function changeLanguage(e) {
+    setLang(e.target.value);
+    localStorage.setItem("logiway-language", e.target.value);
+  }
+  const quickLabel =
+    role === "yuk-veren"
+      ? "Yeni yük ilanı"
+      : role === "lojistik"
+        ? "Yük Bul"
+        : "Durum güncelle";
+  function navigate(target) {
+    setOverlay(null);
+    onSelect(target);
+  }
+  function logout() {
+    clearSession();
+    routerNavigate("/giris", { replace: true });
+  }
+  function handleSearch(q) {
+    addRecentSearch(q);
+  }
 
-  return <div className={`portal-shell ${prefs.density==="compact"?"density-compact":""}`}>
-    <aside>
-      <Brand/>
-      <div className="workspace-badge"><span><Icon/></span><div><small>ÇALIŞMA ALANI</small><strong>{companyName}</strong></div></div>
-      <button className="sidebar-cta" onClick={()=>navigate(role==="yuk-veren"?"Yeni Yük":role==="lojistik"?"Yük pazarı":"Atanmış iş")}><Plus/> {role==="yuk-veren"?"Yük Oluştur":role==="lojistik"?"Yük Bul":"Görevi Aç"}</button>
-      <nav>{menu.map(([label,icon,badge])=><button onClick={()=>navigate(label)} className={active===label?"active":""} key={label}>{icon}<span>{labels[lang]?.[label]||label}</span>{badge&&<b>{badge}</b>}</button>)}</nav>
-      <button type="button" className="logout" onClick={logout}><LogOut size={17}/> Çıkış yap</button>
-    </aside>
-    <main className="portal-main">
-      <header>
-        <button className="global-search-trigger" onClick={()=>setOverlay(overlay==="search"?null:"search")} aria-label="Ara veya komut gir" aria-expanded={overlay==="search"} aria-controls="command-palette">
-          <Search/><span>Yük, firma, plaka veya sevkiyat ara...</span><kbd>⌘ K</kbd>
-        </button>
-        <div className="portal-header-actions">
-          <button className="quick-action" onClick={()=>navigate(role==="yuk-veren"?"Yeni Yük":role==="lojistik"?"Yük pazarı":"Atanmış iş")}><Plus/> <span>{quickLabel}</span></button>
-          <button className="header-icon" onClick={()=>navigate("Mesajlar")} aria-label="Mesajlar"><MessageCircle/></button>
-          <button className="header-icon" onClick={()=>setOverlay(overlay==="notifications"?null:"notifications")} aria-label="Bildirimler" aria-expanded={overlay==="notifications"}><Bell/></button>
-          <label className="language-picker"><Languages size={15}/><select value={lang} onChange={changeLanguage} aria-label="Dil seçin"><option>TR</option><option>EN</option><option>DE</option><option>IT</option></select></label>
-          <button className="user-avatar" onClick={()=>navigate(role==="yuk-veren"?"Firma & Ekip":role==="lojistik"?"Ekip":"Belgeler")} aria-label="Profil bilgileri"><UserRound/></button>
+  return (
+    <div
+      className={`portal-shell ${prefs.density === "compact" ? "density-compact" : ""}`}
+    >
+      <aside>
+        <Brand />
+        <div className="workspace-badge">
+          <span>
+            <Icon />
+          </span>
+          <div>
+            <small>ÇALIŞMA ALANI</small>
+            <strong>{companyName}</strong>
+          </div>
         </div>
-        {overlay==="notifications"&&<NotificationCenter onNavigate={navigate}/>}
-      </header>
+        <button
+          className="sidebar-cta"
+          onClick={() =>
+            navigate(
+              role === "yuk-veren"
+                ? "Yeni Yük"
+                : role === "lojistik"
+                  ? "Yük pazarı"
+                  : "Atanmış iş",
+            )
+          }
+        >
+          <Plus />{" "}
+          {role === "yuk-veren"
+            ? "Yük Oluştur"
+            : role === "lojistik"
+              ? "Yük Bul"
+              : "Görevi Aç"}
+        </button>
+        <nav>
+          {menu.map(([label, icon, badge]) => (
+            <button
+              onClick={() => navigate(label)}
+              className={active === label ? "active" : ""}
+              key={label}
+            >
+              {icon}
+              <span>{labels[lang]?.[label] || label}</span>
+              {badge && <b>{badge}</b>}
+            </button>
+          ))}
+        </nav>
+        <button type="button" className="logout" onClick={logout}>
+          <LogOut size={17} /> Çıkış yap
+        </button>
+      </aside>
+      <main className="portal-main">
+        <header>
+          <button
+            className="global-search-trigger"
+            onClick={() => setOverlay(overlay === "search" ? null : "search")}
+            aria-label="Ara veya komut gir"
+            aria-expanded={overlay === "search"}
+            aria-controls="command-palette"
+          >
+            <Search />
+            <span>Yük, firma, plaka veya sevkiyat ara...</span>
+            <kbd>⌘ K</kbd>
+          </button>
+          <div className="portal-header-actions">
+            <button
+              className="quick-action"
+              onClick={() =>
+                navigate(
+                  role === "yuk-veren"
+                    ? "Yeni Yük"
+                    : role === "lojistik"
+                      ? "Yük pazarı"
+                      : "Atanmış iş",
+                )
+              }
+            >
+              <Plus /> <span>{quickLabel}</span>
+            </button>
+            <button
+              className="header-icon"
+              onClick={() => navigate("Mesajlar")}
+              aria-label="Mesajlar"
+            >
+              <MessageCircle />
+            </button>
+            <button
+              className="header-icon"
+              onClick={() =>
+                setOverlay(overlay === "notifications" ? null : "notifications")
+              }
+              aria-label="Bildirimler"
+              aria-expanded={overlay === "notifications"}
+            >
+              <Bell />
+            </button>
+            <label className="language-picker">
+              <Languages size={15} />
+              <select
+                value={lang}
+                onChange={changeLanguage}
+                aria-label="Dil seçin"
+              >
+                <option>TR</option>
+                <option>EN</option>
+                <option>DE</option>
+                <option>IT</option>
+              </select>
+            </label>
+            <button
+              className="user-avatar"
+              onClick={() =>
+                navigate(
+                  role === "yuk-veren"
+                    ? "Firma & Ekip"
+                    : role === "lojistik"
+                      ? "Ekip"
+                      : "Belgeler",
+                )
+              }
+              aria-label="Profil bilgileri"
+            >
+              <UserRound />
+            </button>
+          </div>
+          {overlay === "notifications" && (
+            <NotificationCenter onNavigate={navigate} />
+          )}
+        </header>
 
-      {/* Command Palette — full-screen overlay, outside header */}
-      {overlay==="search"&&(
-        <CommandPalette
-          role={role}
-          onNavigate={navigate}
-          onClose={()=>setOverlay(null)}
-          recentSearches={prefs.recentSearches}
-          onSearch={handleSearch}
-          onClearSearches={clearRecentSearches}
-          recentlyViewed={prefs.recentlyViewed}
+        {/* Command Palette — full-screen overlay, outside header */}
+        {overlay === "search" && (
+          <CommandPalette
+            role={role}
+            onNavigate={navigate}
+            onClose={() => setOverlay(null)}
+            recentSearches={prefs.recentSearches}
+            onSearch={handleSearch}
+            onClearSearches={clearRecentSearches}
+            recentlyViewed={prefs.recentlyViewed}
+          />
+        )}
+
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function PageHeading({ kicker, title, text, action }) {
+  return (
+    <section className="portal-heading">
+      <div>
+        <span>{kicker}</span>
+        <h1>{title}</h1>
+        <p>{text}</p>
+      </div>
+      {action}
+    </section>
+  );
+}
+
+export function ShipperPortal() {
+  const [active, setActive] = useState("Özet");
+  const [loads, setLoads] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getLoads(seedLoads),
+  );
+  const [marketOffers, setMarketOffers] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getOffers(seedOffers),
+  );
+  const [matches, setMatches] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getMatches(),
+  );
+  const [modal, setModal] = useState(false);
+  const [success, setSuccess] = useState("");
+  useEffect(
+    () =>
+      subscribeMarketplace(() => {
+        setLoads(getLoads(seedLoads));
+        setMarketOffers(getOffers(seedOffers));
+        setMatches(getMatches());
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (!liveMarketplaceEnabled()) return;
+    let mounted = true;
+    loadMyLoads()
+      .then(async (remoteLoads) => {
+        if (!mounted) return;
+        setLoads(remoteLoads);
+        const [groups, remoteMatches] = await Promise.all([
+          Promise.all(
+            remoteLoads.map((load) => offersForLoad(load.id).catch(() => [])),
+          ),
+          loadMyMatches(),
+        ]);
+        const normalizedOffers = groups
+          .flat()
+          .map((o) => ({
+            id: o.id,
+            load: o.loadId,
+            driver: o.driverName || "Atanmamış şoför",
+            company:
+              o.offererType === "COMPANY"
+                ? "Lojistik firması"
+                : "Bağımsız şoför",
+            vehicle: `${o.vehicleType} · ${o.vehiclePlate}`,
+            score: "—",
+            trips: 0,
+            amount: `${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,
+            eta: o.availableAt
+              ? new Date(o.availableAt).toLocaleString("tr-TR")
+              : "Belirtilmedi",
+            status: o.status === "PENDING" ? "Bekliyor" : o.status,
+          }));
+        if (mounted) {
+          setMarketOffers(normalizedOffers);
+          setMatches(
+            remoteMatches.map((match) => {
+              const load = remoteLoads.find((x) => x.id === match.loadId);
+              const offer = normalizedOffers.find(
+                (x) => x.id === match.offerId,
+              );
+              return {
+                ...match,
+                cargo: load?.cargo || match.loadId,
+                route: load ? `${load.from} → ${load.to}` : "Sefer rotası",
+                driver: offer?.driver || "Atanmış şoför",
+                carrier: offer?.company || "Taşıyıcı",
+                amount: offer?.amount || "—",
+                matchedAt: match.matchedAt || match.createdAt,
+              };
+            }),
+          );
+        }
+      })
+      .catch((reason) => mounted && setSuccess(reason.message));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  async function addLoad(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const symbol =
+      f.get("currency") === "EUR"
+        ? "€"
+        : f.get("currency") === "GBP"
+          ? "£"
+          : "kr";
+    if (liveMarketplaceEnabled()) {
+      try {
+        await createAndPublishLoad(f);
+        const remoteLoads = await loadMyLoads();
+        setLoads(remoteLoads);
+        setModal(false);
+        setActive("İlanlarım");
+        setSuccess(
+          "İlan merkezi veritabanına kaydedildi ve eşleştirme havuzunda yayınlandı.",
+        );
+        setTimeout(() => setSuccess(""), 3500);
+        return;
+      } catch (reason) {
+        setSuccess(reason.message);
+        return;
+      }
+    }
+    const next = {
+      id: makeRecordId("LW"),
+      cargo: f.get("cargo"),
+      from: `${f.get("fromCity")}, ${f.get("fromCountry")} · ${f.get("fromPostal")}`,
+      to: `${f.get("toCity")}, ${f.get("toCountry")} · ${f.get("toPostal")}`,
+      originCountry: f.get("fromCountry"),
+      destinationCountry: f.get("toCountry"),
+      fromCity: f.get("fromCity"),
+      toCity: f.get("toCity"),
+      pickupDate: f.get("pickupDate"),
+      deliveryDate: f.get("deliveryDate"),
+      company: "Kaya Lojistik",
+      pickupAddress: f.get("pickupAddress"),
+      deliveryAddress: f.get("deliveryAddress"),
+      vehicle: f.get("vehicle"),
+      weight: `${f.get("weight")} ${f.get("unit")}`,
+      price: `${Number(f.get("price")).toLocaleString("de-DE")} ${symbol}`,
+      date: f.get("pickupDate").split("-").reverse().slice(0, 2).join("."),
+      status: "Teklif alıyor",
+      offers: 0,
+      createdAt: new Date().toISOString(),
+      packaging: f.get("packaging"),
+      payment: f.get("payment"),
+      notes: f.get("notes"),
+      details: {
+        pickupContact: f.get("pickupContact"),
+        pickupPhone: f.get("pickupPhone"),
+        pickupWindow: `${f.get("pickupStart")}–${f.get("pickupEnd")}`,
+        deliveryContact: f.get("deliveryContact"),
+        deliveryPhone: f.get("deliveryPhone"),
+        deliveryDate: f.get("deliveryDate"),
+        deliveryWindow: `${f.get("deliveryStart")}–${f.get("deliveryEnd")}`,
+        volume: f.get("volume"),
+        pallets: f.get("pallets"),
+        stackable: f.get("stackable"),
+        temperature: f.get("temperatureControl"),
+        adr: f.get("adr"),
+        insurance: f.get("insurance"),
+        tracking: f.get("tracking"),
+      },
+    };
+    const nextLoads = [next, ...loads];
+    setLoads(nextLoads);
+    saveLoads(nextLoads);
+    setModal(false);
+    setActive("İlanlarım");
+    setSuccess("İlan yayınlandı; şoför eşleştirme havuzuna anında eklendi.");
+    setTimeout(() => setSuccess(""), 3500);
+  }
+  async function acceptOffer(o) {
+    const load = loads.find((x) => x.id === o.load);
+    if (!load) return;
+    if (liveMarketplaceEnabled()) {
+      try {
+        await acceptLiveOffer(o.id);
+        setLoads(await loadMyLoads());
+        setSuccess(`${o.driver} ile eşleşme tamamlandı.`);
+        return;
+      } catch (reason) {
+        setSuccess(reason.message);
+        return;
+      }
+    }
+    const updatedOffers = marketOffers.map((x) =>
+      x.load === o.load
+        ? { ...x, status: x.id === o.id ? "Kabul edildi" : "Reddedildi" }
+        : x,
+    );
+    const updatedLoads = loads.map((x) =>
+      x.id === o.load ? { ...x, status: "Şoför eşleşti" } : x,
+    );
+    setMarketOffers(updatedOffers);
+    setLoads(updatedLoads);
+    saveOffers(updatedOffers);
+    saveLoads(updatedLoads);
+    setSuccess(`${o.driver} ile eşleşme tamamlandı.`);
+    setTimeout(() => setSuccess(""), 3500);
+  }
+  async function cancelLoad(load) {
+    try {
+      if (liveMarketplaceEnabled()) await cancelLiveLoad(load.id);
+      const next = loads.map((item) =>
+        item.id === load.id ? { ...item, status: "CANCELLED" } : item,
+      );
+      setLoads(liveMarketplaceEnabled() ? await loadMyLoads() : next);
+      setSuccess("İlan iptal edildi.");
+      setTimeout(() => setSuccess(""), 3500);
+    } catch (reason) {
+      setSuccess(reason.message);
+    }
+  }
+  const pendingOffers = marketOffers.filter((o) => o.status !== "Reddedildi");
+  return (
+    <PortalShell
+      role="yuk-veren"
+      active={active}
+      onSelect={(next) =>
+        next === "Yeni Yük" ? setModal(true) : setActive(next)
+      }
+    >
+      {success && (
+        <div className="success-banner portal-toast">
+          <Check /> {success}
+        </div>
+      )}
+      {active === "Özet" && (
+        <>
+          <PageHeading
+            kicker="OPERASYON ÖZETİ"
+            title="Yükleriniz kontrol altında."
+            text="İlanlarınızı yayınlayın, tekliften teslimata tüm operasyonu yönetin."
+            action={
+              <button className="portal-primary" onClick={() => setModal(true)}>
+                Yeni yük ilanı <Package size={18} />
+              </button>
+            }
+          />
+          <div className="portal-stats">
+            <article>
+              <span>Aktif ilan</span>
+              <strong>
+                {loads.filter((x) => x.status === "Teklif alıyor").length}
+              </strong>
+              <small>Şu anda yayında</small>
+            </article>
+            <article>
+              <span>Bekleyen teklif</span>
+              <strong>
+                {marketOffers.filter((x) => x.status === "Bekliyor").length}
+              </strong>
+              <small>Değerlendirme bekliyor</small>
+            </article>
+            <article className="dark">
+              <span>Aktif sevkiyat</span>
+              <strong>{matches.length}</strong>
+              <small>Operasyon takibinde</small>
+            </article>
+          </div>
+          <ActionCenter
+            role="yuk-veren"
+            counts={{
+              offers: marketOffers.filter((x) => x.status === "Bekliyor")
+                .length,
+              activeShipments: matches.length,
+              unread: 0,
+            }}
+            onNavigate={setActive}
+          />
+          <LoadList
+            loads={loads.slice(0, 3)}
+            onAll={() => setActive("İlanlarım")}
+            onCancel={cancelLoad}
+          />
+        </>
+      )}
+      {active === "İlanlarım" && (
+        <>
+          <PageHeading
+            kicker="İLAN YÖNETİMİ"
+            title="Tüm yük ilanlarınız."
+            text="Aktif, planlanmış ve tamamlanmış ilanlarınızı yönetin."
+            action={
+              <button className="portal-primary" onClick={() => setModal(true)}>
+                Yeni ilan <Package size={18} />
+              </button>
+            }
+          />
+          <LoadList loads={loads} onCancel={cancelLoad} />
+        </>
+      )}
+      {active === "Teklifler" && (
+        <>
+          <PageHeading
+            kicker="TEKLİF MERKEZİ"
+            title="Doğru taşıyıcıyı seçin."
+            text="Teklifleri karşılaştırın, mesajlaşın ve kabul edilen işi sevkiyata dönüştürün."
+          />
+          <OfferComparison
+            offers={pendingOffers}
+            onAccept={acceptOffer}
+            onMessage={() => setActive("Mesajlar")}
+          />
+        </>
+      )}
+      {active === "Aktif Sevkiyatlar" &&
+        (liveMarketplaceEnabled() ? (
+          <EmptyState
+            icon={<Route />}
+            title={
+              matches.length
+                ? "Sevkiyat detay bağlantısı hazırlanıyor"
+                : "Aktif sevkiyat bulunmuyor"
+            }
+            text={
+              matches.length
+                ? "Eşleşmeleriniz kaydedildi. Canlı detay ve durum akışı backend sözleşmesi tamamlandığında burada açılacak."
+                : "Bir teklif kabul edildiğinde sevkiyat burada görünecek."
+            }
+          />
+        ) : (
+          <ShipmentDetail onMessage={() => setActive("Mesajlar")} />
+        ))}{" "}
+      {active === "Mesajlar" && (
+        <MessagesCenter
+          demo={!liveMarketplaceEnabled()}
+          onOpenShipment={() => setActive("Aktif Sevkiyatlar")}
+        />
+      )}{" "}
+      {active === "Geçmiş" && (
+        <MonthlyHistory role="yuk-veren" matches={matches} />
+      )}{" "}
+      {active === "Belgeler" && <DocumentCenter role="yuk-veren" />}
+      {active === "Ödemeler" &&
+        (liveMarketplaceEnabled() ? (
+          <EmptyState
+            icon={<CreditCard />}
+            title="Ödeme entegrasyonu henüz etkin değil"
+            text="Gerçek ödeme sağlayıcısı bağlanmadan bakiye veya tahsilat işlemi gösterilmiyor."
+          />
+        ) : (
+          <PaymentCenter />
+        ))}
+      {active === "Firma & Ekip" && (
+        <EmptyState
+          icon={<Users />}
+          title="Firma ve ekip yönetimi"
+          text="Ekip üyeliği ve rol yetkileri için backend sözleşmesi bekleniyor."
         />
       )}
-
-      {children}
-    </main>
-  </div>;
+      {modal && (
+        <LoadModal onClose={() => setModal(false)} onSubmit={addLoad} />
+      )}
+    </PortalShell>
+  );
 }
 
-function PageHeading({kicker,title,text,action}){return <section className="portal-heading"><div><span>{kicker}</span><h1>{title}</h1><p>{text}</p></div>{action}</section>}
+function LoadList({ loads, onAll, onCancel }) {
+  const [expanded, setExpanded] = useState(null);
+  return (
+    <section className="portal-list">
+      <div className="list-head">
+        <div>
+          <h2>Yük ilanları</h2>
+          <p>Yayınladığınız ilanların güncel durumu ve adres detayları</p>
+        </div>
+        {onAll && (
+          <button onClick={onAll}>
+            Tümünü gör <ArrowRight size={15} />
+          </button>
+        )}
+      </div>
+      {loads.map((x) => (
+        <div className="load-entry" key={x.id}>
+          <article className="load-row">
+            <span className="load-box">
+              <Package />
+            </span>
+            <div className="load-route">
+              <strong>
+                {x.from} <ArrowRight /> {x.to}
+              </strong>
+              <small>
+                {x.id} · {x.cargo} · {x.vehicle} · {x.weight}
+              </small>
+              {x.pickupAddress && (
+                <em>
+                  <MapPin /> {x.pickupAddress} → {x.deliveryAddress}
+                </em>
+              )}
+            </div>
+            <div>
+              <small>HEDEF BÜTÇE</small>
+              <strong>{x.price}</strong>
+            </div>
+            <div>
+              <small>TEKLİFLER</small>
+              <strong>{x.offers} teklif</strong>
+            </div>
+            <span
+              className={`portal-status ${x.status === "Teklif alıyor" ? "green" : ""}`}
+            >
+              {x.status}
+            </span>
+            {onCancel &&
+              (x.status === "Teklif alıyor" || x.status === "DRAFT") && (
+                <button
+                  className="row-action"
+                  onClick={() => onCancel(x)}
+                  aria-label="İlanı iptal et"
+                >
+                  <X />
+                </button>
+              )}
+            <button
+              className={expanded === x.id ? "row-action open" : "row-action"}
+              onClick={() => setExpanded(expanded === x.id ? null : x.id)}
+              aria-label="İlan detaylarını aç"
+            >
+              <ChevronRight />
+            </button>
+          </article>
+          {expanded === x.id && <LoadDetails load={x} />}
+        </div>
+      ))}
+    </section>
+  );
+}
 
-export function ShipperPortal(){
-  const [active,setActive]=useState("Özet");
-  const [loads,setLoads]=useState(()=>liveMarketplaceEnabled()?[]:getLoads(seedLoads));
-  const [marketOffers,setMarketOffers]=useState(()=>liveMarketplaceEnabled()?[]:getOffers(seedOffers));
-  const [matches,setMatches]=useState(()=>liveMarketplaceEnabled()?[]:getMatches());
-  const [modal,setModal]=useState(false);const [success,setSuccess]=useState("");
-  useEffect(()=>subscribeMarketplace(()=>{setLoads(getLoads(seedLoads));setMarketOffers(getOffers(seedOffers));setMatches(getMatches())}),[]);
-  useEffect(()=>{
-    if(!liveMarketplaceEnabled())return;
-    let mounted=true;
-    loadMyLoads().then(async remoteLoads=>{
-      if(!mounted)return;
-      setLoads(remoteLoads);
-      const [groups,remoteMatches]=await Promise.all([Promise.all(remoteLoads.map(load=>offersForLoad(load.id).catch(()=>[]))),loadMyMatches()]);
-      const normalizedOffers=groups.flat().map(o=>({id:o.id,load:o.loadId,driver:o.driverName||"Atanmamış şoför",company:o.offererType==="COMPANY"?"Lojistik firması":"Bağımsız şoför",vehicle:`${o.vehicleType} · ${o.vehiclePlate}`,score:"—",trips:0,amount:`${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,eta:o.availableAt?new Date(o.availableAt).toLocaleString("tr-TR"):"Belirtilmedi",status:o.status==="PENDING"?"Bekliyor":o.status}));
-      if(mounted){setMarketOffers(normalizedOffers);setMatches(remoteMatches.map(match=>{const load=remoteLoads.find(x=>x.id===match.loadId);const offer=normalizedOffers.find(x=>x.id===match.offerId);return {...match,cargo:load?.cargo||match.loadId,route:load?`${load.from} → ${load.to}`:"Sefer rotası",driver:offer?.driver||"Atanmış şoför",carrier:offer?.company||"Taşıyıcı",amount:offer?.amount||"—",matchedAt:match.matchedAt||match.createdAt}}))}
-    }).catch(reason=>mounted&&setSuccess(reason.message));
-    return()=>{mounted=false};
-  },[]);
-  async function addLoad(e){
-    e.preventDefault();const f=new FormData(e.currentTarget);const symbol=f.get("currency")==="EUR"?"€":f.get("currency")==="GBP"?"£":"kr";
-    if(liveMarketplaceEnabled()){try{await createAndPublishLoad(f);const remoteLoads=await loadMyLoads();setLoads(remoteLoads);setModal(false);setActive("İlanlarım");setSuccess("İlan merkezi veritabanına kaydedildi ve eşleştirme havuzunda yayınlandı.");setTimeout(()=>setSuccess(""),3500);return}catch(reason){setSuccess(reason.message);return}}
-    const next={id:makeRecordId("LW"),cargo:f.get("cargo"),from:`${f.get("fromCity")}, ${f.get("fromCountry")} · ${f.get("fromPostal")}`,to:`${f.get("toCity")}, ${f.get("toCountry")} · ${f.get("toPostal")}`,originCountry:f.get("fromCountry"),destinationCountry:f.get("toCountry"),fromCity:f.get("fromCity"),toCity:f.get("toCity"),pickupDate:f.get("pickupDate"),deliveryDate:f.get("deliveryDate"),company:"Kaya Lojistik",pickupAddress:f.get("pickupAddress"),deliveryAddress:f.get("deliveryAddress"),vehicle:f.get("vehicle"),weight:`${f.get("weight")} ${f.get("unit")}`,price:`${Number(f.get("price")).toLocaleString("de-DE")} ${symbol}`,date:f.get("pickupDate").split("-").reverse().slice(0,2).join("."),status:"Teklif alıyor",offers:0,createdAt:new Date().toISOString(),packaging:f.get("packaging"),payment:f.get("payment"),notes:f.get("notes"),details:{pickupContact:f.get("pickupContact"),pickupPhone:f.get("pickupPhone"),pickupWindow:`${f.get("pickupStart")}–${f.get("pickupEnd")}`,deliveryContact:f.get("deliveryContact"),deliveryPhone:f.get("deliveryPhone"),deliveryDate:f.get("deliveryDate"),deliveryWindow:`${f.get("deliveryStart")}–${f.get("deliveryEnd")}`,volume:f.get("volume"),pallets:f.get("pallets"),stackable:f.get("stackable"),temperature:f.get("temperatureControl"),adr:f.get("adr"),insurance:f.get("insurance"),tracking:f.get("tracking")}};
-    const nextLoads=[next,...loads];setLoads(nextLoads);saveLoads(nextLoads);setModal(false);setActive("İlanlarım");setSuccess("İlan yayınlandı; şoför eşleştirme havuzuna anında eklendi.");setTimeout(()=>setSuccess(""),3500)
+function LoadDetails({ load }) {
+  const d = load.details || {};
+  const pickupQuery = encodeURIComponent(
+    `${load.pickupAddress || ""}, ${load.from}`,
+  );
+  const deliveryQuery = encodeURIComponent(
+    `${load.deliveryAddress || ""}, ${load.to}`,
+  );
+  const facts = [
+    ["Yükleme penceresi", d.pickupWindow],
+    ["Yükleme yetkilisi", d.pickupContact],
+    ["Yükleme telefonu", d.pickupPhone],
+    ["Yükleme referansı", d.pickupReference],
+    ["Teslim penceresi", d.deliveryWindow],
+    ["Teslim yetkilisi", d.deliveryContact],
+    ["Teslim telefonu", d.deliveryPhone],
+    ["Ölçüler", d.dimensions],
+    ["Hacim", d.volume && `${d.volume} m³`],
+    ["Palet", d.pallets],
+    ["İstiflenebilir", d.stackable],
+    ["Sıcaklık", d.temperature],
+    ["ADR", d.adr],
+    ["Yük değeri", d.cargoValue],
+    ["Sigorta", d.insurance],
+    ["EORI / gümrük", d.eori],
+    ["Takip tercihi", d.tracking],
+    ["Ödeme", load.payment],
+  ];
+  return (
+    <div className="load-details">
+      <div className="address-cards">
+        <article>
+          <span>A</span>
+          <div>
+            <small>TAM YÜKLEME KONUMU</small>
+            <strong>{load.pickupAddress || load.from}</strong>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${pickupQuery}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MapPin /> Adresi haritada aç
+            </a>
+          </div>
+        </article>
+        <article>
+          <span>B</span>
+          <div>
+            <small>TAM TESLİMAT KONUMU</small>
+            <strong>{load.deliveryAddress || load.to}</strong>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${deliveryQuery}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MapPin /> Adresi haritada aç
+            </a>
+          </div>
+        </article>
+      </div>
+      <div className="load-facts">
+        {facts
+          .filter(([, value]) => value)
+          .map(([label, value]) => (
+            <div key={label}>
+              <small>{label}</small>
+              <strong>{value}</strong>
+            </div>
+          ))}
+      </div>
+      {load.notes && (
+        <p className="load-notes">
+          <FileText />{" "}
+          <span>
+            <strong>Operasyon notu</strong>
+            {load.notes}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function LoadModal({ onClose, onSubmit }) {
+  const [step, setStep] = useState(0);
+  const steps = [
+    "Rota",
+    "Yük bilgileri",
+    "Araç gereksinimi",
+    "Ticari bilgiler",
+    "Kontrol ve yayınla",
+  ];
+  function next(event) {
+    event.preventDefault();
+    const current = event.currentTarget
+      .closest("form")
+      .querySelector(".wizard-step.active");
+    const invalid = current.querySelector(":invalid");
+    if (invalid) {
+      invalid.reportValidity();
+      return;
+    }
+    setStep((value) => Math.min(steps.length - 1, value + 1));
   }
-  async function acceptOffer(o){
-    const load=loads.find(x=>x.id===o.load);if(!load)return;
-    if(liveMarketplaceEnabled()){try{await acceptLiveOffer(o.id);setLoads(await loadMyLoads());setSuccess(`${o.driver} ile eşleşme tamamlandı.`);return}catch(reason){setSuccess(reason.message);return}}
-    const updatedOffers=marketOffers.map(x=>x.load===o.load?{...x,status:x.id===o.id?"Kabul edildi":"Reddedildi"}:x);
-    const updatedLoads=loads.map(x=>x.id===o.load?{...x,status:"Şoför eşleşti"}:x);
-    setMarketOffers(updatedOffers);setLoads(updatedLoads);saveOffers(updatedOffers);saveLoads(updatedLoads);setSuccess(`${o.driver} ile eşleşme tamamlandı.`);setTimeout(()=>setSuccess(""),3500);
+  return (
+    <div className="portal-modal" role="dialog" aria-modal="true">
+      <form onSubmit={onSubmit}>
+        <div className="modal-head">
+          <div>
+            <span>YENİ YÜK İLANI</span>
+            <h2>{steps[step]}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Kapat">
+            <X />
+          </button>
+        </div>
+        <div className="load-stepper">
+          {steps.map((label, index) => (
+            <button
+              type="button"
+              className={index === step ? "active" : index < step ? "done" : ""}
+              onClick={() => index < step && setStep(index)}
+              key={label}
+            >
+              <i>{index < step ? <Check /> : index + 1}</i>
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+        <div className={step === 0 ? "wizard-step active" : "wizard-step"}>
+          <div className="form-section-title">
+            Yükleme <span>Adres bilgileri</span>
+          </div>
+          <div className="form-grid form-grid-3">
+            <label>
+              Ülke
+              <select name="fromCountry" defaultValue="Türkiye">
+                {EUROPEAN_COUNTRIES.map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Şehir
+              <input required name="fromCity" placeholder="Tekirdağ" />
+            </label>
+            <label>
+              Posta kodu
+              <input required name="fromPostal" placeholder="59000" />
+            </label>
+            <label className="wide">
+              Açık adres
+              <input
+                required
+                name="pickupAddress"
+                placeholder="Cadde, bina/depo adı ve kapı numarası"
+              />
+            </label>
+            <label>
+              Yükleme tarihi
+              <input required name="pickupDate" type="date" />
+            </label>
+            <label>
+              Saat başlangıcı
+              <input required name="pickupStart" type="time" />
+            </label>
+            <label>
+              Saat bitişi
+              <input required name="pickupEnd" type="time" />
+            </label>
+            <label>
+              Yetkili kişi
+              <input required name="pickupContact" />
+            </label>
+            <label>
+              Telefon
+              <input required name="pickupPhone" type="tel" />
+            </label>
+          </div>
+          <div className="form-section-title">
+            Teslimat <span>Adres bilgileri</span>
+          </div>
+          <div className="form-grid form-grid-3">
+            <label>
+              Ülke
+              <select name="toCountry" defaultValue="Almanya">
+                {EUROPEAN_COUNTRIES.map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Şehir
+              <input required name="toCity" placeholder="Berlin" />
+            </label>
+            <label>
+              Posta kodu
+              <input required name="toPostal" placeholder="10115" />
+            </label>
+            <label className="wide">
+              Açık adres
+              <input
+                required
+                name="deliveryAddress"
+                placeholder="Cadde, tesis/depo adı ve kapı numarası"
+              />
+            </label>
+            <label>
+              Teslim tarihi
+              <input required name="deliveryDate" type="date" />
+            </label>
+            <label>
+              Saat başlangıcı
+              <input required name="deliveryStart" type="time" />
+            </label>
+            <label>
+              Saat bitişi
+              <input required name="deliveryEnd" type="time" />
+            </label>
+            <label>
+              Yetkili kişi
+              <input required name="deliveryContact" />
+            </label>
+            <label>
+              Telefon
+              <input required name="deliveryPhone" type="tel" />
+            </label>
+          </div>
+        </div>
+        <div className={step === 1 ? "wizard-step active" : "wizard-step"}>
+          <div className="form-grid">
+            <label className="wide">
+              Yük adı
+              <input
+                required
+                name="cargo"
+                placeholder="Örn. Paletli otomotiv parçası"
+              />
+            </label>
+            <label>
+              Yük tipi
+              <select name="loadType">
+                <option>Genel kargo</option>
+                <option>Soğuk zincir</option>
+                <option>Tehlikeli madde</option>
+                <option>Proje yükü</option>
+              </select>
+            </label>
+            <label>
+              Ambalaj
+              <select name="packaging">
+                <option>Euro palet</option>
+                <option>Kolili</option>
+                <option>Çuvallı</option>
+                <option>Dökme</option>
+                <option>Diğer</option>
+              </select>
+            </label>
+            <label>
+              Ağırlık (ton)
+              <input
+                required
+                name="weight"
+                type="number"
+                min="0.1"
+                step="0.1"
+              />
+              <input type="hidden" name="unit" value="ton" />
+            </label>
+            <label>
+              Hacim (m³)
+              <input name="volume" type="number" min="0" step="0.1" />
+            </label>
+            <label>
+              Palet sayısı
+              <input name="pallets" type="number" min="0" />
+            </label>
+            <label>
+              İstiflenebilir
+              <select name="stackable">
+                <option>Evet</option>
+                <option>Hayır</option>
+              </select>
+            </label>
+            <label className="wide">
+              Açıklama / not
+              <textarea name="notes" rows="4" />
+            </label>
+          </div>
+        </div>
+        <div className={step === 2 ? "wizard-step active" : "wizard-step"}>
+          <div className="vehicle-options">
+            {[
+              "Tenteli",
+              "Frigo",
+              "Mega",
+              "Lowbed",
+              "Kamyon",
+              "Van",
+              "Diğer",
+            ].map((vehicle) => (
+              <label key={vehicle}>
+                <input required type="radio" name="vehicle" value={vehicle} />
+                <Truck />
+                <span>{vehicle}</span>
+              </label>
+            ))}
+          </div>
+          <div className="special-requirements">
+            <label>
+              <input type="checkbox" name="adr" value="Evet" /> ADR
+            </label>
+            <label>
+              <input type="checkbox" name="temperatureControl" value="Evet" />{" "}
+              Sıcaklık kontrollü
+            </label>
+            <label>
+              <input type="checkbox" name="insurance" value="Evet" /> Ek sigorta
+            </label>
+            <label>
+              <input type="checkbox" name="tracking" value="Zorunlu" /> Takip
+              zorunluluğu
+            </label>
+          </div>
+        </div>
+        <div className={step === 3 ? "wizard-step active" : "wizard-step"}>
+          <div className="form-grid">
+            <label>
+              Hedef bütçe
+              <input required name="price" type="number" min="1" />
+            </label>
+            <label>
+              Para birimi
+              <select name="currency">
+                <option value="EUR">Euro (EUR)</option>
+                <option value="TRY">Türk Lirası (TRY)</option>
+                <option value="GBP">Sterlin (GBP)</option>
+              </select>
+            </label>
+            <label className="wide">
+              Ödeme koşulu
+              <select name="payment">
+                <option>Teslimatta ödeme</option>
+                <option>7 gün vadeli</option>
+                <option>15 gün vadeli</option>
+                <option>30 gün vadeli</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div className={step === 4 ? "wizard-step active" : "wizard-step"}>
+          <div className="review-panel">
+            <BadgeCheck />
+            <div>
+              <h3>İlanınız yayınlanmaya hazır</h3>
+              <p>
+                Rota, yük, araç ve ticari bilgileri kontrol ettiniz.
+                Koordinatlar kullanıcıdan istenmez; geocoding entegrasyonu
+                geldiğinde adres üzerinden arka planda üretilecektir.
+              </p>
+              <span>
+                {liveMarketplaceEnabled()
+                  ? "Canlı API'ye kaydedilecek"
+                  : "Demo geliştirme verisi olarak kaydedilecek"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button
+            type="button"
+            onClick={() => (step ? setStep(step - 1) : onClose())}
+          >
+            {step ? "Geri" : "Vazgeç"}
+          </button>
+          {step < steps.length - 1 ? (
+            <button type="button" className="login-button" onClick={next}>
+              Devam et <ArrowRight />
+            </button>
+          ) : (
+            <button className="login-button">
+              Kontrol et ve yayınla <ArrowRight />
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export function CompanyPortal() {
+  const [active, setActive] = useState("Firma özeti");
+  const [data, setData] = useState(() =>
+    isBackendConfigured() ? null : demoCompanyDashboard,
+  );
+  const [notice, setNotice] = useState("");
+  const [filters, setFilters] = useState({
+    origin: "",
+    destination: "",
+    date: "",
+    vehicle: "Tümü",
+  });
+  const [marketLoads, setMarketLoads] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getLoads(seedLoads),
+  );
+  const [marketOffers, setMarketOffers] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getOffers(seedOffers),
+  );
+  const [matches, setMatches] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getMatches(),
+  );
+  const { prefs, toggleSavedLoad, saveFilter, removeFilter } = usePreferences();
+  useEffect(() => {
+    let mounted = true;
+    getCompanyDashboard()
+      .then((result) => mounted && setData(result))
+      .catch((error) => mounted && setNotice(error.message));
+    if (liveMarketplaceEnabled()) {
+      Promise.all([loadMarketplace(), loadMyOffers(), loadMyMatches()])
+        .then(([loads, offers, remoteMatches]) => {
+          if (!mounted) return;
+          const normalized = offers.map((o) => ({
+            id: o.id,
+            load: o.loadId,
+            driver: o.driverName || "Atanmamış şoför",
+            company: "Firma hesabı",
+            vehicle: `${o.vehicleType} · ${o.vehiclePlate}`,
+            amount: `${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,
+            status: o.status === "PENDING" ? "Bekliyor" : o.status,
+            createdAt: o.createdAt,
+          }));
+          setMarketLoads(loads);
+          setMarketOffers(normalized);
+          setMatches(
+            remoteMatches.map((match) => {
+              const offer = normalized.find((x) => x.id === match.offerId);
+              return {
+                ...match,
+                cargo: match.loadId,
+                route: "Backend seferi",
+                driver: offer?.driver || "Atanmış şoför",
+                carrier: "Firma hesabı",
+                vehicle: offer?.vehicle,
+                amount: offer?.amount || "—",
+                matchedAt: match.matchedAt || match.createdAt,
+              };
+            }),
+          );
+        })
+        .catch((error) => mounted && setNotice(error.message));
+      return () => {
+        mounted = false;
+      };
+    }
+    const unsubscribe = subscribeMarketplace(() => {
+      setMarketLoads(getLoads(seedLoads));
+      setMarketOffers(getOffers(seedOffers));
+      setMatches(getMatches());
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+  if (!data)
+    return (
+      <PortalShell role="lojistik" active={active} onSelect={setActive}>
+        <section className="portal-heading">
+          <div>
+            <span>ERİŞİM KONTROLÜ</span>
+            <h1>Firma üyeliği doğrulanamadı.</h1>
+            <p>
+              {notice ||
+                "Şirket paneli yalnızca kayıtlı şirket üyelerine açıktır."}
+            </p>
+          </div>
+        </section>
+      </PortalShell>
+    );
+  const companyOffers = liveMarketplaceEnabled()
+    ? marketOffers
+    : marketOffers.filter((x) => x.company === "Horoz Lojistik");
+  const offeredIds = companyOffers.map((x) => x.load);
+  const companyMatches = liveMarketplaceEnabled()
+    ? matches
+    : matches.filter((x) => x.carrier === "Horoz Lojistik");
+  const available = marketLoads
+    .filter((x) => x.status === "Teklif alıyor")
+    .map((x) =>
+      loadToJob(x, {
+        origin: "Tümü",
+        destination: "Tümü",
+        vehicle: filters.vehicle,
+      }),
+    )
+    .filter(
+      (x) =>
+        (!filters.origin ||
+          x.from
+            .toLocaleLowerCase("tr")
+            .includes(filters.origin.toLocaleLowerCase("tr"))) &&
+        (!filters.destination ||
+          x.to
+            .toLocaleLowerCase("tr")
+            .includes(filters.destination.toLocaleLowerCase("tr"))) &&
+        (filters.vehicle === "Tümü" || x.vehicle === filters.vehicle) &&
+        (!filters.date || x.pickupDate === filters.date),
+    );
+  const totalRevenue =
+    (data.kpis.grossRevenue || 0) +
+    companyMatches.reduce(
+      (sum, x) => sum + (Number(String(x.amount).replace(/[^0-9]/g, "")) || 0),
+      0,
+    );
+  async function offer(job) {
+    if (offeredIds.includes(job.id)) return;
+    if (liveMarketplaceEnabled()) {
+      try {
+        const created = await submitLiveOffer(job);
+        setMarketOffers((current) => [
+          {
+            id: created.id,
+            load: created.loadId,
+            driver: created.driverName || "Atanmamış şoför",
+            company: data.company.name,
+            vehicle: `${created.vehicleType} · ${created.vehiclePlate}`,
+            amount: `${Number(created.amount).toLocaleString("tr-TR")} ${created.currency}`,
+            status: "Bekliyor",
+            createdAt: created.createdAt,
+          },
+          ...current,
+        ]);
+        setNotice(`${job.id} için firma teklifi merkezi sisteme gönderildi.`);
+        return;
+      } catch (error) {
+        setNotice(error.message);
+        return;
+      }
+    }
+    const item = {
+      id: makeRecordId("OF"),
+      load: job.id,
+      driver: "Mehmet Yılmaz",
+      company: "Horoz Lojistik",
+      vehicle: "Tır · 34 HRZ 196",
+      score: "4.9",
+      trips: 184,
+      amount: job.price,
+      eta: "Bugün 15:30",
+      status: "Bekliyor",
+      createdAt: new Date().toISOString(),
+    };
+    const nextOffers = [item, ...marketOffers];
+    const nextLoads = marketLoads.map((x) =>
+      x.id === job.id ? { ...x, offers: (x.offers || 0) + 1 } : x,
+    );
+    setMarketOffers(nextOffers);
+    setMarketLoads(nextLoads);
+    saveOffers(nextOffers);
+    saveLoads(nextLoads);
+    setNotice(`${job.id} için Horoz Lojistik teklifi gönderildi.`);
+    setTimeout(() => setNotice(""), 3500);
   }
-  async function cancelLoad(load){
-    try{
-      if(liveMarketplaceEnabled())await cancelLiveLoad(load.id);
-      const next=loads.map(item=>item.id===load.id?{...item,status:"CANCELLED"}:item);
-      setLoads(liveMarketplaceEnabled()?await loadMyLoads():next);
-      setSuccess("İlan iptal edildi.");setTimeout(()=>setSuccess(""),3500);
-    }catch(reason){setSuccess(reason.message)}
+  const kpis = [
+    ...Object.entries({
+      "Aktif şoför": data.kpis.drivers,
+      "Kayıtlı araç": data.kpis.vehicles,
+      "Bu ay bulunan yük": data.kpis.loads,
+      "Gönderilen teklif": data.kpis.offers,
+      "Aktif sefer": data.kpis.activeTrips + companyMatches.length,
+      "Tamamlanan sefer": data.kpis.completedTrips,
+    }),
+  ];
+  return (
+    <PortalShell role="lojistik" active={active} onSelect={setActive}>
+      {notice && (
+        <div className="success-banner portal-toast">
+          <Check /> {notice}
+        </div>
+      )}
+      {active === "Firma özeti" && (
+        <>
+          <PageHeading
+            kicker="FİRMA OPERASYON MERKEZİ"
+            title={`${data.company.name} kontrol paneli.`}
+            text="Filo, teklifler ve sevkiyatlar tek operasyon görünümünde."
+            action={
+              <span className={`company-source ${data.source}`}>
+                {data.source === "live" ? "CANLI VERİ" : "DEMO VERİ"}
+              </span>
+            }
+          />
+          <div className="company-kpis">
+            {kpis.map(([label, value]) => (
+              <article key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+                <small>Son güncel şirket verisi</small>
+              </article>
+            ))}
+            <article className="revenue">
+              <span>Son 12 ay brüt kazanç</span>
+              <strong>{totalRevenue.toLocaleString("tr-TR")} €</strong>
+              <small>Kabul edilen taşıma işleri</small>
+            </article>
+          </div>
+          <ActionCenter
+            role="lojistik"
+            counts={{ availableLoads: available.length, unread: 0 }}
+            onNavigate={setActive}
+          />
+          <CompanyTrips
+            trips={[
+              ...companyMatches.map((x) => ({
+                id: x.id,
+                loadTitle: x.cargo,
+                route: x.route,
+                driverName: x.driver,
+                amount: Number(String(x.amount).replace(/[^0-9]/g, "")),
+                currency: "EUR",
+                status: x.status,
+                matchedAt: x.matchedAt,
+              })),
+              ...data.recentTrips,
+            ].slice(0, 6)}
+          />
+        </>
+      )}
+      {active === "Yük pazarı" && (
+        <>
+          <PageHeading
+            kicker="AVRUPA YÜK PAZARI"
+            title="Filonuza yeni yük bulun."
+            text="Rota, tarih ve araç uyumuna göre sıralanan doğrulanmış yükler."
+          />
+          <SavedFilters
+            filters={prefs.savedFilters}
+            activeFilters={filters}
+            onApply={setFilters}
+            onSave={saveFilter}
+            onRemove={removeFilter}
+          />
+          <MarketplaceFilters filters={filters} onChange={setFilters} />
+          <JobGrid
+            data={available}
+            accepted={offeredIds}
+            onAccept={offer}
+            savedLoadIds={prefs.savedLoadIds}
+            onToggleSave={toggleSavedLoad}
+            onView={() => {}}
+          />
+        </>
+      )}
+      {active === "Kaydedilen Yükler" && (
+        <>
+          <PageHeading
+            kicker="KAYDEDILEN YÜKLER"
+            title="Takip ettiğiniz yükler."
+            text="Kaydettiğiniz yükleri buradan hızlıca açabilirsiniz."
+          />
+          <SavedLoads
+            loads={[
+              ...marketLoads,
+              ...jobs.filter((j) => !marketLoads.find((m) => m.id === j.id)),
+            ]}
+            savedIds={prefs.savedLoadIds}
+            onToggleSave={toggleSavedLoad}
+            onView={() => setActive("Yük pazarı")}
+          />
+        </>
+      )}
+      {active === "Tekliflerim" && (
+        <>
+          <PageHeading
+            kicker="FİRMA TEKLİFLERİ"
+            title="Gönderilen teklifleri yönetin."
+            text="Yük detayını açın, mesajlaşın, teklifi güncelleyin veya geri çekin."
+          />
+          <section className="company-table">
+            <div className="company-table-head">
+              <span>İlan</span>
+              <span>Atanan şoför</span>
+              <span>Araç</span>
+              <span>Tutar</span>
+              <span>Durum</span>
+            </div>
+            {companyOffers.map((x) => (
+              <article key={x.id}>
+                <strong>{x.load}</strong>
+                <span>{x.driver}</span>
+                <span>{x.vehicle}</span>
+                <b>{x.amount}</b>
+                <em>{x.status}</em>
+              </article>
+            ))}
+          </section>
+        </>
+      )}
+      {active === "Sevkiyatlar" &&
+        (liveMarketplaceEnabled() ? (
+          <EmptyState
+            icon={<Route />}
+            title={
+              companyMatches.length
+                ? "Sevkiyat detay bağlantısı hazırlanıyor"
+                : "Aktif sevkiyat bulunmuyor"
+            }
+            text="Gerçek sevkiyat detayları bağlanana kadar örnek operasyon verisi gösterilmiyor."
+          />
+        ) : (
+          <ShipmentDetail onMessage={() => setActive("Mesajlar")} />
+        ))}{" "}
+      {active === "Mesajlar" && (
+        <MessagesCenter
+          demo={!liveMarketplaceEnabled()}
+          onOpenShipment={() => setActive("Sevkiyatlar")}
+        />
+      )}{" "}
+      {active === "Şoförler" && (
+        <>
+          <PageHeading
+            kicker="FİLO EKİBİ"
+            title="Şoförler ve atamalar."
+            text="Şoför uygunluğu, doğrulama ve aktif görevleri yönetin."
+          />
+          <CompanyDrivers drivers={data.drivers} />
+        </>
+      )}
+      {active === "Kazançlar" && (
+        <>
+          <PageHeading
+            kicker="FİNANS"
+            title="Kazanç görünümü."
+            text="Tamamlanan taşımalardan oluşan gelir özeti."
+          />
+          <CompanyMonthlyChart months={data.monthly} />
+        </>
+      )}
+      {["Araçlar", "Canlı Harita", "Faturalar", "Belgeler", "Ekip"].includes(
+        active,
+      ) && (
+        <EmptyState
+          icon={<Truck />}
+          title={`${active} alanı entegrasyona hazır`}
+          text="Bu ekran için ilgili backend endpoint sözleşmesi bekleniyor."
+        />
+      )}
+    </PortalShell>
+  );
+}
+
+function CompanyMonthlyChart({ months }) {
+  const max = Math.max(...months.map((x) => x.revenue), 1);
+  return (
+    <section className="company-chart">
+      <div>
+        <h2>12 aylık kazanç ve operasyon</h2>
+        <p>Yeşil sütun gelir, sayı tamamlanan seferdir.</p>
+      </div>
+      <div className="company-bars">
+        {months.map((x) => (
+          <article key={x.month}>
+            <span>
+              <i style={{ height: `${(x.revenue / max) * 100}%` }} />
+            </span>
+            <strong>{x.trips}</strong>
+            <small>{x.month}</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+function CompanyDrivers({ drivers }) {
+  return (
+    <section className="company-table drivers">
+      <div className="company-table-head">
+        <span>Şoför</span>
+        <span>Durum</span>
+        <span>Deneyim</span>
+        <span>Sefer</span>
+        <span>Gelir</span>
+      </div>
+      {drivers.map((x) => (
+        <article key={x.id}>
+          <span>
+            <strong>{x.name}</strong>
+            <small>{x.email}</small>
+          </span>
+          <em>{x.status}</em>
+          <span>{x.yearsExperience} yıl</span>
+          <b>{x.completedTrips}</b>
+          <strong>{x.revenue.toLocaleString("tr-TR")} €</strong>
+        </article>
+      ))}
+    </section>
+  );
+}
+function CompanyTrips({ trips }) {
+  return (
+    <section className="company-table trips">
+      <div className="company-table-head">
+        <span>Sefer / yük</span>
+        <span>Rota</span>
+        <span>Şoför</span>
+        <span>Tutar</span>
+        <span>Durum</span>
+      </div>
+      {trips.map((x) => (
+        <article key={x.id}>
+          <span>
+            <strong>{x.id}</strong>
+            <small>{x.loadTitle}</small>
+          </span>
+          <strong>{x.route}</strong>
+          <span>{x.driverName}</span>
+          <b>
+            {Number(x.amount || 0).toLocaleString("tr-TR")} {x.currency}
+          </b>
+          <em>{x.status}</em>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+export function DriverPortal() {
+  const [active, setActive] = useState("Atanmış iş");
+  const live = liveMarketplaceEnabled();
+  return (
+    <PortalShell role="sofor" active={active} onSelect={setActive}>
+      {active === "Atanmış iş" &&
+        (live ? (
+          <EmptyState
+            icon={<Package />}
+            title="Atanmış görev bulunmuyor"
+            text="Size bir sevkiyat atandığında gerçek rota ve iletişim bilgileri burada gösterilecek."
+          />
+        ) : (
+          <DriverWorkspace onMessage={() => setActive("Mesajlar")} />
+        ))}{" "}
+      {active === "Rota" &&
+        (live ? (
+          <EmptyState
+            icon={<Map />}
+            title="Aktif rota bulunmuyor"
+            text="Atanmış sevkiyat olmadan örnek konum veya ETA gösterilmiyor."
+          />
+        ) : (
+          <LiveRoute />
+        ))}{" "}
+      {active === "Mesajlar" && <MessagesCenter demo={!live} />}{" "}
+      {active === "Belgeler" && <DocumentCenter role="sofor" />}
+    </PortalShell>
+  );
+}
+
+export function LegacyDriverPortal() {
+  const [active, setActive] = useState("Uygun işler");
+  const [filter, setFilter] = useState("Tümü");
+  const [origin, setOrigin] = useState("Norveç");
+  const [destination, setDestination] = useState("İtalya");
+  const [notice, setNotice] = useState("");
+  const [marketLoads, setMarketLoads] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getLoads(seedLoads),
+  );
+  const [marketOffers, setMarketOffers] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getOffers(seedOffers),
+  );
+  const [matches, setMatches] = useState(() =>
+    liveMarketplaceEnabled() ? [] : getMatches(),
+  );
+  useEffect(
+    () =>
+      subscribeMarketplace(() => {
+        setMarketLoads(getLoads(seedLoads));
+        setMarketOffers(getOffers(seedOffers));
+        setMatches(getMatches());
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (!liveMarketplaceEnabled()) return;
+    let active = true;
+    Promise.all([loadMarketplace(), loadMyOffers(), loadMyMatches()])
+      .then(([remoteLoads, offers, remoteMatches]) => {
+        if (!active) return;
+        setMarketLoads(remoteLoads);
+        const normalizedOffers = offers.map((o) => ({
+          id: o.id,
+          load: o.loadId,
+          driver: o.driverName || "Ahmet Yılmaz",
+          company:
+            o.offererType === "COMPANY"
+              ? "Lojistik firması"
+              : "Bağımsız taşıyıcı",
+          vehicle: `${o.vehicleType} · ${o.vehiclePlate}`,
+          amount: `${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,
+          status: o.status === "PENDING" ? "Bekliyor" : o.status,
+          createdAt: o.createdAt,
+        }));
+        setMarketOffers(normalizedOffers);
+        setMatches(
+          remoteMatches.map((match) => {
+            const offer = normalizedOffers.find((x) => x.id === match.offerId);
+            return {
+              ...match,
+              cargo: match.loadId,
+              route: "Backend seferi",
+              driver: offer?.driver || "Ahmet Yılmaz",
+              carrier: offer?.company || "Taşıyıcı",
+              vehicle: offer?.vehicle,
+              amount: offer?.amount || "—",
+              matchedAt: match.matchedAt || match.createdAt,
+            };
+          }),
+        );
+      })
+      .catch((reason) => active && setNotice(reason.message));
+    return () => {
+      active = false;
+    };
+  }, []);
+  const allJobs = useMemo(() => {
+    const dynamic = marketLoads
+      .filter((x) => x.status === "Teklif alıyor")
+      .map((x) => loadToJob(x, { origin, destination, vehicle: filter }));
+    if (liveMarketplaceEnabled())
+      return dynamic.sort((a, b) => b.match - a.match);
+    const ids = new Set(dynamic.map((x) => x.id));
+    return [
+      ...dynamic,
+      ...jobs
+        .filter((x) => !ids.has(x.id))
+        .map((x) => loadToJob(x, { origin, destination, vehicle: filter })),
+    ].sort((a, b) => b.match - a.match);
+  }, [marketLoads, origin, destination, filter]);
+  const visible = useMemo(
+    () =>
+      allJobs.filter(
+        (x) =>
+          (filter === "Tümü" || x.vehicle === filter) &&
+          (origin === "Tümü" || x.originCountry === origin) &&
+          (destination === "Tümü" || x.destinationCountry === destination),
+      ),
+    [allJobs, filter, origin, destination],
+  );
+  const myOffers = liveMarketplaceEnabled()
+    ? marketOffers
+    : marketOffers.filter((x) => x.driver === "Ahmet Yılmaz");
+  const offeredIds = myOffers.map((x) => x.load);
+  const acceptedMatches = liveMarketplaceEnabled()
+    ? matches
+    : matches.filter((x) => x.driver === "Ahmet Yılmaz");
+  async function accept(job) {
+    if (offeredIds.includes(job.id)) return;
+    if (liveMarketplaceEnabled()) {
+      try {
+        const created = await submitLiveOffer(job);
+        const offer = {
+          id: created.id,
+          load: created.loadId,
+          driver: created.driverName,
+          company:
+            created.offererType === "COMPANY"
+              ? "Lojistik firması"
+              : "Bağımsız taşıyıcı",
+          vehicle: `${created.vehicleType} · ${created.vehiclePlate}`,
+          amount: `${Number(created.amount).toLocaleString("tr-TR")} ${created.currency}`,
+          status: "Bekliyor",
+          createdAt: created.createdAt,
+        };
+        setMarketOffers((current) => [offer, ...current]);
+        setNotice(`${job.id} için teklifiniz merkezi sisteme gönderildi.`);
+        setTimeout(() => setNotice(""), 3500);
+        return;
+      } catch (reason) {
+        setNotice(reason.message);
+        return;
+      }
+    }
+    const offer = {
+      id: makeRecordId("OF"),
+      load: job.id,
+      driver: "Ahmet Yılmaz",
+      company: "Anadolu Filo",
+      vehicle: "Tır · 34 LOG 2026",
+      score: "4.9",
+      trips: 128,
+      amount: job.price,
+      eta: "Bugün 16:30",
+      status: "Bekliyor",
+      createdAt: new Date().toISOString(),
+    };
+    const updatedOffers = [offer, ...marketOffers];
+    const updatedLoads = marketLoads.map((x) =>
+      x.id === job.id ? { ...x, offers: (x.offers || 0) + 1 } : x,
+    );
+    setMarketOffers(updatedOffers);
+    setMarketLoads(updatedLoads);
+    saveOffers(updatedOffers);
+    saveLoads(updatedLoads);
+    setNotice(`${job.id} için teklifiniz yük verene gönderildi.`);
+    setTimeout(() => setNotice(""), 3500);
   }
-  const pendingOffers=marketOffers.filter(o=>o.status!=="Reddedildi");
-  return <PortalShell role="yuk-veren" active={active} onSelect={(next)=>next==="Yeni Yük"?setModal(true):setActive(next)}>{success&&<div className="success-banner portal-toast"><Check/> {success}</div>}{active==="Özet"&&<><PageHeading kicker="OPERASYON ÖZETİ" title="Yükleriniz kontrol altında." text="İlanlarınızı yayınlayın, tekliften teslimata tüm operasyonu yönetin." action={<button className="portal-primary" onClick={()=>setModal(true)}>Yeni yük ilanı <Package size={18}/></button>}/><div className="portal-stats"><article><span>Aktif ilan</span><strong>{loads.filter(x=>x.status==="Teklif alıyor").length}</strong><small>Şu anda yayında</small></article><article><span>Bekleyen teklif</span><strong>{marketOffers.filter(x=>x.status==="Bekliyor").length}</strong><small>Değerlendirme bekliyor</small></article><article className="dark"><span>Aktif sevkiyat</span><strong>{matches.length}</strong><small>Operasyon takibinde</small></article></div><ActionCenter role="yuk-veren" counts={{offers:marketOffers.filter(x=>x.status==="Bekliyor").length,activeShipments:matches.length,unread:0}} onNavigate={setActive}/><LoadList loads={loads.slice(0,3)} onAll={()=>setActive("İlanlarım")} onCancel={cancelLoad}/></>}{active==="İlanlarım"&&<><PageHeading kicker="İLAN YÖNETİMİ" title="Tüm yük ilanlarınız." text="Aktif, planlanmış ve tamamlanmış ilanlarınızı yönetin." action={<button className="portal-primary" onClick={()=>setModal(true)}>Yeni ilan <Package size={18}/></button>}/><LoadList loads={loads} onCancel={cancelLoad}/></>}{active==="Teklifler"&&<><PageHeading kicker="TEKLİF MERKEZİ" title="Doğru taşıyıcıyı seçin." text="Teklifleri karşılaştırın, mesajlaşın ve kabul edilen işi sevkiyata dönüştürün."/><OfferComparison offers={pendingOffers} onAccept={acceptOffer} onMessage={()=>setActive("Mesajlar")}/></>}{active==="Aktif Sevkiyatlar"&&(liveMarketplaceEnabled()?<EmptyState icon={<Route/>} title={matches.length?"Sevkiyat detay bağlantısı hazırlanıyor":"Aktif sevkiyat bulunmuyor"} text={matches.length?"Eşleşmeleriniz kaydedildi. Canlı detay ve durum akışı backend sözleşmesi tamamlandığında burada açılacak.":"Bir teklif kabul edildiğinde sevkiyat burada görünecek."}/>:<ShipmentDetail onMessage={()=>setActive("Mesajlar")}/>)} {active==="Mesajlar"&&<MessagesCenter demo={!liveMarketplaceEnabled()} onOpenShipment={()=>setActive("Aktif Sevkiyatlar")}/>} {active==="Geçmiş"&&<MonthlyHistory role="yuk-veren" matches={matches}/>} {active==="Belgeler"&&<DocumentCenter role="yuk-veren"/>}{active==="Ödemeler"&&(liveMarketplaceEnabled()?<EmptyState icon={<CreditCard/>} title="Ödeme entegrasyonu henüz etkin değil" text="Gerçek ödeme sağlayıcısı bağlanmadan bakiye veya tahsilat işlemi gösterilmiyor."/>:<PaymentCenter/>)}{active==="Firma & Ekip"&&<EmptyState icon={<Users/>} title="Firma ve ekip yönetimi" text="Ekip üyeliği ve rol yetkileri için backend sözleşmesi bekleniyor."/>}{modal&&<LoadModal onClose={()=>setModal(false)} onSubmit={addLoad}/>}</PortalShell>
+  const pendingJobs = allJobs.filter((x) => offeredIds.includes(x.id));
+  const totalEarnings = acceptedMatches.reduce(
+    (sum, x) => sum + (Number(String(x.amount).replace(/[^0-9]/g, "")) || 0),
+    0,
+  );
+  return (
+    <PortalShell role="sofor" active={active} onSelect={setActive}>
+      {notice && (
+        <div className="success-banner portal-toast">
+          <Check /> {notice}
+        </div>
+      )}
+      {active === "Uygun işler" && (
+        <>
+          <PageHeading
+            kicker="51 ÜLKEDE ROTA EŞLEŞTİRMESİ"
+            title="Sonraki rotanızı siz seçin."
+            text="Konum, hedef rota ve araç uyumuna göre ilanlar otomatik puanlanır."
+            action={
+              <div className="driver-online">
+                <i /> Avrupa genelinde iş almaya açık
+              </div>
+            }
+          />
+          <section className="route-preference">
+            <div>
+              <span className="route-step">A</span>
+              <label>
+                Şu anda neredesiniz?
+                <select
+                  value={origin}
+                  onChange={(e) => setOrigin(e.target.value)}
+                >
+                  <option>Tümü</option>
+                  {EUROPEAN_COUNTRIES.map((country) => (
+                    <option key={country}>{country}</option>
+                  ))}
+                </select>
+                <small>51 ülkeden mevcut konumunuzu seçin</small>
+              </label>
+            </div>
+            <ArrowRight />
+            <div>
+              <span className="route-step destination">B</span>
+              <label>
+                Nereye gitmek istiyorsunuz?
+                <select
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                >
+                  <option>Tümü</option>
+                  {EUROPEAN_COUNTRIES.map((country) => (
+                    <option key={country}>{country}</option>
+                  ))}
+                </select>
+                <small>Boş dönüşü azaltacak hedef ülkeyi seçin</small>
+              </label>
+            </div>
+            <button
+              onClick={() =>
+                setNotice(
+                  `${origin} → ${destination} koridorunda ${visible.length} uygun yük bulundu.`,
+                )
+              }
+            >
+              Rotamı eşleştir
+            </button>
+          </section>
+          <div className="driver-toolbar">
+            <div>
+              {[
+                "Tümü",
+                "Tır",
+                "Frigorifik",
+                "Kamyon",
+                "Kamyonet",
+                "Panelvan",
+              ].map((x) => (
+                <button
+                  className={filter === x ? "active" : ""}
+                  onClick={() => setFilter(x)}
+                  key={x}
+                >
+                  {x}
+                </button>
+              ))}
+            </div>
+            <span>{visible.length} uygun Avrupa işi</span>
+          </div>
+          {visible.length ? (
+            <JobGrid data={visible} accepted={offeredIds} onAccept={accept} />
+          ) : (
+            <EmptyState
+              icon={<Route />}
+              title="Bu koridorda aktif yük bulunamadı"
+              text="Konum veya araç filtresini genişleterek çevre rotalardaki işleri görebilirsiniz."
+            />
+          )}
+        </>
+      )}
+      {active === "Seferlerim" && (
+        <>
+          <PageHeading
+            kicker="TEKLİF & SEFER TAKİBİ"
+            title="Tüm işleriniz tek ekranda."
+            text="Bekleyen tekliflerinizi ve kabul edilen seferlerinizi takip edin."
+          />
+          <div className="portal-stats">
+            <article>
+              <span>Bekleyen teklif</span>
+              <strong>
+                {myOffers.filter((x) => x.status === "Bekliyor").length}
+              </strong>
+              <small>Yük veren yanıtı bekleniyor</small>
+            </article>
+            <article>
+              <span>Planlanan sefer</span>
+              <strong>{acceptedMatches.length}</strong>
+              <small>Eşleşmesi tamamlandı</small>
+            </article>
+            <article className="dark">
+              <span>Başarı oranı</span>
+              <strong>
+                {myOffers.length
+                  ? `%${Math.round((acceptedMatches.length / myOffers.length) * 100)}`
+                  : "%0"}
+              </strong>
+              <small>Kabul edilen teklifler</small>
+            </article>
+          </div>
+          <section className="trip-board">
+            {pendingJobs.length ? (
+              <JobGrid
+                data={pendingJobs}
+                accepted={offeredIds}
+                onAccept={accept}
+              />
+            ) : (
+              <EmptyState
+                icon={<Route />}
+                title="Henüz teklifiniz yok"
+                text="Uygun işler ekranından bir Avrupa yüküne teklif vererek başlayın."
+                action={() => setActive("Uygun işler")}
+              />
+            )}
+          </section>
+        </>
+      )}
+      {active === "Geçmiş" && (
+        <MonthlyHistory role="sofor" matches={acceptedMatches} />
+      )}{" "}
+      {active === "Canlı rota" && <LiveRoute />}
+      {active === "Belgeler" && <DocumentCenter role="sofor" />}
+      {active === "Takograf" && <TachographCenter />}
+      {active === "Kazançlar" && (
+        <>
+          <PageHeading
+            kicker="AVRUPA KAZANÇ ÖZETİ"
+            title="Kazançlarınızı Euro bazında izleyin."
+            text="Eşleşen seferler ve bekleyen ödemeler gerçek iş akışından hesaplanır."
+          />
+          <div className="earnings-grid">
+            <article>
+              <span>Planlanan kazanç</span>
+              <strong>{totalEarnings.toLocaleString("tr-TR")} €</strong>
+              <small>{acceptedMatches.length} eşleşmiş sefer</small>
+            </article>
+            <article>
+              <span>Bekleyen teklif</span>
+              <strong>
+                {myOffers.filter((x) => x.status === "Bekliyor").length}
+              </strong>
+              <small>Yük veren onayı bekliyor</small>
+            </article>
+            <article className="dark">
+              <span>Toplam sefer</span>
+              <strong>{acceptedMatches.length}</strong>
+              <small>Logiway eşleşmeleri</small>
+            </article>
+          </div>
+          <MonthlyHistory role="sofor" matches={acceptedMatches} />
+        </>
+      )}
+    </PortalShell>
+  );
 }
 
-function LoadList({loads,onAll,onCancel}){
-  const [expanded,setExpanded]=useState(null);
-  return <section className="portal-list"><div className="list-head"><div><h2>Yük ilanları</h2><p>Yayınladığınız ilanların güncel durumu ve adres detayları</p></div>{onAll&&<button onClick={onAll}>Tümünü gör <ArrowRight size={15}/></button>}</div>{loads.map(x=><div className="load-entry" key={x.id}><article className="load-row"><span className="load-box"><Package/></span><div className="load-route"><strong>{x.from} <ArrowRight/> {x.to}</strong><small>{x.id} · {x.cargo} · {x.vehicle} · {x.weight}</small>{x.pickupAddress&&<em><MapPin/> {x.pickupAddress} → {x.deliveryAddress}</em>}</div><div><small>HEDEF BÜTÇE</small><strong>{x.price}</strong></div><div><small>TEKLİFLER</small><strong>{x.offers} teklif</strong></div><span className={`portal-status ${x.status==="Teklif alıyor"?"green":""}`}>{x.status}</span>{onCancel&&(x.status==="Teklif alıyor"||x.status==="DRAFT")&&<button className="row-action" onClick={()=>onCancel(x)} aria-label="İlanı iptal et"><X/></button>}<button className={expanded===x.id?"row-action open":"row-action"} onClick={()=>setExpanded(expanded===x.id?null:x.id)} aria-label="İlan detaylarını aç"><ChevronRight/></button></article>{expanded===x.id&&<LoadDetails load={x}/>}</div>)}</section>
-}
-
-function LoadDetails({load}){
-  const d=load.details||{};const pickupQuery=encodeURIComponent(`${load.pickupAddress||""}, ${load.from}`);const deliveryQuery=encodeURIComponent(`${load.deliveryAddress||""}, ${load.to}`);
-  const facts=[["Yükleme penceresi",d.pickupWindow],["Yükleme yetkilisi",d.pickupContact],["Yükleme telefonu",d.pickupPhone],["Yükleme referansı",d.pickupReference],["Teslim penceresi",d.deliveryWindow],["Teslim yetkilisi",d.deliveryContact],["Teslim telefonu",d.deliveryPhone],["Ölçüler",d.dimensions],["Hacim",d.volume&&`${d.volume} m³`],["Palet",d.pallets],["İstiflenebilir",d.stackable],["Sıcaklık",d.temperature],["ADR",d.adr],["Yük değeri",d.cargoValue],["Sigorta",d.insurance],["EORI / gümrük",d.eori],["Takip tercihi",d.tracking],["Ödeme",load.payment]];
-  return <div className="load-details"><div className="address-cards"><article><span>A</span><div><small>TAM YÜKLEME KONUMU</small><strong>{load.pickupAddress||load.from}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${pickupQuery}`} target="_blank" rel="noreferrer"><MapPin/> Adresi haritada aç</a></div></article><article><span>B</span><div><small>TAM TESLİMAT KONUMU</small><strong>{load.deliveryAddress||load.to}</strong><a href={`https://www.google.com/maps/search/?api=1&query=${deliveryQuery}`} target="_blank" rel="noreferrer"><MapPin/> Adresi haritada aç</a></div></article></div><div className="load-facts">{facts.filter(([,value])=>value).map(([label,value])=><div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>{load.notes&&<p className="load-notes"><FileText/> <span><strong>Operasyon notu</strong>{load.notes}</span></p>}</div>
-}
-
-function LoadModal({onClose,onSubmit}){
-  const [step,setStep]=useState(0);const steps=["Rota","Yük bilgileri","Araç gereksinimi","Ticari bilgiler","Kontrol ve yayınla"];
-  function next(event){event.preventDefault();const current=event.currentTarget.closest("form").querySelector(".wizard-step.active");const invalid=current.querySelector(":invalid");if(invalid){invalid.reportValidity();return}setStep(value=>Math.min(steps.length-1,value+1))}
-  return <div className="portal-modal" role="dialog" aria-modal="true"><form onSubmit={onSubmit}><div className="modal-head"><div><span>YENİ YÜK İLANI</span><h2>{steps[step]}</h2></div><button type="button" onClick={onClose} aria-label="Kapat"><X/></button></div><div className="load-stepper">{steps.map((label,index)=><button type="button" className={index===step?"active":index<step?"done":""} onClick={()=>index<step&&setStep(index)} key={label}><i>{index<step?<Check/>:index+1}</i><span>{label}</span></button>)}</div>
-  <div className={step===0?"wizard-step active":"wizard-step"}><div className="form-section-title">Yükleme <span>Adres bilgileri</span></div><div className="form-grid form-grid-3"><label>Ülke<select name="fromCountry" defaultValue="Türkiye">{EUROPEAN_COUNTRIES.map(x=><option key={x}>{x}</option>)}</select></label><label>Şehir<input required name="fromCity" placeholder="Tekirdağ"/></label><label>Posta kodu<input required name="fromPostal" placeholder="59000"/></label><label className="wide">Açık adres<input required name="pickupAddress" placeholder="Cadde, bina/depo adı ve kapı numarası"/></label><label>Yükleme tarihi<input required name="pickupDate" type="date"/></label><label>Saat başlangıcı<input required name="pickupStart" type="time"/></label><label>Saat bitişi<input required name="pickupEnd" type="time"/></label><label>Yetkili kişi<input required name="pickupContact"/></label><label>Telefon<input required name="pickupPhone" type="tel"/></label></div><div className="form-section-title">Teslimat <span>Adres bilgileri</span></div><div className="form-grid form-grid-3"><label>Ülke<select name="toCountry" defaultValue="Almanya">{EUROPEAN_COUNTRIES.map(x=><option key={x}>{x}</option>)}</select></label><label>Şehir<input required name="toCity" placeholder="Berlin"/></label><label>Posta kodu<input required name="toPostal" placeholder="10115"/></label><label className="wide">Açık adres<input required name="deliveryAddress" placeholder="Cadde, tesis/depo adı ve kapı numarası"/></label><label>Teslim tarihi<input required name="deliveryDate" type="date"/></label><label>Saat başlangıcı<input required name="deliveryStart" type="time"/></label><label>Saat bitişi<input required name="deliveryEnd" type="time"/></label><label>Yetkili kişi<input required name="deliveryContact"/></label><label>Telefon<input required name="deliveryPhone" type="tel"/></label></div></div>
-  <div className={step===1?"wizard-step active":"wizard-step"}><div className="form-grid"><label className="wide">Yük adı<input required name="cargo" placeholder="Örn. Paletli otomotiv parçası"/></label><label>Yük tipi<select name="loadType"><option>Genel kargo</option><option>Soğuk zincir</option><option>Tehlikeli madde</option><option>Proje yükü</option></select></label><label>Ambalaj<select name="packaging"><option>Euro palet</option><option>Kolili</option><option>Çuvallı</option><option>Dökme</option><option>Diğer</option></select></label><label>Ağırlık (ton)<input required name="weight" type="number" min="0.1" step="0.1"/><input type="hidden" name="unit" value="ton"/></label><label>Hacim (m³)<input name="volume" type="number" min="0" step="0.1"/></label><label>Palet sayısı<input name="pallets" type="number" min="0"/></label><label>İstiflenebilir<select name="stackable"><option>Evet</option><option>Hayır</option></select></label><label className="wide">Açıklama / not<textarea name="notes" rows="4"/></label></div></div>
-  <div className={step===2?"wizard-step active":"wizard-step"}><div className="vehicle-options">{["Tenteli","Frigo","Mega","Lowbed","Kamyon","Van","Diğer"].map((vehicle)=><label key={vehicle}><input required type="radio" name="vehicle" value={vehicle}/><Truck/><span>{vehicle}</span></label>)}</div><div className="special-requirements"><label><input type="checkbox" name="adr" value="Evet"/> ADR</label><label><input type="checkbox" name="temperatureControl" value="Evet"/> Sıcaklık kontrollü</label><label><input type="checkbox" name="insurance" value="Evet"/> Ek sigorta</label><label><input type="checkbox" name="tracking" value="Zorunlu"/> Takip zorunluluğu</label></div></div>
-  <div className={step===3?"wizard-step active":"wizard-step"}><div className="form-grid"><label>Hedef bütçe<input required name="price" type="number" min="1"/></label><label>Para birimi<select name="currency"><option value="EUR">Euro (EUR)</option><option value="TRY">Türk Lirası (TRY)</option><option value="GBP">Sterlin (GBP)</option></select></label><label className="wide">Ödeme koşulu<select name="payment"><option>Teslimatta ödeme</option><option>7 gün vadeli</option><option>15 gün vadeli</option><option>30 gün vadeli</option></select></label></div></div>
-  <div className={step===4?"wizard-step active":"wizard-step"}><div className="review-panel"><BadgeCheck/><div><h3>İlanınız yayınlanmaya hazır</h3><p>Rota, yük, araç ve ticari bilgileri kontrol ettiniz. Koordinatlar kullanıcıdan istenmez; geocoding entegrasyonu geldiğinde adres üzerinden arka planda üretilecektir.</p><span>{liveMarketplaceEnabled()?"Canlı API'ye kaydedilecek":"Demo geliştirme verisi olarak kaydedilecek"}</span></div></div></div>
-  <div className="modal-actions"><button type="button" onClick={()=>step?setStep(step-1):onClose()}>{step?"Geri":"Vazgeç"}</button>{step<steps.length-1?<button type="button" className="login-button" onClick={next}>Devam et <ArrowRight/></button>:<button className="login-button">Kontrol et ve yayınla <ArrowRight/></button>}</div></form></div>
-}
-
-export function CompanyPortal(){
-  const [active,setActive]=useState("Firma özeti");const [data,setData]=useState(()=>isBackendConfigured()?null:demoCompanyDashboard);const [notice,setNotice]=useState("");const [filters,setFilters]=useState({origin:"",destination:"",date:"",vehicle:"Tümü"});
-  const [marketLoads,setMarketLoads]=useState(()=>liveMarketplaceEnabled()?[]:getLoads(seedLoads));const [marketOffers,setMarketOffers]=useState(()=>liveMarketplaceEnabled()?[]:getOffers(seedOffers));const [matches,setMatches]=useState(()=>liveMarketplaceEnabled()?[]:getMatches());
-  const {prefs,toggleSavedLoad,saveFilter,removeFilter}=usePreferences();
-  useEffect(()=>{let mounted=true;getCompanyDashboard().then(result=>mounted&&setData(result)).catch(error=>mounted&&setNotice(error.message));if(liveMarketplaceEnabled()){Promise.all([loadMarketplace(),loadMyOffers(),loadMyMatches()]).then(([loads,offers,remoteMatches])=>{if(!mounted)return;const normalized=offers.map(o=>({id:o.id,load:o.loadId,driver:o.driverName||"Atanmamış şoför",company:"Firma hesabı",vehicle:`${o.vehicleType} · ${o.vehiclePlate}`,amount:`${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,status:o.status==="PENDING"?"Bekliyor":o.status,createdAt:o.createdAt}));setMarketLoads(loads);setMarketOffers(normalized);setMatches(remoteMatches.map(match=>{const offer=normalized.find(x=>x.id===match.offerId);return {...match,cargo:match.loadId,route:"Backend seferi",driver:offer?.driver||"Atanmış şoför",carrier:"Firma hesabı",vehicle:offer?.vehicle,amount:offer?.amount||"—",matchedAt:match.matchedAt||match.createdAt}}))}).catch(error=>mounted&&setNotice(error.message));return()=>{mounted=false}}const unsubscribe=subscribeMarketplace(()=>{setMarketLoads(getLoads(seedLoads));setMarketOffers(getOffers(seedOffers));setMatches(getMatches())});return()=>{mounted=false;unsubscribe()}},[]);
-  if(!data)return <PortalShell role="lojistik" active={active} onSelect={setActive}><section className="portal-heading"><div><span>ERİŞİM KONTROLÜ</span><h1>Firma üyeliği doğrulanamadı.</h1><p>{notice||"Şirket paneli yalnızca kayıtlı şirket üyelerine açıktır."}</p></div></section></PortalShell>;
-  const companyOffers=liveMarketplaceEnabled()?marketOffers:marketOffers.filter(x=>x.company==="Horoz Lojistik");const offeredIds=companyOffers.map(x=>x.load);const companyMatches=liveMarketplaceEnabled()?matches:matches.filter(x=>x.carrier==="Horoz Lojistik");
-  const available=marketLoads.filter(x=>x.status==="Teklif alıyor").map(x=>loadToJob(x,{origin:"Tümü",destination:"Tümü",vehicle:filters.vehicle})).filter(x=>(!filters.origin||x.from.toLocaleLowerCase("tr").includes(filters.origin.toLocaleLowerCase("tr")))&&(!filters.destination||x.to.toLocaleLowerCase("tr").includes(filters.destination.toLocaleLowerCase("tr")))&&(filters.vehicle==="Tümü"||x.vehicle===filters.vehicle)&&(!filters.date||x.pickupDate===filters.date));
-  const totalRevenue=(data.kpis.grossRevenue||0)+companyMatches.reduce((sum,x)=>sum+(Number(String(x.amount).replace(/[^0-9]/g,""))||0),0);
-  async function offer(job){if(offeredIds.includes(job.id))return;if(liveMarketplaceEnabled()){try{const created=await submitLiveOffer(job);setMarketOffers(current=>[{id:created.id,load:created.loadId,driver:created.driverName||"Atanmamış şoför",company:data.company.name,vehicle:`${created.vehicleType} · ${created.vehiclePlate}`,amount:`${Number(created.amount).toLocaleString("tr-TR")} ${created.currency}`,status:"Bekliyor",createdAt:created.createdAt},...current]);setNotice(`${job.id} için firma teklifi merkezi sisteme gönderildi.`);return}catch(error){setNotice(error.message);return}}const item={id:makeRecordId("OF"),load:job.id,driver:"Mehmet Yılmaz",company:"Horoz Lojistik",vehicle:"Tır · 34 HRZ 196",score:"4.9",trips:184,amount:job.price,eta:"Bugün 15:30",status:"Bekliyor",createdAt:new Date().toISOString()};const nextOffers=[item,...marketOffers];const nextLoads=marketLoads.map(x=>x.id===job.id?{...x,offers:(x.offers||0)+1}:x);setMarketOffers(nextOffers);setMarketLoads(nextLoads);saveOffers(nextOffers);saveLoads(nextLoads);setNotice(`${job.id} için Horoz Lojistik teklifi gönderildi.`);setTimeout(()=>setNotice(""),3500)}
-  const kpis=[...Object.entries({"Aktif şoför":data.kpis.drivers,"Kayıtlı araç":data.kpis.vehicles,"Bu ay bulunan yük":data.kpis.loads,"Gönderilen teklif":data.kpis.offers,"Aktif sefer":data.kpis.activeTrips+companyMatches.length,"Tamamlanan sefer":data.kpis.completedTrips})];
-  return <PortalShell role="lojistik" active={active} onSelect={setActive}>{notice&&<div className="success-banner portal-toast"><Check/> {notice}</div>}{active==="Firma özeti"&&<><PageHeading kicker="FİRMA OPERASYON MERKEZİ" title={`${data.company.name} kontrol paneli.`} text="Filo, teklifler ve sevkiyatlar tek operasyon görünümünde." action={<span className={`company-source ${data.source}`}>{data.source==="live"?"CANLI VERİ":"DEMO VERİ"}</span>}/><div className="company-kpis">{kpis.map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong><small>Son güncel şirket verisi</small></article>)}<article className="revenue"><span>Son 12 ay brüt kazanç</span><strong>{totalRevenue.toLocaleString("tr-TR")} €</strong><small>Kabul edilen taşıma işleri</small></article></div><ActionCenter role="lojistik" counts={{availableLoads:available.length,unread:0}} onNavigate={setActive}/><CompanyTrips trips={[...companyMatches.map(x=>({id:x.id,loadTitle:x.cargo,route:x.route,driverName:x.driver,amount:Number(String(x.amount).replace(/[^0-9]/g,"")),currency:"EUR",status:x.status,matchedAt:x.matchedAt})),...data.recentTrips].slice(0,6)}/></>}{active==="Yük pazarı"&&<><PageHeading kicker="AVRUPA YÜK PAZARI" title="Filonuza yeni yük bulun." text="Rota, tarih ve araç uyumuna göre sıralanan doğrulanmış yükler."/><SavedFilters filters={prefs.savedFilters} activeFilters={filters} onApply={setFilters} onSave={saveFilter} onRemove={removeFilter}/><MarketplaceFilters filters={filters} onChange={setFilters}/><JobGrid data={available} accepted={offeredIds} onAccept={offer} savedLoadIds={prefs.savedLoadIds} onToggleSave={toggleSavedLoad} onView={()=>{}}/></>}{active==="Kaydedilen Yükler"&&<><PageHeading kicker="KAYDEDILEN YÜKLER" title="Takip ettiğiniz yükler." text="Kaydettiğiniz yükleri buradan hızlıca açabilirsiniz."/><SavedLoads loads={[...marketLoads,...jobs.filter(j=>!marketLoads.find(m=>m.id===j.id))]} savedIds={prefs.savedLoadIds} onToggleSave={toggleSavedLoad} onView={()=>setActive("Yük pazarı")}/></>}{active==="Tekliflerim"&&<><PageHeading kicker="FİRMA TEKLİFLERİ" title="Gönderilen teklifleri yönetin." text="Yük detayını açın, mesajlaşın, teklifi güncelleyin veya geri çekin."/><section className="company-table"><div className="company-table-head"><span>İlan</span><span>Atanan şoför</span><span>Araç</span><span>Tutar</span><span>Durum</span></div>{companyOffers.map(x=><article key={x.id}><strong>{x.load}</strong><span>{x.driver}</span><span>{x.vehicle}</span><b>{x.amount}</b><em>{x.status}</em></article>)}</section></>}{active==="Sevkiyatlar"&&(liveMarketplaceEnabled()?<EmptyState icon={<Route/>} title={companyMatches.length?"Sevkiyat detay bağlantısı hazırlanıyor":"Aktif sevkiyat bulunmuyor"} text="Gerçek sevkiyat detayları bağlanana kadar örnek operasyon verisi gösterilmiyor."/>:<ShipmentDetail onMessage={()=>setActive("Mesajlar")}/>)} {active==="Mesajlar"&&<MessagesCenter demo={!liveMarketplaceEnabled()} onOpenShipment={()=>setActive("Sevkiyatlar")}/>} {active==="Şoförler"&&<><PageHeading kicker="FİLO EKİBİ" title="Şoförler ve atamalar." text="Şoför uygunluğu, doğrulama ve aktif görevleri yönetin."/><CompanyDrivers drivers={data.drivers}/></>}{active==="Kazançlar"&&<><PageHeading kicker="FİNANS" title="Kazanç görünümü." text="Tamamlanan taşımalardan oluşan gelir özeti."/><CompanyMonthlyChart months={data.monthly}/></>}{["Araçlar","Canlı Harita","Faturalar","Belgeler","Ekip"].includes(active)&&<EmptyState icon={<Truck/>} title={`${active} alanı entegrasyona hazır`} text="Bu ekran için ilgili backend endpoint sözleşmesi bekleniyor."/>}</PortalShell>
-}
-
-function CompanyMonthlyChart({months}){const max=Math.max(...months.map(x=>x.revenue),1);return <section className="company-chart"><div><h2>12 aylık kazanç ve operasyon</h2><p>Yeşil sütun gelir, sayı tamamlanan seferdir.</p></div><div className="company-bars">{months.map(x=><article key={x.month}><span><i style={{height:`${x.revenue/max*100}%`}}/></span><strong>{x.trips}</strong><small>{x.month}</small></article>)}</div></section>}
-function CompanyDrivers({drivers}){return <section className="company-table drivers"><div className="company-table-head"><span>Şoför</span><span>Durum</span><span>Deneyim</span><span>Sefer</span><span>Gelir</span></div>{drivers.map(x=><article key={x.id}><span><strong>{x.name}</strong><small>{x.email}</small></span><em>{x.status}</em><span>{x.yearsExperience} yıl</span><b>{x.completedTrips}</b><strong>{x.revenue.toLocaleString("tr-TR")} €</strong></article>)}</section>}
-function CompanyTrips({trips}){return <section className="company-table trips"><div className="company-table-head"><span>Sefer / yük</span><span>Rota</span><span>Şoför</span><span>Tutar</span><span>Durum</span></div>{trips.map(x=><article key={x.id}><span><strong>{x.id}</strong><small>{x.loadTitle}</small></span><strong>{x.route}</strong><span>{x.driverName}</span><b>{Number(x.amount||0).toLocaleString("tr-TR")} {x.currency}</b><em>{x.status}</em></article>)}</section>}
-
-export function DriverPortal(){
-  const [active,setActive]=useState("Atanmış iş");
-  const live=liveMarketplaceEnabled();
-  return <PortalShell role="sofor" active={active} onSelect={setActive}>{active==="Atanmış iş"&&(live?<EmptyState icon={<Package/>} title="Atanmış görev bulunmuyor" text="Size bir sevkiyat atandığında gerçek rota ve iletişim bilgileri burada gösterilecek."/>:<DriverWorkspace onMessage={()=>setActive("Mesajlar")}/>)} {active==="Rota"&&(live?<EmptyState icon={<Map/>} title="Aktif rota bulunmuyor" text="Atanmış sevkiyat olmadan örnek konum veya ETA gösterilmiyor."/>:<LiveRoute/>)} {active==="Mesajlar"&&<MessagesCenter demo={!live}/>} {active==="Belgeler"&&<DocumentCenter role="sofor"/>}</PortalShell>
-}
-
-export function LegacyDriverPortal(){
-  const [active,setActive]=useState("Uygun işler");const [filter,setFilter]=useState("Tümü");const [origin,setOrigin]=useState("Norveç");const [destination,setDestination]=useState("İtalya");const [notice,setNotice]=useState("");
-  const [marketLoads,setMarketLoads]=useState(()=>liveMarketplaceEnabled()?[]:getLoads(seedLoads));const [marketOffers,setMarketOffers]=useState(()=>liveMarketplaceEnabled()?[]:getOffers(seedOffers));const [matches,setMatches]=useState(()=>liveMarketplaceEnabled()?[]:getMatches());
-  useEffect(()=>subscribeMarketplace(()=>{setMarketLoads(getLoads(seedLoads));setMarketOffers(getOffers(seedOffers));setMatches(getMatches())}),[]);
-  useEffect(()=>{
-    if(!liveMarketplaceEnabled())return;
-    let active=true;
-    Promise.all([loadMarketplace(),loadMyOffers(),loadMyMatches()]).then(([remoteLoads,offers,remoteMatches])=>{
-      if(!active)return;
-      setMarketLoads(remoteLoads);
-      const normalizedOffers=offers.map(o=>({
-        id:o.id,load:o.loadId,driver:o.driverName||"Ahmet Yılmaz",
-        company:o.offererType==="COMPANY"?"Lojistik firması":"Bağımsız taşıyıcı",
-        vehicle:`${o.vehicleType} · ${o.vehiclePlate}`,
-        amount:`${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,
-        status:o.status==="PENDING"?"Bekliyor":o.status,createdAt:o.createdAt
-      }));
-      setMarketOffers(normalizedOffers);
-      setMatches(remoteMatches.map(match=>{const offer=normalizedOffers.find(x=>x.id===match.offerId);return {...match,cargo:match.loadId,route:"Backend seferi",driver:offer?.driver||"Ahmet Yılmaz",carrier:offer?.company||"Taşıyıcı",vehicle:offer?.vehicle,amount:offer?.amount||"—",matchedAt:match.matchedAt||match.createdAt}}));
-    }).catch(reason=>active&&setNotice(reason.message));
-    return()=>{active=false};
-  },[]);
-  const allJobs=useMemo(()=>{const dynamic=marketLoads.filter(x=>x.status==="Teklif alıyor").map(x=>loadToJob(x,{origin,destination,vehicle:filter}));if(liveMarketplaceEnabled())return dynamic.sort((a,b)=>b.match-a.match);const ids=new Set(dynamic.map(x=>x.id));return [...dynamic,...jobs.filter(x=>!ids.has(x.id)).map(x=>loadToJob(x,{origin,destination,vehicle:filter}))].sort((a,b)=>b.match-a.match)},[marketLoads,origin,destination,filter]);
-  const visible=useMemo(()=>allJobs.filter(x=>(filter==="Tümü"||x.vehicle===filter)&&(origin==="Tümü"||x.originCountry===origin)&&(destination==="Tümü"||x.destinationCountry===destination)),[allJobs,filter,origin,destination]);
-  const myOffers=liveMarketplaceEnabled()?marketOffers:marketOffers.filter(x=>x.driver==="Ahmet Yılmaz");const offeredIds=myOffers.map(x=>x.load);const acceptedMatches=liveMarketplaceEnabled()?matches:matches.filter(x=>x.driver==="Ahmet Yılmaz");
-  async function accept(job){
-    if(offeredIds.includes(job.id))return;
-    if(liveMarketplaceEnabled()){try{const created=await submitLiveOffer(job);const offer={id:created.id,load:created.loadId,driver:created.driverName,company:created.offererType==="COMPANY"?"Lojistik firması":"Bağımsız taşıyıcı",vehicle:`${created.vehicleType} · ${created.vehiclePlate}`,amount:`${Number(created.amount).toLocaleString("tr-TR")} ${created.currency}`,status:"Bekliyor",createdAt:created.createdAt};setMarketOffers(current=>[offer,...current]);setNotice(`${job.id} için teklifiniz merkezi sisteme gönderildi.`);setTimeout(()=>setNotice(""),3500);return}catch(reason){setNotice(reason.message);return}}
-    const offer={id:makeRecordId("OF"),load:job.id,driver:"Ahmet Yılmaz",company:"Anadolu Filo",vehicle:"Tır · 34 LOG 2026",score:"4.9",trips:128,amount:job.price,eta:"Bugün 16:30",status:"Bekliyor",createdAt:new Date().toISOString()};
-    const updatedOffers=[offer,...marketOffers];const updatedLoads=marketLoads.map(x=>x.id===job.id?{...x,offers:(x.offers||0)+1}:x);setMarketOffers(updatedOffers);setMarketLoads(updatedLoads);saveOffers(updatedOffers);saveLoads(updatedLoads);setNotice(`${job.id} için teklifiniz yük verene gönderildi.`);setTimeout(()=>setNotice(""),3500)
-  }
-  const pendingJobs=allJobs.filter(x=>offeredIds.includes(x.id));const totalEarnings=acceptedMatches.reduce((sum,x)=>sum+(Number(String(x.amount).replace(/[^0-9]/g,""))||0),0);
-  return <PortalShell role="sofor" active={active} onSelect={setActive}>{notice&&<div className="success-banner portal-toast"><Check/> {notice}</div>}{active==="Uygun işler"&&<><PageHeading kicker="51 ÜLKEDE ROTA EŞLEŞTİRMESİ" title="Sonraki rotanızı siz seçin." text="Konum, hedef rota ve araç uyumuna göre ilanlar otomatik puanlanır." action={<div className="driver-online"><i/> Avrupa genelinde iş almaya açık</div>}/><section className="route-preference"><div><span className="route-step">A</span><label>Şu anda neredesiniz?<select value={origin} onChange={e=>setOrigin(e.target.value)}><option>Tümü</option>{EUROPEAN_COUNTRIES.map(country=><option key={country}>{country}</option>)}</select><small>51 ülkeden mevcut konumunuzu seçin</small></label></div><ArrowRight/><div><span className="route-step destination">B</span><label>Nereye gitmek istiyorsunuz?<select value={destination} onChange={e=>setDestination(e.target.value)}><option>Tümü</option>{EUROPEAN_COUNTRIES.map(country=><option key={country}>{country}</option>)}</select><small>Boş dönüşü azaltacak hedef ülkeyi seçin</small></label></div><button onClick={()=>setNotice(`${origin} → ${destination} koridorunda ${visible.length} uygun yük bulundu.`)}>Rotamı eşleştir</button></section><div className="driver-toolbar"><div>{["Tümü","Tır","Frigorifik","Kamyon","Kamyonet","Panelvan"].map(x=><button className={filter===x?"active":""} onClick={()=>setFilter(x)} key={x}>{x}</button>)}</div><span>{visible.length} uygun Avrupa işi</span></div>{visible.length?<JobGrid data={visible} accepted={offeredIds} onAccept={accept}/>:<EmptyState icon={<Route/>} title="Bu koridorda aktif yük bulunamadı" text="Konum veya araç filtresini genişleterek çevre rotalardaki işleri görebilirsiniz."/>}</>}{active==="Seferlerim"&&<><PageHeading kicker="TEKLİF & SEFER TAKİBİ" title="Tüm işleriniz tek ekranda." text="Bekleyen tekliflerinizi ve kabul edilen seferlerinizi takip edin."/><div className="portal-stats"><article><span>Bekleyen teklif</span><strong>{myOffers.filter(x=>x.status==="Bekliyor").length}</strong><small>Yük veren yanıtı bekleniyor</small></article><article><span>Planlanan sefer</span><strong>{acceptedMatches.length}</strong><small>Eşleşmesi tamamlandı</small></article><article className="dark"><span>Başarı oranı</span><strong>{myOffers.length?`%${Math.round(acceptedMatches.length/myOffers.length*100)}`:"%0"}</strong><small>Kabul edilen teklifler</small></article></div><section className="trip-board">{pendingJobs.length?<JobGrid data={pendingJobs} accepted={offeredIds} onAccept={accept}/>:<EmptyState icon={<Route/>} title="Henüz teklifiniz yok" text="Uygun işler ekranından bir Avrupa yüküne teklif vererek başlayın." action={()=>setActive("Uygun işler")}/>}</section></>}{active==="Geçmiş"&&<MonthlyHistory role="sofor" matches={acceptedMatches}/>} {active==="Canlı rota"&&<LiveRoute/>}{active==="Belgeler"&&<DocumentCenter role="sofor"/>}{active==="Takograf"&&<TachographCenter/>}{active==="Kazançlar"&&<><PageHeading kicker="AVRUPA KAZANÇ ÖZETİ" title="Kazançlarınızı Euro bazında izleyin." text="Eşleşen seferler ve bekleyen ödemeler gerçek iş akışından hesaplanır."/><div className="earnings-grid"><article><span>Planlanan kazanç</span><strong>{totalEarnings.toLocaleString("tr-TR")} €</strong><small>{acceptedMatches.length} eşleşmiş sefer</small></article><article><span>Bekleyen teklif</span><strong>{myOffers.filter(x=>x.status==="Bekliyor").length}</strong><small>Yük veren onayı bekliyor</small></article><article className="dark"><span>Toplam sefer</span><strong>{acceptedMatches.length}</strong><small>Logiway eşleşmeleri</small></article></div><MonthlyHistory role="sofor" matches={acceptedMatches}/></>}</PortalShell>
-}
-
-const demoHistory=[
-  {id:"MT-2505",loadId:"LW-2798",route:"Bursa, Türkiye → Hamburg, Almanya",cargo:"Otomotiv parçası",driver:"Ahmet Yılmaz",carrier:"Anadolu Filo",amount:"3.720 €",status:"Tamamlandı",matchedAt:"2026-05-26T10:00:00.000Z"},
-  {id:"MT-2504",loadId:"LW-2742",route:"Göteborg, İsveç → Paris, Fransa",cargo:"Makine ekipmanı",driver:"Ahmet Yılmaz",carrier:"Anadolu Filo",amount:"3.240 €",status:"Tamamlandı",matchedAt:"2026-04-20T10:00:00.000Z"},
-  {id:"MT-2503",loadId:"LW-2688",route:"Ankara, Türkiye → Varşova, Polonya",cargo:"Tekstil paletleri",driver:"Ahmet Yılmaz",carrier:"Anadolu Filo",amount:"2.850 €",status:"Tamamlandı",matchedAt:"2026-03-17T10:00:00.000Z"},
+const demoHistory = [
+  {
+    id: "MT-2505",
+    loadId: "LW-2798",
+    route: "Bursa, Türkiye → Hamburg, Almanya",
+    cargo: "Otomotiv parçası",
+    driver: "Ahmet Yılmaz",
+    carrier: "Anadolu Filo",
+    amount: "3.720 €",
+    status: "Tamamlandı",
+    matchedAt: "2026-05-26T10:00:00.000Z",
+  },
+  {
+    id: "MT-2504",
+    loadId: "LW-2742",
+    route: "Göteborg, İsveç → Paris, Fransa",
+    cargo: "Makine ekipmanı",
+    driver: "Ahmet Yılmaz",
+    carrier: "Anadolu Filo",
+    amount: "3.240 €",
+    status: "Tamamlandı",
+    matchedAt: "2026-04-20T10:00:00.000Z",
+  },
+  {
+    id: "MT-2503",
+    loadId: "LW-2688",
+    route: "Ankara, Türkiye → Varşova, Polonya",
+    cargo: "Tekstil paletleri",
+    driver: "Ahmet Yılmaz",
+    carrier: "Anadolu Filo",
+    amount: "2.850 €",
+    status: "Tamamlandı",
+    matchedAt: "2026-03-17T10:00:00.000Z",
+  },
 ];
 
-function MonthlyHistory({role,matches}){
-  const records=liveMarketplaceEnabled()?matches:[...matches,...demoHistory.filter(seed=>!matches.some(x=>x.id===seed.id))];
-  const months=[...new Set(records.map(x=>(x.matchedAt||new Date().toISOString()).slice(0,7)))].sort().reverse();const [month,setMonth]=useState(months[0]||"all");
-  const visible=month==="all"?records:records.filter(x=>(x.matchedAt||"").startsWith(month));const total=visible.reduce((sum,x)=>sum+(Number(String(x.amount).replace(/[^0-9]/g,""))||0),0);
-  return <section className="history-page"><PageHeading kicker="AYLIK OPERASYON ARŞİVİ" title={role==="sofor"?"Sefer ve kazanç geçmişiniz.":"İlan ve taşıma geçmişiniz."} text="Önceki aylarda gerçekleşen eşleşmeleri, rotaları ve tutarları inceleyin." action={<select className="history-select" value={month} onChange={e=>setMonth(e.target.value)}><option value="all">Tüm aylar</option>{months.map(x=><option value={x} key={x}>{new Date(`${x}-01`).toLocaleDateString("tr-TR",{month:"long",year:"numeric"})}</option>)}</select>}/><div className="history-summary"><article><span>Toplam sefer</span><strong>{visible.length}</strong></article><article><span>{role==="sofor"?"Toplam kazanç":"Taşıma hacmi"}</span><strong>{total.toLocaleString("tr-TR")} €</strong></article><article><span>Tamamlanma</span><strong>%{visible.length?Math.round(visible.filter(x=>x.status==="Tamamlandı").length/visible.length*100):0}</strong></article></div><div className="history-table"><div className="history-head"><span>Sefer</span><span>Rota ve yük</span><span>{role==="sofor"?"Taşıyıcı":"Şoför"}</span><span>Tutar</span><span>Durum</span></div>{visible.map(x=><article key={x.id}><span><strong>{x.loadId}</strong><small>{new Date(x.matchedAt).toLocaleDateString("tr-TR")}</small></span><span><strong>{x.route||`${x.from} → ${x.to}`}</strong><small>{x.cargo}</small></span><span><strong>{role==="sofor"?x.carrier:x.driver}</strong><small>{role==="sofor"?x.driver:x.vehicle}</small></span><b>{x.amount}</b><em>{x.status}</em></article>)}</div></section>
+function MonthlyHistory({ role, matches }) {
+  const records = liveMarketplaceEnabled()
+    ? matches
+    : [
+        ...matches,
+        ...demoHistory.filter((seed) => !matches.some((x) => x.id === seed.id)),
+      ];
+  const months = [
+    ...new Set(
+      records.map((x) => (x.matchedAt || new Date().toISOString()).slice(0, 7)),
+    ),
+  ]
+    .sort()
+    .reverse();
+  const [month, setMonth] = useState(months[0] || "all");
+  const visible =
+    month === "all"
+      ? records
+      : records.filter((x) => (x.matchedAt || "").startsWith(month));
+  const total = visible.reduce(
+    (sum, x) => sum + (Number(String(x.amount).replace(/[^0-9]/g, "")) || 0),
+    0,
+  );
+  return (
+    <section className="history-page">
+      <PageHeading
+        kicker="AYLIK OPERASYON ARŞİVİ"
+        title={
+          role === "sofor"
+            ? "Sefer ve kazanç geçmişiniz."
+            : "İlan ve taşıma geçmişiniz."
+        }
+        text="Önceki aylarda gerçekleşen eşleşmeleri, rotaları ve tutarları inceleyin."
+        action={
+          <select
+            className="history-select"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+          >
+            <option value="all">Tüm aylar</option>
+            {months.map((x) => (
+              <option value={x} key={x}>
+                {new Date(`${x}-01`).toLocaleDateString("tr-TR", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </option>
+            ))}
+          </select>
+        }
+      />
+      <div className="history-summary">
+        <article>
+          <span>Toplam sefer</span>
+          <strong>{visible.length}</strong>
+        </article>
+        <article>
+          <span>{role === "sofor" ? "Toplam kazanç" : "Taşıma hacmi"}</span>
+          <strong>{total.toLocaleString("tr-TR")} €</strong>
+        </article>
+        <article>
+          <span>Tamamlanma</span>
+          <strong>
+            %
+            {visible.length
+              ? Math.round(
+                  (visible.filter((x) => x.status === "Tamamlandı").length /
+                    visible.length) *
+                    100,
+                )
+              : 0}
+          </strong>
+        </article>
+      </div>
+      <div className="history-table">
+        <div className="history-head">
+          <span>Sefer</span>
+          <span>Rota ve yük</span>
+          <span>{role === "sofor" ? "Taşıyıcı" : "Şoför"}</span>
+          <span>Tutar</span>
+          <span>Durum</span>
+        </div>
+        {visible.map((x) => (
+          <article key={x.id}>
+            <span>
+              <strong>{x.loadId}</strong>
+              <small>{new Date(x.matchedAt).toLocaleDateString("tr-TR")}</small>
+            </span>
+            <span>
+              <strong>{x.route || `${x.from} → ${x.to}`}</strong>
+              <small>{x.cargo}</small>
+            </span>
+            <span>
+              <strong>{role === "sofor" ? x.carrier : x.driver}</strong>
+              <small>{role === "sofor" ? x.driver : x.vehicle}</small>
+            </span>
+            <b>{x.amount}</b>
+            <em>{x.status}</em>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
-function DocumentCenter({role}){
-  const live=liveMarketplaceEnabled();
-  const defaults=role==="sofor"?["Kimlik / pasaport","Sürücü belgesi","Mesleki yeterlilik (CPC)","Takograf kartı","Araç ruhsatı ve sigorta"]:["Şirket sicil belgesi","Vergi / VAT numarası","EORI belgesi","Taşıma sorumluluk sigortası","e-CMR / eFTI yetkilendirmesi"];
-  const storageKey=`logiway-documents-${role}`;const [documents,setDocuments]=useState(()=>JSON.parse(localStorage.getItem(storageKey)||"{}"));
-  function upload(name,file){if(!file)return;const next={...documents,[name]:{file:file.name,date:new Date().toLocaleDateString("tr-TR")}};setDocuments(next);localStorage.setItem(storageKey,JSON.stringify(next))}
-  const complete=defaults.filter(x=>documents[x]).length;
-  if(live)return <EmptyState icon={<FileText/>} title="Belge yükleme henüz etkin değil" text="Belgeler yalnızca güvenli dosya depolama ve doğrulama API'si bağlandıktan sonra kabul edilecek."/>;
-  return <section className="feature-page"><PageHeading kicker="DOĞRULAMA & UYUM" title={role==="sofor"?"Şoför ve araç belgeleriniz.":"Şirketiniz Avrupa taşımacılığına hazır."} text="Belgelerinizi tek merkezde yönetin; doğrulama durumunu eşleşmelerde güven göstergesi olarak kullanın."/><div className="verification-summary"><div><span className="verification-icon"><BadgeCheck/></span><div><small>PROFİL DOĞRULAMA</small><strong>%{Math.round((complete/defaults.length)*100)} tamamlandı</strong><p>{complete}/{defaults.length} belge yüklendi</p></div></div><div className="verify-progress"><i style={{width:`${(complete/defaults.length)*100}%`}}/></div><span className="integration-note">KYC sağlayıcısı entegrasyonuna hazır</span></div><div className="verification-grid">{defaults.map((name,index)=><article className={documents[name]?"verify-card uploaded":"verify-card"} key={name}><div className="doc-icon">{documents[name]?<FileCheck2/>:<FileText/>}</div><div><strong>{name}</strong><small>{documents[name]?`${documents[name].file} · ${documents[name].date}`:"PDF, JPG veya PNG · En fazla 10 MB"}</small></div><label><UploadCloud size={16}/>{documents[name]?"Güncelle":"Belge yükle"}<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>upload(name,e.target.files?.[0])}/></label><span className={documents[name]?"doc-status ok":"doc-status"}>{documents[name]?<><Check/> Yüklendi</>:index<2?"Gerekli":"Önerilen"}</span></article>)}</div></section>
+function DocumentCenter({ role }) {
+  const live = liveMarketplaceEnabled();
+  const defaults =
+    role === "sofor"
+      ? [
+          "Kimlik / pasaport",
+          "Sürücü belgesi",
+          "Mesleki yeterlilik (CPC)",
+          "Takograf kartı",
+          "Araç ruhsatı ve sigorta",
+        ]
+      : [
+          "Şirket sicil belgesi",
+          "Vergi / VAT numarası",
+          "EORI belgesi",
+          "Taşıma sorumluluk sigortası",
+          "e-CMR / eFTI yetkilendirmesi",
+        ];
+  const storageKey = `logiway-documents-${role}`;
+  const [documents, setDocuments] = useState(() =>
+    JSON.parse(localStorage.getItem(storageKey) || "{}"),
+  );
+  function upload(name, file) {
+    if (!file) return;
+    const next = {
+      ...documents,
+      [name]: { file: file.name, date: new Date().toLocaleDateString("tr-TR") },
+    };
+    setDocuments(next);
+    localStorage.setItem(storageKey, JSON.stringify(next));
+  }
+  const complete = defaults.filter((x) => documents[x]).length;
+  if (live)
+    return (
+      <EmptyState
+        icon={<FileText />}
+        title="Belge yükleme henüz etkin değil"
+        text="Belgeler yalnızca güvenli dosya depolama ve doğrulama API'si bağlandıktan sonra kabul edilecek."
+      />
+    );
+  return (
+    <section className="feature-page">
+      <PageHeading
+        kicker="DOĞRULAMA & UYUM"
+        title={
+          role === "sofor"
+            ? "Şoför ve araç belgeleriniz."
+            : "Şirketiniz Avrupa taşımacılığına hazır."
+        }
+        text="Belgelerinizi tek merkezde yönetin; doğrulama durumunu eşleşmelerde güven göstergesi olarak kullanın."
+      />
+      <div className="verification-summary">
+        <div>
+          <span className="verification-icon">
+            <BadgeCheck />
+          </span>
+          <div>
+            <small>PROFİL DOĞRULAMA</small>
+            <strong>
+              %{Math.round((complete / defaults.length) * 100)} tamamlandı
+            </strong>
+            <p>
+              {complete}/{defaults.length} belge yüklendi
+            </p>
+          </div>
+        </div>
+        <div className="verify-progress">
+          <i style={{ width: `${(complete / defaults.length) * 100}%` }} />
+        </div>
+        <span className="integration-note">
+          KYC sağlayıcısı entegrasyonuna hazır
+        </span>
+      </div>
+      <div className="verification-grid">
+        {defaults.map((name, index) => (
+          <article
+            className={documents[name] ? "verify-card uploaded" : "verify-card"}
+            key={name}
+          >
+            <div className="doc-icon">
+              {documents[name] ? <FileCheck2 /> : <FileText />}
+            </div>
+            <div>
+              <strong>{name}</strong>
+              <small>
+                {documents[name]
+                  ? `${documents[name].file} · ${documents[name].date}`
+                  : "PDF, JPG veya PNG · En fazla 10 MB"}
+              </small>
+            </div>
+            <label>
+              <UploadCloud size={16} />
+              {documents[name] ? "Güncelle" : "Belge yükle"}
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => upload(name, e.target.files?.[0])}
+              />
+            </label>
+            <span className={documents[name] ? "doc-status ok" : "doc-status"}>
+              {documents[name] ? (
+                <>
+                  <Check /> Yüklendi
+                </>
+              ) : index < 2 ? (
+                "Gerekli"
+              ) : (
+                "Önerilen"
+              )}
+            </span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
-function PaymentCenter(){
-  const [connected,setConnected]=useState(()=>localStorage.getItem("logiway-payment-connected")==="true");const [secured,setSecured]=useState(false);
-  function connect(){setConnected(true);localStorage.setItem("logiway-payment-connected","true")}
-  return <section className="feature-page"><PageHeading kicker="GÜVENLİ ÇOKLU PARA BİRİMİ" title="Ödemelerinizi güvenceyle yönetin." text="EUR, GBP ve NOK ödemelerini sefer durumuna bağlı olarak tek panelde takip edin."/><div className="payment-overview"><article><span>Korumalı bakiye</span><strong>{secured?"4.850 €":"0 €"}</strong><small>Teslimata kadar güvenli hesapta</small></article><article><span>Bekleyen tahsilat</span><strong>9.250 €</strong><small>2 aktif uluslararası sefer</small></article><article className="dark"><span>Ödenen</span><strong>38.400 €</strong><small>Bu yıl · 14 ödeme</small></article></div><div className="secure-payment"><div><span className="secure-icon"><ShieldCheck/></span><div><h2>Logiway Güvenli Ödeme</h2><p>Yük bedeli güvenli hesapta tutulur, dijital teslimat onayından sonra şoföre aktarılır.</p><span className="integration-note">Ödeme sağlayıcısı entegrasyonuna hazır demo akış</span></div></div><div className="payment-actions"><button className="portal-secondary" onClick={connect}>{connected?<><Check/> Hesap bağlandı</>:<><CreditCard/> Ödeme hesabını bağla</>}</button><button className="portal-primary" disabled={!connected||secured} onClick={()=>setSecured(true)}>{secured?<><Check/> Ödeme güvenceye alındı</>:"4.850 € güvenceye al"}</button></div></div><section className="payment-list"><div className="list-head"><div><h2>Son hareketler</h2><p>Para birimine göre mutabakat ve ödeme durumu</p></div></div><div className="payment-row"><FileCheck2/><div><strong>Bergen → Milano</strong><small>LW-2847 · EUR</small></div><span>4.850 €</span><b>{secured?"Güvende":"Hazır"}</b></div><div className="payment-row"><Clock3/><div><strong>Rotterdam → Paris</strong><small>LW-2848 · EUR</small></div><span>2.750 €</span><b className="waiting">Vade: 7 gün</b></div></section></section>
+function PaymentCenter() {
+  const [connected, setConnected] = useState(
+    () => localStorage.getItem("logiway-payment-connected") === "true",
+  );
+  const [secured, setSecured] = useState(false);
+  function connect() {
+    setConnected(true);
+    localStorage.setItem("logiway-payment-connected", "true");
+  }
+  return (
+    <section className="feature-page">
+      <PageHeading
+        kicker="GÜVENLİ ÇOKLU PARA BİRİMİ"
+        title="Ödemelerinizi güvenceyle yönetin."
+        text="EUR, GBP ve NOK ödemelerini sefer durumuna bağlı olarak tek panelde takip edin."
+      />
+      <div className="payment-overview">
+        <article>
+          <span>Korumalı bakiye</span>
+          <strong>{secured ? "4.850 €" : "0 €"}</strong>
+          <small>Teslimata kadar güvenli hesapta</small>
+        </article>
+        <article>
+          <span>Bekleyen tahsilat</span>
+          <strong>9.250 €</strong>
+          <small>2 aktif uluslararası sefer</small>
+        </article>
+        <article className="dark">
+          <span>Ödenen</span>
+          <strong>38.400 €</strong>
+          <small>Bu yıl · 14 ödeme</small>
+        </article>
+      </div>
+      <div className="secure-payment">
+        <div>
+          <span className="secure-icon">
+            <ShieldCheck />
+          </span>
+          <div>
+            <h2>Logiway Güvenli Ödeme</h2>
+            <p>
+              Yük bedeli güvenli hesapta tutulur, dijital teslimat onayından
+              sonra şoföre aktarılır.
+            </p>
+            <span className="integration-note">
+              Ödeme sağlayıcısı entegrasyonuna hazır demo akış
+            </span>
+          </div>
+        </div>
+        <div className="payment-actions">
+          <button className="portal-secondary" onClick={connect}>
+            {connected ? (
+              <>
+                <Check /> Hesap bağlandı
+              </>
+            ) : (
+              <>
+                <CreditCard /> Ödeme hesabını bağla
+              </>
+            )}
+          </button>
+          <button
+            className="portal-primary"
+            disabled={!connected || secured}
+            onClick={() => setSecured(true)}
+          >
+            {secured ? (
+              <>
+                <Check /> Ödeme güvenceye alındı
+              </>
+            ) : (
+              "4.850 € güvenceye al"
+            )}
+          </button>
+        </div>
+      </div>
+      <section className="payment-list">
+        <div className="list-head">
+          <div>
+            <h2>Son hareketler</h2>
+            <p>Para birimine göre mutabakat ve ödeme durumu</p>
+          </div>
+        </div>
+        <div className="payment-row">
+          <FileCheck2 />
+          <div>
+            <strong>Bergen → Milano</strong>
+            <small>LW-2847 · EUR</small>
+          </div>
+          <span>4.850 €</span>
+          <b>{secured ? "Güvende" : "Hazır"}</b>
+        </div>
+        <div className="payment-row">
+          <Clock3 />
+          <div>
+            <strong>Rotterdam → Paris</strong>
+            <small>LW-2848 · EUR</small>
+          </div>
+          <span>2.750 €</span>
+          <b className="waiting">Vade: 7 gün</b>
+        </div>
+      </section>
+    </section>
+  );
 }
 
-function LiveRoute(){
-  const stops=[{city:"Bergen",country:"Norveç",time:"Tamamlandı"},{city:"Oslo",country:"Norveç",time:"Bugün 16:40"},{city:"Hamburg",country:"Almanya",time:"Yarın 14:10"},{city:"Münih",country:"Almanya",time:"12 Eyl · 08:30"},{city:"Milano",country:"İtalya",time:"12 Eyl · 15:20"}];
-  return <section className="feature-page"><PageHeading kicker="CANLI ROTA & ETA" title="Bergen'den Milano'ya, her adım görünür." text="Konum, sınır geçişleri ve tahmini teslimat zamanı operasyon ekibiyle paylaşılır." action={<div className="driver-online"><i/> Konum paylaşımı açık</div>}/><div className="live-route-card"><div className="map-stage"><div className="map-grid"/><div className="map-route"><span className="map-pin start">Bergen</span><i/><i/><span className="truck-marker"><Truck/></span><i/><span className="map-pin finish">Milano</span></div><div className="eta-card"><small>TAHMİNİ VARIŞ</small><strong>12 Eylül · 15:20</strong><span>1.846 km kaldı · 24 sa 40 dk</span></div></div><div className="route-stops"><h2>Rota zaman çizelgesi</h2>{stops.map((stop,index)=><div className={index===0?"route-stop done":index===1?"route-stop current":"route-stop"} key={stop.city}><span>{index===0?<Check/>:index===1?<Navigation/>:index+1}</span><div><strong>{stop.city}, {stop.country}</strong><small>{stop.time}</small></div></div>)}<div className="route-alert"><AlertTriangle/><div><strong>Hamburg çevresinde yoğunluk</strong><small>ETA otomatik olarak 25 dakika güncellendi.</small></div></div></div></div></section>
+function LiveRoute() {
+  const stops = [
+    { city: "Bergen", country: "Norveç", time: "Tamamlandı" },
+    { city: "Oslo", country: "Norveç", time: "Bugün 16:40" },
+    { city: "Hamburg", country: "Almanya", time: "Yarın 14:10" },
+    { city: "Münih", country: "Almanya", time: "12 Eyl · 08:30" },
+    { city: "Milano", country: "İtalya", time: "12 Eyl · 15:20" },
+  ];
+  return (
+    <section className="feature-page">
+      <PageHeading
+        kicker="CANLI ROTA & ETA"
+        title="Bergen'den Milano'ya, her adım görünür."
+        text="Konum, sınır geçişleri ve tahmini teslimat zamanı operasyon ekibiyle paylaşılır."
+        action={
+          <div className="driver-online">
+            <i /> Konum paylaşımı açık
+          </div>
+        }
+      />
+      <div className="live-route-card">
+        <div className="map-stage">
+          <div className="map-grid" />
+          <div className="map-route">
+            <span className="map-pin start">Bergen</span>
+            <i />
+            <i />
+            <span className="truck-marker">
+              <Truck />
+            </span>
+            <i />
+            <span className="map-pin finish">Milano</span>
+          </div>
+          <div className="eta-card">
+            <small>TAHMİNİ VARIŞ</small>
+            <strong>12 Eylül · 15:20</strong>
+            <span>1.846 km kaldı · 24 sa 40 dk</span>
+          </div>
+        </div>
+        <div className="route-stops">
+          <h2>Rota zaman çizelgesi</h2>
+          {stops.map((stop, index) => (
+            <div
+              className={
+                index === 0
+                  ? "route-stop done"
+                  : index === 1
+                    ? "route-stop current"
+                    : "route-stop"
+              }
+              key={stop.city}
+            >
+              <span>
+                {index === 0 ? (
+                  <Check />
+                ) : index === 1 ? (
+                  <Navigation />
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <div>
+                <strong>
+                  {stop.city}, {stop.country}
+                </strong>
+                <small>{stop.time}</small>
+              </div>
+            </div>
+          ))}
+          <div className="route-alert">
+            <AlertTriangle />
+            <div>
+              <strong>Hamburg çevresinde yoğunluk</strong>
+              <small>ETA otomatik olarak 25 dakika güncellendi.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function TachographCenter(){
-  const [resting,setResting]=useState(false);const [minutes,setMinutes]=useState(255);
-  function toggle(){setResting(x=>!x);if(resting)setMinutes(x=>Math.max(0,x-15))}
-  const hours=Math.floor(minutes/60),mins=minutes%60;
-  return <section className="feature-page"><PageHeading kicker="SÜRÜŞ & DİNLENME UYUMU" title="Takograf sürenizi kontrol altında tutun." text="Günlük sürüş, mola ve haftalık dinlenme limitlerini rota planıyla birlikte izleyin."/><div className="tachograph-grid"><article className="tacho-main"><div className="tacho-top"><span className={resting?"tacho-state resting":"tacho-state"}>{resting?<PauseCircle/>:<Truck/>}{resting?"Molada":"Sürüşte"}</span><span className="integration-note">Takograf API entegrasyonuna hazır</span></div><small>KALAN GÜNLÜK SÜRÜŞ</small><strong>{hours} sa {mins} dk</strong><div className="tacho-progress"><i style={{width:`${Math.min(100,(minutes/540)*100)}%`}}/></div><button className="portal-primary" onClick={toggle}>{resting?"Sürüşü yeniden başlat":"Molayı başlat"}</button></article><article className="tacho-stat"><Clock3/><span>Sonraki zorunlu mola</span><strong>1 sa 12 dk</strong><small>45 dakika dinlenme gerekli</small></article><article className="tacho-stat"><Timer/><span>Haftalık sürüş</span><strong>31 sa 20 dk</strong><small>56 saat sınırının altında</small></article><article className="tacho-stat safe"><ShieldCheck/><span>Uyum durumu</span><strong>Uygun</strong><small>Aktif ihlal bulunmuyor</small></article></div><div className="compliance-alert"><BadgeCheck/><div><strong>Rota mola planıyla uyumlu</strong><p>Oslo sonrası planlanan durak, AB sürüş ve dinlenme kurgusuna göre rota zaman çizelgesine eklendi.</p></div></div></section>
+function TachographCenter() {
+  const [resting, setResting] = useState(false);
+  const [minutes, setMinutes] = useState(255);
+  function toggle() {
+    setResting((x) => !x);
+    if (resting) setMinutes((x) => Math.max(0, x - 15));
+  }
+  const hours = Math.floor(minutes / 60),
+    mins = minutes % 60;
+  return (
+    <section className="feature-page">
+      <PageHeading
+        kicker="SÜRÜŞ & DİNLENME UYUMU"
+        title="Takograf sürenizi kontrol altında tutun."
+        text="Günlük sürüş, mola ve haftalık dinlenme limitlerini rota planıyla birlikte izleyin."
+      />
+      <div className="tachograph-grid">
+        <article className="tacho-main">
+          <div className="tacho-top">
+            <span className={resting ? "tacho-state resting" : "tacho-state"}>
+              {resting ? <PauseCircle /> : <Truck />}
+              {resting ? "Molada" : "Sürüşte"}
+            </span>
+            <span className="integration-note">
+              Takograf API entegrasyonuna hazır
+            </span>
+          </div>
+          <small>KALAN GÜNLÜK SÜRÜŞ</small>
+          <strong>
+            {hours} sa {mins} dk
+          </strong>
+          <div className="tacho-progress">
+            <i style={{ width: `${Math.min(100, (minutes / 540) * 100)}%` }} />
+          </div>
+          <button className="portal-primary" onClick={toggle}>
+            {resting ? "Sürüşü yeniden başlat" : "Molayı başlat"}
+          </button>
+        </article>
+        <article className="tacho-stat">
+          <Clock3 />
+          <span>Sonraki zorunlu mola</span>
+          <strong>1 sa 12 dk</strong>
+          <small>45 dakika dinlenme gerekli</small>
+        </article>
+        <article className="tacho-stat">
+          <Timer />
+          <span>Haftalık sürüş</span>
+          <strong>31 sa 20 dk</strong>
+          <small>56 saat sınırının altında</small>
+        </article>
+        <article className="tacho-stat safe">
+          <ShieldCheck />
+          <span>Uyum durumu</span>
+          <strong>Uygun</strong>
+          <small>Aktif ihlal bulunmuyor</small>
+        </article>
+      </div>
+      <div className="compliance-alert">
+        <BadgeCheck />
+        <div>
+          <strong>Rota mola planıyla uyumlu</strong>
+          <p>
+            Oslo sonrası planlanan durak, AB sürüş ve dinlenme kurgusuna göre
+            rota zaman çizelgesine eklendi.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function JobGrid({data,accepted,onAccept,savedLoadIds=[],onToggleSave,onView}){const [detail,setDetail]=useState(null);return <><section className="job-grid">{data.map(job=><article className="job-card" key={job.id} onClick={()=>{setDetail(job);onView?.(job);}}><div className="job-card-header"><div className="match-score">%{job.match} uygun</div><BookmarkButton loadId={job.id} saved={savedLoadIds.includes(job.id)} onToggle={onToggleSave}/></div><div className="job-top"><span>{job.id}</span><strong>{job.price}</strong></div><h3>{job.cargo}</h3><div className="job-route"><div><i/><span><small>KALKIŞ</small><strong>{job.from}</strong></span></div><div className="route-line"/><div><i/><span><small>VARIŞ</small><strong>{job.to}</strong></span></div></div>{job.matchReasons&&<div className="match-reasons">{job.matchReasons.slice(0,3).map(reason=><span key={reason}><Check/> {reason}</span>)}</div>}<div className="job-meta"><span><Truck/> {job.vehicle}</span><span><Weight/> {job.weight}</span><span><MapPin/> {job.distance}</span><span><Clock3/> {job.date}</span></div><div className="job-company"><span>{job.company[0]}</span><div><strong>{job.company}</strong><small><ShieldCheck/> Doğrulanmış firma</small></div></div><button disabled={accepted.includes(job.id)} onClick={(event)=>{event.stopPropagation();onAccept(job)}} className={accepted.includes(job.id)?"accepted":""}>{accepted.includes(job.id)?<><Check/> Teklif gönderildi</>:<>Teklif ver <ArrowRight/></>}</button></article>)}</section>{detail&&<LoadDetailDrawer load={detail} onClose={()=>setDetail(null)} onOffer={(job)=>{onAccept(job);setDetail(null)}} onMessage={()=>setDetail(null)}/>}</>}
-function EmptyState({icon,title,text,action}){return <div className="portal-empty"><span>{icon}</span><h3>{title}</h3><p>{text}</p>{action&&<button onClick={action}>Uygun işleri gör <ArrowRight/></button>}</div>}
+function JobGrid({
+  data,
+  accepted,
+  onAccept,
+  savedLoadIds = [],
+  onToggleSave,
+  onView,
+}) {
+  const [detail, setDetail] = useState(null);
+  return (
+    <>
+      <section className="job-grid">
+        {data.map((job) => (
+          <article
+            className="job-card"
+            key={job.id}
+            onClick={() => {
+              setDetail(job);
+              onView?.(job);
+            }}
+          >
+            <div className="job-card-header">
+              <div className="match-score">%{job.match} uygun</div>
+              <BookmarkButton
+                loadId={job.id}
+                saved={savedLoadIds.includes(job.id)}
+                onToggle={onToggleSave}
+              />
+            </div>
+            <div className="job-top">
+              <span>{job.id}</span>
+              <strong>{job.price}</strong>
+            </div>
+            <h3>{job.cargo}</h3>
+            <div className="job-route">
+              <div>
+                <i />
+                <span>
+                  <small>KALKIŞ</small>
+                  <strong>{job.from}</strong>
+                </span>
+              </div>
+              <div className="route-line" />
+              <div>
+                <i />
+                <span>
+                  <small>VARIŞ</small>
+                  <strong>{job.to}</strong>
+                </span>
+              </div>
+            </div>
+            {job.matchReasons && (
+              <div className="match-reasons">
+                {job.matchReasons.slice(0, 3).map((reason) => (
+                  <span key={reason}>
+                    <Check /> {reason}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="job-meta">
+              <span>
+                <Truck /> {job.vehicle}
+              </span>
+              <span>
+                <Weight /> {job.weight}
+              </span>
+              <span>
+                <MapPin /> {job.distance}
+              </span>
+              <span>
+                <Clock3 /> {job.date}
+              </span>
+            </div>
+            <div className="job-company">
+              <span>{job.company[0]}</span>
+              <div>
+                <strong>{job.company}</strong>
+                <small>
+                  <ShieldCheck /> Doğrulanmış firma
+                </small>
+              </div>
+            </div>
+            <button
+              disabled={accepted.includes(job.id)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAccept(job);
+              }}
+              className={accepted.includes(job.id) ? "accepted" : ""}
+            >
+              {accepted.includes(job.id) ? (
+                <>
+                  <Check /> Teklif gönderildi
+                </>
+              ) : (
+                <>
+                  Teklif ver <ArrowRight />
+                </>
+              )}
+            </button>
+          </article>
+        ))}
+      </section>
+      {detail && (
+        <LoadDetailDrawer
+          load={detail}
+          onClose={() => setDetail(null)}
+          onOffer={(job) => {
+            onAccept(job);
+            setDetail(null);
+          }}
+          onMessage={() => setDetail(null)}
+        />
+      )}
+    </>
+  );
+}
+function EmptyState({ icon, title, text, action }) {
+  return (
+    <div className="portal-empty">
+      <span>{icon}</span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+      {action && (
+        <button onClick={action}>
+          Uygun işleri gör <ArrowRight />
+        </button>
+      )}
+    </div>
+  );
+}
