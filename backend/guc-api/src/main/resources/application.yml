@@ -73,6 +73,8 @@ guc:
       mfa-token-minutes: ${JWT_MFA_TOKEN_MINUTES:5}
     encryption-key: ${ENCRYPTION_KEY}
     hsts-enabled: false
+    rate-limit:
+      register-per-hour: ${REGISTER_RATE_LIMIT_PER_HOUR:5}
   storage:
     local-path: ${GUC_STORAGE_PATH:./data/uploads}
   notifications:

@@ -13,10 +13,10 @@ public class RateLimitService {
 
     private static final int LOGIN_LIMIT = 10;
     private static final Duration LOGIN_WINDOW = Duration.ofMinutes(15);
-    private static final int REGISTER_LIMIT = 5;
     private static final Duration REGISTER_WINDOW = Duration.ofHours(1);
 
     private final StringRedisTemplate redisTemplate;
+    private final RateLimitProperties properties;
 
     public void checkLogin(String identifier, String ip) {
         consume("rl:login:id:" + identifier.toLowerCase(), LOGIN_LIMIT, LOGIN_WINDOW);
@@ -24,7 +24,7 @@ public class RateLimitService {
     }
 
     public void checkRegister(String ip) {
-        consume("rl:register:ip:" + ip, REGISTER_LIMIT, REGISTER_WINDOW);
+        consume("rl:register:ip:" + ip, properties.getRegisterPerHour(), REGISTER_WINDOW);
     }
 
     public void checkMfa(String userId, String ip) {

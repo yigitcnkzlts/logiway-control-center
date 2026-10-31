@@ -11,5 +11,7 @@ guc:
       mfa-token-minutes: 5
     encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     hsts-enabled: false
+    rate-limit:
+      register-per-hour: 100
   storage:
     local-path: ./target/test-uploads

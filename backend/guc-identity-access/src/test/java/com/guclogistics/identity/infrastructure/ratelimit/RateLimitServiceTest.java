@@ -31,11 +31,13 @@ class RateLimitServiceTest {
     private ValueOperations<String, String> valueOperations;
 
     private RateLimitService rateLimitService;
+    private RateLimitProperties properties;
 
     @BeforeEach
     void setUp() {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        rateLimitService = new RateLimitService(redisTemplate);
+        properties = new RateLimitProperties();
+        rateLimitService = new RateLimitService(redisTemplate, properties);
     }
 
     @Test
@@ -54,6 +56,19 @@ class RateLimitServiceTest {
         when(valueOperations.increment(anyString())).thenReturn(6L);
 
         assertThatThrownBy(() -> rateLimitService.checkRegister("192.168.1.1"))
+                .isInstanceOf(DomainException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.RATE_LIMITED);
+    }
+
+    @Test
+    void checkRegisterUsesConfiguredTestLimit() {
+        properties.setRegisterPerHour(100);
+        when(valueOperations.increment(anyString())).thenReturn(100L, 101L);
+
+        assertThatCode(() -> rateLimitService.checkRegister("192.168.1.2"))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> rateLimitService.checkRegister("192.168.1.2"))
                 .isInstanceOf(DomainException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.RATE_LIMITED);
