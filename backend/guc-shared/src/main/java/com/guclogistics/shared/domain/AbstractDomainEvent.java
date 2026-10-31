@@ -1,8 +1,11 @@
 package com.guclogistics.shared.domain;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import java.time.Instant;
 import java.util.UUID;
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public abstract class AbstractDomainEvent implements DomainEvent {
 
     private final UUID eventId;

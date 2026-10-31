@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -69,6 +70,40 @@ class AuthFlowIntegrationTest {
     @Autowired
     ObjectMapper objectMapper;
 
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    @Test
+    void registerPersistsSerializableUserRegisteredOutboxEvent() throws Exception {
+        String email = "outbox+" + System.nanoTime() + "@example.com";
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Forwarded-For", "203.0.113.11")
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "SecurePass123!",
+                                  "role": "INDEPENDENT_DRIVER",
+                                  "deviceFingerprint": "outbox-device",
+                                  "platform": "WEB"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isCreated());
+
+        String payload = jdbcTemplate.queryForObject(
+                "SELECT payload_json::text FROM outbox_events WHERE event_type = 'UserRegistered' "
+                        + "AND payload_json ->> 'email' = ?",
+                String.class,
+                email);
+        JsonNode eventJson = objectMapper.readTree(payload);
+
+        assertThat(eventJson.get("eventId").asText()).isNotBlank();
+        assertThat(eventJson.get("occurredAt").asText()).isNotBlank();
+        assertThat(eventJson.get("email").asText()).isEqualTo(email);
+        assertThat(eventJson.get("role").asText()).isEqualTo("INDEPENDENT_DRIVER");
+    }
+
     @Test
     void registerLoginRefreshRotationAndReuseDetection() throws Exception {
         String email = "shipper+" + System.nanoTime() + "@example.com";
@@ -77,6 +112,8 @@ class AuthFlowIntegrationTest {
                   "email": "%s",
                   "password": "SecurePass123!",
                   "role": "SHIPPER",
+                  "companyName": "Integration Shipper",
+                  "companyCountry": "TR",
                   "deviceFingerprint": "device-1",
                   "platform": "ANDROID",
                   "deviceName": "Pixel"
@@ -170,6 +207,8 @@ class AuthFlowIntegrationTest {
                   "email": "ratelimit+%d@example.com",
                   "password": "SecurePass123!",
                   "role": "SHIPPER",
+                  "companyName": "Rate Limit Shipper",
+                  "companyCountry": "TR",
                   "deviceFingerprint": "rl-device",
                   "platform": "WEB"
                 }
