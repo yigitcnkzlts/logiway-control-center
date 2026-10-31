@@ -1,3 +1,5 @@
+import { apiErrorMessage } from "./authValidation";
+
 const API_URL=(import.meta.env.VITE_GUC_API_URL||"").replace(/\/$/,"");
 // Shared demo access is intentionally disabled for production builds, even if
 // the public flag is set accidentally. Use `vite --mode demo` for demo builds.
@@ -47,7 +49,7 @@ export async function apiFetch(path,options={},retried=false){
 export async function apiJson(path,options={}){
   const response=await apiFetch(path,options);
   const body=await response.json().catch(()=>({}));
-  if(!response.ok)throw new ApiError(body.message||`API ${response.status}`,response.status,body);
+  if(!response.ok)throw new ApiError(apiErrorMessage(body,response.status),response.status,body);
   return body;
 }
 

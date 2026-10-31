@@ -606,6 +606,7 @@ button:focus:not(:focus-visible){outline:none}
 .password-field button{position:absolute;right:5px;top:5px;width:39px;height:39px;border:0;border-radius:9px;background:transparent;color:#748179;display:grid;place-items:center;cursor:pointer}
 .password-field button:hover{background:#f0f4ed;color:#38552d}
 .password-field button svg{width:18px}
+.password-requirements{display:block;margin-top:7px;color:#65746b;font-size:11px;font-weight:500;line-height:1.45}
 .button-spinner{width:17px;height:17px;border:2px solid #ffffff55;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
 .login-button:disabled{cursor:wait;opacity:.78}
 .auth-error{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:11px;background:#fff0ee;color:#a33c33;font-size:12px;font-weight:700}

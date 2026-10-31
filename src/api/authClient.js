@@ -1,5 +1,6 @@
 import { apiJson, clearSession, isApiConfigured, isDemoMode, saveTokens } from "./apiClient";
 import { createDemoSession, validateDemoCredentials } from "./demoAuth";
+import { registrationValidationMessage, validateRegistration } from "./authValidation";
 
 function fingerprint(){
   const key="logiway-device-id";let value=localStorage.getItem(key);
@@ -55,8 +56,10 @@ export async function registerUser({email,password,phone,role,company,country}){
     localStorage.setItem("guc-session",JSON.stringify(session));
     return {...session,mode:"demo"};
   }
+  const validationFields=validateRegistration({email,password,phone,role,company,country});
+  if(Object.keys(validationFields).length)throw new Error(registrationValidationMessage(validationFields));
   const roleCode=role==="sofor"?"INDEPENDENT_DRIVER":role==="lojistik"?"LOGISTICS_COMPANY":"SHIPPER";
-  const tokens=await post("/api/v1/auth/register",{email,password,phone,role:roleCode,companyName:company,companyCountry:COUNTRY_CODES[country]||"TR",deviceFingerprint:fingerprint(),platform:"WEB",deviceName:navigator.userAgent.slice(0,120),locale:"tr",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone});
+  const tokens=await post("/api/v1/auth/register",{email:email.trim(),password,phone:phone?.trim()||null,role:roleCode,companyName:company?.trim()||null,companyCountry:COUNTRY_CODES[country]||"TR",deviceFingerprint:fingerprint(),platform:"WEB",deviceName:navigator.userAgent.slice(0,120),locale:"tr",timezone:Intl.DateTimeFormat().resolvedOptions().timeZone});
   saveSession(tokens);
   await hydrateCompany();return {...tokens,mode:"live"};
 }
