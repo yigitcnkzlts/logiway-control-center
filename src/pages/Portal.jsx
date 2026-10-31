@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, BarChart3, Bell, Building2, Check, ChevronRight, ClipboardList, Clock3, CreditCard, Eye, EyeOff, FileCheck2, FileText, Languages, LogOut, Map, MapPin, MessageCircle, Navigation, Package, PauseCircle, Plus, Route, Search, ShieldCheck, Timer, TrendingUp, Truck, UploadCloud, UserRound, Users, Wallet, Weight, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, BarChart3, Bell, Building2, Check, ChevronRight, ClipboardList, Clock3, CreditCard, Eye, EyeOff, FileCheck2, FileText, Languages, LogOut, Map, MapPin, MessageCircle, Navigation, Package, PackageCheck, PauseCircle, Plus, Route, Search, ShieldCheck, Timer, TrendingUp, Truck, UploadCloud, UserRound, Users, Wallet, Warehouse, Weight, X } from "lucide-react";
 import { getLoads, getMatches, getOffers, loadToJob, saveLoads, saveOffers, subscribeMarketplace } from "../services/marketplaceStore";
 import { demoCompanyDashboard, getCompanyDashboard } from "../api/companyDashboardClient";
 import { getSession, isBackendConfigured, loginUser, registerUser, verifyMfa } from "../api/authClient";
@@ -36,6 +36,29 @@ const roleInfo = {
   lojistik: { title:"Lojistik Firması", description:"Filonuzu verimli işlerle buluşturun ve büyütün.", features:["Yük bulma","Araç ve şoför yönetimi","Sefer ve kazanç yönetimi"], icon:Users },
   sofor: { title:"Şoför", description:"Yoldaki işlerinize hızlı ve kolay erişin.", features:["Uygun yükleri görüntüleme","Teklif gönderme","Sefer yönetimi"], icon:Truck },
 };
+const roleSelectionInfo = {
+  "yuk-veren": {
+    title:"Yük Veren",
+    description:"Taşıma ihtiyaçlarınızı tek merkezden yönetin ve doğru taşıyıcıyla hızlıca eşleşin.",
+    features:["Yük ilanı oluşturma","Teklifleri karşılaştırma","Sevkiyat takibi"],
+    buttonLabel:"Yük Veren olarak devam et",
+    icon:PackageCheck,
+  },
+  lojistik: {
+    title:"Lojistik Firması",
+    description:"Filonuzu verimli işlerle buluşturun, tekliflerinizi yönetin ve operasyonunuzu büyütün.",
+    features:["Uygun yükleri bulma","Araç ve şoför yönetimi","Sefer ve kazanç yönetimi"],
+    buttonLabel:"Lojistik Firması olarak devam et",
+    icon:Warehouse,
+  },
+  sofor: {
+    title:"Şoför",
+    description:"Yoldaki işlerinize hızlı erişin, seferlerinizi takip edin ve teslimat sürecini yönetin.",
+    features:["Uygun yükleri görüntüleme","Teklif gönderme","Sefer yönetimi"],
+    buttonLabel:"Şoför olarak devam et",
+    icon:Truck,
+  },
+};
 const seedOffers = [
   { id:1, load:"LW-2847", driver:"Lars Johansen", vehicle:"Frigorifik · NO DR 847", score:"4.9", trips:184, amount:"4.650 €", eta:"Bugün 14:30" },
   { id:2, load:"LW-2847", driver:"Marco Bianchi", vehicle:"Frigorifik · IT MB 144", score:"4.8", trips:126, amount:"4.780 €", eta:"Bugün 16:00" },
@@ -44,7 +67,7 @@ const seedOffers = [
 
 function Brand(){return <Link className="portal-brand" to="/"><span><Route size={19}/></span>logiway</Link>}
 
-export function RoleSelect(){return <div className="role-page"><header><Brand/><Link to="/" className="back-link"><ArrowLeft size={16}/> Ana sayfa</Link></header><main><div className="role-intro"><span>LOGIWAY’E HOŞ GELDİNİZ</span><h1>Size uygun çalışma alanını seçin.</h1><p>Rolünüze özel araçlarla lojistik operasyonunuzu hemen yönetmeye başlayın.</p></div><div className="role-cards">{Object.entries(roleInfo).map(([key,info])=>{const Icon=info.icon;return <article className={`role-card role-card--${key}`} key={key}><div className="role-card-top"><span className="role-icon"><Icon/></span><span className="role-card-number">0{Object.keys(roleInfo).indexOf(key)+1}</span></div><div className="role-card-copy"><h2>{info.title}</h2><p>{info.description}</p><ul>{info.features.map(feature=><li key={feature}><Check size={15}/>{feature}</li>)}</ul></div><Link to={`/giris/${key}`} className="role-continue" aria-label={`${info.title} olarak devam et`}>Devam et <ArrowRight size={17}/></Link></article>})}</div><Link to="/dashboard" className="admin-access"><ShieldCheck size={18}/><span><strong>Yönetici girişi</strong><small>Operasyon kontrol merkezi</small></span><ChevronRight size={18}/></Link></main></div>}
+export function RoleSelect(){return <div className="role-page"><header><Brand/><Link to="/" className="back-link"><ArrowLeft size={16}/> Ana sayfa</Link></header><main><div className="role-intro"><span>LOGIWAY&apos;E HOŞ GELDİNİZ</span><h1>Çalışma alanınızı seçin.</h1><p>Rolünüze uygun paneli seçin ve lojistik operasyonlarınızı yönetmeye başlayın.</p></div><div className="role-cards">{Object.entries(roleSelectionInfo).map(([key,info],index)=>{const Icon=info.icon;return <article className={`role-card role-card--${key}`} key={key}><div className="role-card-top"><span className="role-icon" aria-hidden="true"><Icon/></span><span className="role-card-number" aria-hidden="true">0{index+1}</span></div><div className="role-card-copy"><h2>{info.title}</h2><p>{info.description}</p><ul>{info.features.map(feature=><li key={feature}><Check size={15}/>{feature}</li>)}</ul></div><Link to={`/giris/${key}`} className="role-continue">{info.buttonLabel} <ArrowRight size={17}/></Link></article>})}</div><Link to="/dashboard" className="admin-access"><ShieldCheck size={18}/><span><strong>Yönetici girişi</strong><small>Operasyon kontrol merkezi</small></span><ChevronRight size={18}/></Link></main></div>}
 
 export function PortalLogin(){
   const {role}=useParams();const navigate=useNavigate();const info=roleInfo[role];const [busy,setBusy]=useState(false);const [register,setRegister]=useState(false);const [error,setError]=useState("");const [mfaToken,setMfaToken]=useState("");const [showPassword,setShowPassword]=useState(false);
