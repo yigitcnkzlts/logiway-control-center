@@ -457,10 +457,11 @@ export function PortalLogin() {
     const submittedPassword =
       form.elements.namedItem("password")?.value || f.get("password");
     try {
+      let authResult;
       if (mfaToken) {
-        await verifyMfa({ mfaToken, code: f.get("mfaCode") });
+        authResult = await verifyMfa({ mfaToken, code: f.get("mfaCode") });
       } else if (register) {
-        const result = await registerUser({
+        authResult = await registerUser({
           email: submittedEmail,
           password: submittedPassword,
           phone: f.get("phone"),
@@ -468,7 +469,7 @@ export function PortalLogin() {
           company: f.get("displayName"),
           country: f.get("country"),
         });
-        if (result.mode === "demo") {
+        if (authResult.mode === "demo") {
           const current = JSON.parse(
             localStorage.getItem("logiway-registrations") || "[]",
           );
@@ -501,17 +502,17 @@ export function PortalLogin() {
           window.dispatchEvent(new CustomEvent("logiway-marketplace-change"));
         }
       } else {
-        const result = await loginUser({
+        authResult = await loginUser({
           email: submittedEmail,
           password: submittedPassword,
           role,
         });
-        if (result.mode === "mfa") {
-          setMfaToken(result.mfaToken);
+        if (authResult.mode === "mfa") {
+          setMfaToken(authResult.mfaToken);
           return;
         }
       }
-      navigate(`/${role}/panel`);
+      navigate(authResult?.panelPath || `/${role}/panel`);
     } catch (reason) {
       setError(reason.message || "Giriş tamamlanamadı.");
     } finally {
