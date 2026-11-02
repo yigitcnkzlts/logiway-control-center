@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ClipboardList,
   Clock3,
+  Copy,
   CreditCard,
   Eye,
   EyeOff,
@@ -1572,6 +1573,8 @@ export function ShipperPortal() {
   );
   const [modal, setModal] = useState(false);
   const [success, setSuccess] = useState("");
+  const [loadFilters, setLoadFilters] = useState({ status: "Tümü", search: "" });
+  const [confirmCancel, setConfirmCancel] = useState(null); // load object pending cancel
   useEffect(
     () =>
       subscribeMarketplace(() => {
@@ -1749,12 +1752,29 @@ export function ShipperPortal() {
       const next = loads.map((item) =>
         item.id === load.id ? { ...item, status: "CANCELLED" } : item,
       );
+      if (!liveMarketplaceEnabled()) saveLoads(next);
       setLoads(liveMarketplaceEnabled() ? await loadMyLoads() : next);
       setSuccess("İlan iptal edildi.");
       setTimeout(() => setSuccess(""), 3500);
     } catch (reason) {
       setSuccess(reason.message);
     }
+  }
+  function copyLoad(load) {
+    const copy = {
+      ...load,
+      id: makeRecordId("LW"),
+      status: "Teklif alıyor",
+      offers: 0,
+      createdAt: new Date().toISOString(),
+      date: new Date().toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" }).replace("/", "."),
+      demo: !liveMarketplaceEnabled() || undefined,
+    };
+    const next = [copy, ...loads];
+    setLoads(next);
+    saveLoads(next);
+    setSuccess(`${load.cargo} ilanı kopyalandı.`);
+    setTimeout(() => setSuccess(""), 3500);
   }
   const pendingOffers = marketOffers.filter((o) => o.status !== "Reddedildi");
   return (
@@ -1786,14 +1806,28 @@ export function ShipperPortal() {
           <PageHeading
             kicker="İLAN YÖNETİMİ"
             title="Yük İlanlarım"
-            text="Aktif, planlanmış ve tamamlanmış ilanlarınızı yönetin."
+            text="Oluşturduğunuz ilanları yönetin, filtreleyin ve takip edin."
             action={
               <button className="portal-primary" onClick={() => setModal(true)}>
                 Yeni yük ilanı <Package size={18} />
               </button>
             }
           />
-          <LoadList loads={loads} onCancel={cancelLoad} />
+          <LoadListFull
+            loads={loads}
+            filters={loadFilters}
+            onFilterChange={setLoadFilters}
+            onCancel={(load) => setConfirmCancel(load)}
+            onCopy={copyLoad}
+            isDemo={!liveMarketplaceEnabled()}
+          />
+          {confirmCancel && (
+            <ConfirmCancelDialog
+              load={confirmCancel}
+              onConfirm={() => { cancelLoad(confirmCancel); setConfirmCancel(null); }}
+              onClose={() => setConfirmCancel(null)}
+            />
+          )}
         </>
       )}
       {active === "Gelen Teklifler" && (
@@ -1859,6 +1893,186 @@ export function ShipperPortal() {
         <LoadModal onClose={() => setModal(false)} onSubmit={addLoad} />
       )}
     </PortalShell>
+  );
+}
+
+// ─── ConfirmCancelDialog ──────────────────────────────────────────────────────
+function ConfirmCancelDialog({ load, onConfirm, onClose }) {
+  return (
+    <div className="portal-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title">
+      <div className="confirm-dialog">
+        <h3 id="cancel-dialog-title">İlanı iptal et</h3>
+        <p>
+          <strong>{load.cargo}</strong> ilanını iptal etmek istediğinizden emin misiniz?
+          Bu işlem geri alınamaz.
+        </p>
+        <div className="confirm-dialog-actions">
+          <button className="confirm-btn confirm-btn--danger" onClick={onConfirm}>
+            Evet, iptal et
+          </button>
+          <button className="confirm-btn" onClick={onClose}>
+            Vazgeç
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── LoadListFull ─────────────────────────────────────────────────────────────
+function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo }) {
+  const [expanded, setExpanded] = useState(null);
+
+  const STATUS_OPTIONS = ["Tümü", "Teklif alıyor", "Şoför eşleşti", "CANCELLED", "Planlandı"];
+
+  // Apply filters
+  const visible = loads.filter((x) => {
+    const statusOk = filters.status === "Tümü" || x.status === filters.status;
+    const q = filters.search.toLocaleLowerCase("tr");
+    const searchOk = !q || [x.cargo, x.from, x.to, x.id, x.vehicle].some(
+      (v) => String(v || "").toLocaleLowerCase("tr").includes(q)
+    );
+    return statusOk && searchOk;
+  });
+
+  function statusClass(status) {
+    if (status === "Teklif alıyor") return "portal-status green";
+    if (status === "Şoför eşleşti") return "portal-status blue";
+    if (status === "CANCELLED")     return "portal-status cancelled";
+    return "portal-status";
+  }
+
+  return (
+    <section className="portal-list load-list-full">
+      {/* Filter bar */}
+      <div className="llf-filters">
+        <label className="llf-search" aria-label="İlan ara">
+          <Search size={14} aria-hidden="true" />
+          <input
+            value={filters.search}
+            onChange={(e) => onFilterChange({ ...filters, search: e.target.value })}
+            placeholder="Yük adı, güzergah veya ID ara"
+            aria-label="Yük ara"
+          />
+          {filters.search && (
+            <button onClick={() => onFilterChange({ ...filters, search: "" })} aria-label="Aramayı temizle">
+              <X size={13} />
+            </button>
+          )}
+        </label>
+        <div className="llf-status-tabs" role="group" aria-label="Durum filtresi">
+          {STATUS_OPTIONS.map((s) => (
+            <button
+              key={s}
+              className={filters.status === s ? "llf-tab active" : "llf-tab"}
+              onClick={() => onFilterChange({ ...filters, status: s })}
+              aria-pressed={filters.status === s}
+            >
+              {s === "CANCELLED" ? "İptal" : s}
+              {s !== "Tümü" && (
+                <span className="llf-tab-count">
+                  {loads.filter((x) => x.status === s).length}
+                </span>
+              )}
+              {s === "Tümü" && <span className="llf-tab-count">{loads.length}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Empty state */}
+      {visible.length === 0 && (
+        <div className="llf-empty" role="status">
+          <Package size={28} aria-hidden="true" />
+          <h3>
+            {loads.length === 0
+              ? "Henüz yük ilanınız bulunmuyor"
+              : "Filtreyle eşleşen ilan bulunamadı"}
+          </h3>
+          <p>
+            {loads.length === 0
+              ? "İlk ilanınızı oluşturun ve taşıyıcı tekliflerini karşılaştırın."
+              : "Farklı bir arama veya durum filtresi deneyin."}
+          </p>
+        </div>
+      )}
+
+      {/* Load rows */}
+      {visible.map((x) => (
+        <div className="load-entry" key={x.id}>
+          <article className="load-row llf-row">
+            <span className="load-box"><Package /></span>
+
+            <div className="load-route">
+              <strong>
+                {x.from} <ArrowRight size={13} aria-hidden="true" /> {x.to}
+              </strong>
+              <small>
+                {x.id}
+                {x.cargo ? ` · ${x.cargo}` : ""}
+                {x.vehicle ? ` · ${x.vehicle}` : ""}
+                {x.weight ? ` · ${x.weight}` : ""}
+                {x.loadType ? ` · ${x.loadType}` : ""}
+              </small>
+              {x.pickupDate && (
+                <em className="llf-date">
+                  <Clock3 size={11} aria-hidden="true" /> {x.date || x.pickupDate}
+                </em>
+              )}
+            </div>
+
+            <div className="llf-meta">
+              <small>BÜTÇE</small>
+              <strong>{x.price || "Belirtilmedi"}</strong>
+            </div>
+
+            <div className="llf-meta">
+              <small>TEKLİF</small>
+              <strong>{x.offers ?? 0}</strong>
+            </div>
+
+            <div className="llf-badges">
+              <span className={statusClass(x.status)}>{x.status === "CANCELLED" ? "İptal" : x.status}</span>
+              {isDemo && x.demo !== false && (
+                <span className="demo-badge-inline" title="Demo ilanı">DEMO</span>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="llf-actions">
+              <button
+                className="llf-action-btn"
+                title="Detaylar"
+                aria-label={`${x.cargo} detaylarını ${expanded === x.id ? "kapat" : "aç"}`}
+                onClick={() => setExpanded(expanded === x.id ? null : x.id)}
+              >
+                <ChevronRight size={15} className={expanded === x.id ? "llf-chevron open" : "llf-chevron"} />
+              </button>
+              <button
+                className="llf-action-btn"
+                title="Kopyala"
+                aria-label={`${x.cargo} ilanını kopyala`}
+                onClick={() => onCopy(x)}
+              >
+                <Copy size={14} />
+              </button>
+              {(x.status === "Teklif alıyor" || x.status === "DRAFT") && (
+                <button
+                  className="llf-action-btn llf-action-btn--danger"
+                  title="İptal et"
+                  aria-label={`${x.cargo} ilanını iptal et`}
+                  onClick={() => onCancel(x)}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </article>
+
+          {expanded === x.id && <LoadDetails load={x} />}
+        </div>
+      ))}
+    </section>
   );
 }
 

@@ -947,3 +947,101 @@ button:focus:not(:focus-visible){outline:none}
   .rs-facts{grid-template-columns:1fr}
   .rs-wide{grid-column:auto}
 }
+
+/* ── LoadListFull — full load management ────────────────────────── */
+.load-list-full{}
+
+/* Filter bar */
+.llf-filters{
+  padding:14px 20px 10px;
+  display:flex;flex-direction:column;gap:10px;
+  border-bottom:1px solid #edf0eb;
+}
+.llf-search{
+  display:flex;align-items:center;gap:8px;
+  height:38px;padding:0 11px;
+  border:1px solid #d7dfd4;border-radius:10px;
+  background:#f8faf7;
+}
+.llf-search svg{color:#829087;flex-shrink:0}
+.llf-search input{
+  flex:1;border:0;background:transparent;outline:0;
+  font-size:12px;color:#102a20;
+}
+.llf-search button{border:0;background:transparent;color:#829087;cursor:pointer}
+.llf-status-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.llf-tab{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 11px;border:1px solid #d7dfd4;border-radius:99px;
+  background:#fff;color:#66756c;font-size:11px;font-weight:700;
+  cursor:pointer;transition:.12s;
+}
+.llf-tab:hover{border-color:#6d8c5c;color:#3a5430}
+.llf-tab.active{background:#102a20;color:#fff;border-color:#102a20}
+.llf-tab-count{
+  padding:1px 5px;border-radius:99px;
+  background:rgba(255,255,255,.2);font-size:9px;
+}
+.llf-tab:not(.active) .llf-tab-count{background:#edf2ea;color:#527342}
+
+/* Row */
+.llf-row{grid-template-columns:auto 1fr auto auto auto auto!important}
+.llf-meta{display:flex;flex-direction:column;gap:2px}
+.llf-meta small{font-size:9px;color:#829087;font-weight:800}
+.llf-meta strong{font-size:12px}
+.llf-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.llf-date{
+  display:flex;align-items:center;gap:4px;
+  margin-top:4px;font-size:9px;color:#7a8880;font-style:normal;
+}
+.llf-actions{display:flex;align-items:center;gap:4px}
+.llf-action-btn{
+  display:grid;place-items:center;
+  width:30px;height:30px;border-radius:8px;
+  border:1px solid #e0e8db;background:#fff;
+  color:#527342;cursor:pointer;transition:.12s;
+}
+.llf-action-btn:hover{background:#edf4e9;border-color:#b8d9a8}
+.llf-action-btn:focus-visible{outline:2px solid #5a8a3f;outline-offset:2px}
+.llf-action-btn--danger{color:#9b352d;border-color:#f5cac8}
+.llf-action-btn--danger:hover{background:#fde9e7;border-color:#e8a09b}
+.llf-chevron{transition:transform .15s}
+.llf-chevron.open{transform:rotate(90deg)}
+
+/* Status variants */
+.portal-status.blue{background:#e0edf7;color:#1a4f7a}
+.portal-status.cancelled{background:#f2f3f1;color:#66736b;text-decoration:line-through}
+
+/* Empty state */
+.llf-empty{
+  padding:52px 20px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.llf-empty svg{color:#b0c0b0}
+.llf-empty h3{font:800 15px Manrope;color:#233d31;margin:0}
+.llf-empty p{color:#829087;font-size:12px;margin:0}
+
+/* Confirm cancel dialog */
+.confirm-dialog{
+  width:min(440px,100%);
+  background:#fff;border-radius:16px;padding:28px;
+  box-shadow:0 30px 90px #102a2040;
+  margin:auto;
+}
+.confirm-dialog h3{font:800 17px Manrope;margin:0 0 10px}
+.confirm-dialog p{color:#66756c;font-size:13px;line-height:1.6;margin:0 0 22px}
+.confirm-dialog-actions{display:flex;gap:10px}
+.confirm-btn{
+  flex:1;height:44px;border:0;border-radius:99px;
+  font-weight:800;font-size:12px;cursor:pointer;transition:.15s;
+}
+.confirm-btn{background:#edf3e9;color:#38542c}
+.confirm-btn:hover{background:#deecd7}
+.confirm-btn--danger{background:#9b352d;color:#fff}
+.confirm-btn--danger:hover{background:#7e2a23}
+
+@media(max-width:760px){
+  .llf-row{grid-template-columns:auto 1fr auto auto!important}
+  .llf-meta:first-of-type{display:none}
+  .llf-filters{padding:10px 14px}
+}
