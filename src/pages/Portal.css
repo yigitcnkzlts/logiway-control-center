@@ -796,3 +796,77 @@ button:focus:not(:focus-visible){outline:none}
 }
 .demo-continue-btn:hover{background:#fdf3b0;border-style:solid}
 .demo-continue-btn:focus-visible{outline:2px solid #c0a820;outline-offset:2px}
+
+/* ── Araç Gereksinimi step improvements ────────────────────────── */
+
+/* Suggestion banner */
+.vehicle-suggestion{
+  display:flex;align-items:flex-start;gap:9px;
+  padding:11px 14px;border-radius:11px;
+  margin-bottom:16px;font-size:12px;line-height:1.55;
+}
+.vehicle-suggestion--info{background:#edf7e9;color:#2e5a24;border:1px solid #c3ddb8}
+.vehicle-suggestion--warn{background:#fff8e1;color:#7a5c00;border:1px solid #f0d060}
+.vehicle-suggestion svg{flex-shrink:0;margin-top:1px}
+
+/* Vehicle cards grid */
+.vehicle-options{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-bottom:20px;
+}
+.vehicle-card{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;
+  gap:6px;
+  padding:16px 10px 14px;
+  border:2px solid #d7dfd4;border-radius:14px;
+  background:#fff;cursor:pointer;
+  text-align:center;transition:.15s;
+}
+.vehicle-card:hover{border-color:#6d8c5c;background:#f5fbf2}
+.vehicle-card:focus-within{border-color:#102a20;outline:2px solid #b9dd9b;outline-offset:2px}
+.vehicle-card input[type="radio"]{position:absolute;opacity:0;width:0;height:0}
+.vehicle-card:has(input:checked){
+  border-color:#102a20;
+  background:#edf7e9;
+  box-shadow:0 0 0 1px #102a20;
+}
+.vehicle-card svg{color:#527342;flex-shrink:0}
+.vehicle-card:has(input:checked) svg{color:#102a20}
+.vehicle-card-name{
+  font:700 13px Manrope;color:#102a20;
+}
+.vehicle-card-desc{
+  font-size:10px;color:#718078;line-height:1.4;
+}
+
+/* Special requirements */
+.special-requirements{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  margin-top:4px;
+}
+.req-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:12px 14px;border-radius:11px;
+  border:1px solid #dfe5dc;background:#f8faf7;cursor:pointer;
+  transition:.15s;
+}
+.req-item:hover{border-color:#6d8c5c;background:#f2f8ee}
+.req-item input[type="checkbox"]{
+  margin-top:2px;width:16px;height:16px;
+  accent-color:#102a20;flex-shrink:0;cursor:pointer;
+}
+.req-label{display:flex;flex-direction:column;gap:3px}
+.req-label>:first-child{font:700 12px Manrope;color:#233d31}
+.req-label small{font-size:10px;color:#718078;line-height:1.4}
+
+/* Mobile */
+@media(max-width:760px){
+  .vehicle-options{grid-template-columns:1fr 1fr}
+  .special-requirements{grid-template-columns:1fr}
+}
+@media(max-width:400px){
+  .vehicle-options{grid-template-columns:1fr}
+}

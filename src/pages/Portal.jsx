@@ -2019,6 +2019,7 @@ function LoadDetails({ load }) {
 
 function LoadModal({ onClose, onSubmit }) {
   const [step, setStep] = useState(0);
+  const [loadType, setLoadType] = useState("Genel kargo");
   const steps = [
     "Rota",
     "Yük bilgileri",
@@ -2175,7 +2176,7 @@ function LoadModal({ onClose, onSubmit }) {
             </label>
             <label>
               Yük tipi
-              <select name="loadType" required>
+              <select name="loadType" required onChange={(e) => setLoadType(e.target.value)}>
                 <option value="Genel kargo">Genel kargo</option>
                 <option value="Soğuk zincir">Soğuk zincir</option>
                 <option value="Tehlikeli madde">Tehlikeli madde</option>
@@ -2205,37 +2206,79 @@ function LoadModal({ onClose, onSubmit }) {
           </div>
         </div>
         <div className={step === 2 ? "wizard-step active" : "wizard-step"}>
+          {/* Akıllı öneri — yük tipine göre, seçimi değiştirmez */}
+          {loadType === "Soğuk zincir" && (
+            <div className="vehicle-suggestion vehicle-suggestion--info">
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span><strong>Öneri:</strong> Soğuk zincir yükler için genellikle <strong>Frigo</strong> araç kullanılır.</span>
+            </div>
+          )}
+          {loadType === "Tehlikeli madde" && (
+            <div className="vehicle-suggestion vehicle-suggestion--warn">
+              <AlertTriangle size={15} aria-hidden="true" />
+              <span><strong>Hatırlatma:</strong> Tehlikeli madde taşımacılığında ADR gerekliliklerini etkinleştirmeyi unutmayın.</span>
+            </div>
+          )}
+          {loadType === "Proje yükü" && (
+            <div className="vehicle-suggestion vehicle-suggestion--info">
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span><strong>Öneri:</strong> Proje yükleri için <strong>Lowbed</strong> veya özel araç değerlendirilebilir.</span>
+            </div>
+          )}
+          {loadType === "Genel kargo" && (
+            <div className="vehicle-suggestion vehicle-suggestion--info">
+              <ShieldCheck size={15} aria-hidden="true" />
+              <span><strong>Öneri:</strong> Standart genel kargo için genellikle <strong>Tenteli</strong> araç tercih edilir.</span>
+            </div>
+          )}
+
           <div className="vehicle-options">
             {[
-              "Tenteli",
-              "Frigo",
-              "Mega",
-              "Lowbed",
-              "Kamyon",
-              "Van",
-              "Diğer",
-            ].map((vehicle) => (
-              <label key={vehicle}>
-                <input required type="radio" name="vehicle" value={vehicle} />
-                <Truck />
-                <span>{vehicle}</span>
+              { value: "Tenteli",  label: "Tenteli",  desc: "Standart paletli ve genel yükler için." },
+              { value: "Frigo",    label: "Frigo",    desc: "Soğutmalı veya sıcaklık kontrollü taşımalar için." },
+              { value: "Mega",     label: "Mega",     desc: "Yüksek hacimli yükler için." },
+              { value: "Lowbed",   label: "Lowbed",   desc: "İş makineleri ve ağır ekipmanlar için." },
+              { value: "Kamyon",   label: "Kamyon",   desc: "Orta ölçekli taşımalar için." },
+              { value: "Panelvan", label: "Panelvan", desc: "Küçük yükler ve hızlı teslimatlar için." },
+              { value: "Diğer",   label: "Diğer",   desc: "Özel araç ihtiyacı olan taşımalar için." },
+            ].map(({ value, label, desc }) => (
+              <label key={value} className="vehicle-card">
+                <input required type="radio" name="vehicle" value={value} />
+                <Truck size={24} aria-hidden="true" />
+                <span className="vehicle-card-name">{label}</span>
+                <span className="vehicle-card-desc">{desc}</span>
               </label>
             ))}
           </div>
+
           <div className="special-requirements">
-            <label>
-              <input type="checkbox" name="adr" value="Evet" /> ADR
+            <label className="req-item">
+              <input type="checkbox" name="adr" value="Evet" />
+              <span className="req-label">
+                ADR
+                <small>Tehlikeli madde taşımacılığı için gerekli uygunluk ve yetkinlikler.</small>
+              </span>
             </label>
-            <label>
-              <input type="checkbox" name="temperatureControl" value="Evet" />{" "}
-              Sıcaklık kontrollü
+            <label className="req-item">
+              <input type="checkbox" name="temperatureControl" value="Evet" />
+              <span className="req-label">
+                Sıcaklık kontrolü
+                <small>Yükün belirlenen sıcaklık koşullarında taşınması.</small>
+              </span>
             </label>
-            <label>
-              <input type="checkbox" name="insurance" value="Evet" /> Ek sigorta
+            <label className="req-item">
+              <input type="checkbox" name="insurance" value="Evet" />
+              <span className="req-label">
+                Ek sigorta
+                <small>Taşıma için ilave sigorta teminatı talebi.</small>
+              </span>
             </label>
-            <label>
-              <input type="checkbox" name="tracking" value="Zorunlu" /> Takip
-              zorunluluğu
+            <label className="req-item">
+              <input type="checkbox" name="tracking" value="Zorunlu" />
+              <span className="req-label">
+                Takip zorunluluğu
+                <small>Sevkiyat konumunun takip edilmesi talebi.</small>
+              </span>
             </label>
           </div>
         </div>
