@@ -1056,9 +1056,10 @@ function PortalShell({ role, children, active, onSelect }) {
 
   const labels = {
     EN: {
-      Özet: "Overview",
-      İlanlarım: "My loads",
-      Teklifler: "Offers",
+      "Genel Bakış": "Overview",
+      "Yük İlanlarım": "My loads",
+      "Gelen Teklifler": "Offers",
+      "Sevkiyatlarım": "My shipments",
       Geçmiş: "History",
       Belgeler: "Documents",
       Ödemeler: "Payments",
@@ -1069,9 +1070,10 @@ function PortalShell({ role, children, active, onSelect }) {
       Takograf: "Tachograph",
     },
     DE: {
-      Özet: "Übersicht",
-      İlanlarım: "Meine Ladungen",
-      Teklifler: "Angebote",
+      "Genel Bakış": "Übersicht",
+      "Yük İlanlarım": "Meine Ladungen",
+      "Gelen Teklifler": "Angebote",
+      "Sevkiyatlarım": "Meine Sendungen",
       Geçmiş: "Verlauf",
       Belgeler: "Dokumente",
       Ödemeler: "Zahlungen",
@@ -1082,9 +1084,10 @@ function PortalShell({ role, children, active, onSelect }) {
       Takograf: "Tachograph",
     },
     IT: {
-      Özet: "Panoramica",
-      İlanlarım: "I miei carichi",
-      Teklifler: "Offerte",
+      "Genel Bakış": "Panoramica",
+      "Yük İlanlarım": "I miei carichi",
+      "Gelen Teklifler": "Offerte",
+      "Sevkiyatlarım": "Le mie spedizioni",
       Geçmiş: "Storico",
       Belgeler: "Documenti",
       Ödemeler: "Pagamenti",
@@ -1098,10 +1101,10 @@ function PortalShell({ role, children, active, onSelect }) {
   const menu =
     role === "yuk-veren"
       ? [
-          ["Özet", <ClipboardList size={18} />],
-          ["İlanlarım", <Package size={18} />],
-          ["Teklifler", <Wallet size={18} />],
-          ["Aktif Sevkiyatlar", <Route size={18} />],
+          ["Genel Bakış", <ClipboardList size={18} />],
+          ["Yük İlanlarım", <Package size={18} />],
+          ["Gelen Teklifler", <Wallet size={18} />],
+          ["Sevkiyatlarım", <Route size={18} />],
           ["Mesajlar", <MessageCircle size={18} />],
           ["Geçmiş", <Clock3 size={18} />],
           ["Belgeler", <FileText size={18} />],
@@ -1314,8 +1317,214 @@ function PageHeading({ kicker, title, text, action }) {
   );
 }
 
+/* ─── Shipper Overview ──────────────────────────────────────────────────────
+ * Yük Veren Genel Bakış ekranı.
+ * Tüm veriler ShipperPortal'dan props olarak gelir — gerçek API veya demo.
+ * ─────────────────────────────────────────────────────────────────────────── */
+function ShipperOverview({
+  loads,
+  marketOffers,
+  matches,
+  onNavigate,
+  onNewLoad,
+  onCancelLoad,
+  liveMode,
+}) {
+  const activeLoads    = loads.filter((x) => x.status === "Teklif alıyor").length;
+  const pendingOffers  = marketOffers.filter((x) => x.status === "Bekliyor").length;
+  const activeShipments = matches.length;
+  const completedMatches = matches.filter(
+    (x) => x.status === "Tamamlandı" || x.status === "COMPLETED",
+  ).length;
+
+  const recentLoads = loads.slice(0, 5);
+
+  const stats = [
+    {
+      label: "Aktif Yük İlanları",
+      value: activeLoads,
+      sub: activeLoads === 1 ? "ilan yayında" : "ilan yayında",
+      dark: false,
+    },
+    {
+      label: "Bekleyen Teklifler",
+      value: pendingOffers,
+      sub: "değerlendirme bekliyor",
+      dark: false,
+      urgent: pendingOffers > 0,
+    },
+    {
+      label: "Devam Eden Sevkiyatlar",
+      value: activeShipments,
+      sub: "operasyon takibinde",
+      dark: true,
+    },
+    {
+      label: "Tamamlanan Taşımalar",
+      value: completedMatches,
+      sub: "başarıyla teslim edildi",
+      dark: false,
+    },
+  ];
+
+  return (
+    <div className="shipper-overview">
+      {/* Başlık */}
+      <section className="portal-heading">
+        <div>
+          <span>OPERASYON MERKEZİ</span>
+          <h1>Operasyon Merkezi</h1>
+          <p>Yüklerinizi, tekliflerinizi ve sevkiyatlarınızı tek merkezden yönetin.</p>
+        </div>
+        <button className="portal-primary" onClick={onNewLoad} aria-label="Yeni yük ilanı oluştur">
+          Yeni Yük İlanı <Package size={18} aria-hidden="true" />
+        </button>
+      </section>
+
+      {/* İstatistik kartları */}
+      <div className="so-stats" role="list" aria-label="Operasyon özeti">
+        {stats.map((s) => (
+          <article
+            key={s.label}
+            className={`so-stat ${s.dark ? "so-stat--dark" : ""} ${s.urgent ? "so-stat--urgent" : ""}`}
+            role="listitem"
+          >
+            <span className="so-stat-label">{s.label}</span>
+            <strong className="so-stat-value">{s.value}</strong>
+            <small className="so-stat-sub">{s.sub}</small>
+          </article>
+        ))}
+      </div>
+
+      {/* Aksiyon merkezi — sadece gerçekten bekleyen işler */}
+      <ActionCenter
+        role="yuk-veren"
+        counts={{
+          offers: pendingOffers,
+          activeShipments,
+          unread: 0,
+        }}
+        onNavigate={onNavigate}
+      />
+
+      {/* Hızlı işlemler */}
+      <div className="so-quick-actions" aria-label="Hızlı işlemler">
+        <span className="section-kicker">HIZLI İŞLEMLER</span>
+        <div className="so-qa-grid">
+          <button
+            className="so-qa-btn so-qa-btn--primary"
+            onClick={onNewLoad}
+            aria-label="Yeni yük ilanı oluştur"
+          >
+            <Package size={18} aria-hidden="true" />
+            <div>
+              <strong>Yeni Yük İlanı</strong>
+              <small>Taşıyıcıları bilgilendir</small>
+            </div>
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+          <button
+            className="so-qa-btn"
+            onClick={() => onNavigate("Gelen Teklifler")}
+            aria-label="Gelen teklifleri incele"
+          >
+            <Wallet size={18} aria-hidden="true" />
+            <div>
+              <strong>Teklifleri İncele</strong>
+              <small>
+                {pendingOffers > 0
+                  ? `${pendingOffers} teklif bekliyor`
+                  : "Teklif bekleniyor"}
+              </small>
+            </div>
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {/* Son Yük İlanları */}
+      <div className="so-recent-loads">
+        <div className="so-section-head">
+          <span className="section-kicker">SON YÜK İLANLARI</span>
+          {loads.length > 5 && (
+            <button
+              className="so-see-all"
+              onClick={() => onNavigate("Yük İlanlarım")}
+              aria-label="Tüm ilanları gör"
+            >
+              Tümünü gör <ChevronRight size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        {recentLoads.length === 0 ? (
+          /* Boş durum */
+          <div className="so-empty" role="status">
+            <Package size={32} aria-hidden="true" />
+            <h3>Henüz yük ilanı oluşturmadınız</h3>
+            <p>
+              {liveMode
+                ? "İlk ilanınızı oluşturun; doğrulanmış taşıyıcılar tekliflerini göndersin."
+                : "İlk ilanınızı oluşturun ve taşıyıcı tekliflerini karşılaştırın."}
+            </p>
+            <button
+              className="portal-primary"
+              onClick={onNewLoad}
+              aria-label="İlk yük ilanını oluştur"
+            >
+              İlk İlanı Oluştur <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <div className="so-load-list" role="list">
+            {recentLoads.map((load) => (
+              <article key={load.id} className="so-load-row" role="listitem">
+                <div className="so-load-icon" aria-hidden="true">
+                  <Package size={16} />
+                </div>
+                <div className="so-load-route">
+                  <strong>
+                    {load.from} <span aria-hidden="true">→</span> {load.to}
+                  </strong>
+                  <small>
+                    {load.id} · {load.cargo} · {load.vehicle} · {load.weight}
+                  </small>
+                </div>
+                <div className="so-load-meta">
+                  <small>TARİH</small>
+                  <span>{load.date || load.pickupDate || "—"}</span>
+                </div>
+                <div className="so-load-meta">
+                  <small>TEKLİF</small>
+                  <span>{load.offers ?? 0} teklif</span>
+                </div>
+                <span
+                  className={`portal-status ${load.status === "Teklif alıyor" ? "green" : ""}`}
+                >
+                  {load.status}
+                </span>
+                {onCancelLoad &&
+                  (load.status === "Teklif alıyor" ||
+                    load.status === "DRAFT") && (
+                    <button
+                      className="row-action"
+                      onClick={() => onCancelLoad(load)}
+                      aria-label={`${load.id} ilanını iptal et`}
+                    >
+                      <X size={14} aria-hidden="true" />
+                    </button>
+                  )}
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ShipperPortal() {
-  const [active, setActive] = useState("Özet");
+  const [active, setActive] = useState("Genel Bakış");
   const [loads, setLoads] = useState(() =>
     liveMarketplaceEnabled() ? [] : getLoads(seedLoads),
   );
@@ -1409,7 +1618,7 @@ export function ShipperPortal() {
         const remoteLoads = await loadMyLoads();
         setLoads(remoteLoads);
         setModal(false);
-        setActive("İlanlarım");
+        setActive("Yük İlanlarım");
         setSuccess(
           "İlan merkezi veritabanına kaydedildi ve eşleştirme havuzunda yayınlandı.",
         );
@@ -1465,7 +1674,7 @@ export function ShipperPortal() {
     setLoads(nextLoads);
     saveLoads(nextLoads);
     setModal(false);
-    setActive("İlanlarım");
+    setActive("Yük İlanlarım");
     setSuccess("İlan yayınlandı; şoför eşleştirme havuzuna anında eklendi.");
     setTimeout(() => setSuccess(""), 3500);
   }
@@ -1525,76 +1734,37 @@ export function ShipperPortal() {
           <Check /> {success}
         </div>
       )}
-      {active === "Özet" && (
+      {active === "Genel Bakış" && (
+        <ShipperOverview
+          loads={loads}
+          marketOffers={marketOffers}
+          matches={matches}
+          onNavigate={setActive}
+          onNewLoad={() => setModal(true)}
+          onCancelLoad={cancelLoad}
+          liveMode={liveMarketplaceEnabled()}
+        />
+      )}
+      {active === "Yük İlanlarım" && (
         <>
           <PageHeading
-            kicker="OPERASYON ÖZETİ"
-            title="Yükleriniz kontrol altında."
-            text="İlanlarınızı yayınlayın, tekliften teslimata tüm operasyonu yönetin."
+            kicker="İLAN YÖNETİMİ"
+            title="Yük İlanlarım"
+            text="Aktif, planlanmış ve tamamlanmış ilanlarınızı yönetin."
             action={
               <button className="portal-primary" onClick={() => setModal(true)}>
                 Yeni yük ilanı <Package size={18} />
               </button>
             }
           />
-          <div className="portal-stats">
-            <article>
-              <span>Aktif ilan</span>
-              <strong>
-                {loads.filter((x) => x.status === "Teklif alıyor").length}
-              </strong>
-              <small>Şu anda yayında</small>
-            </article>
-            <article>
-              <span>Bekleyen teklif</span>
-              <strong>
-                {marketOffers.filter((x) => x.status === "Bekliyor").length}
-              </strong>
-              <small>Değerlendirme bekliyor</small>
-            </article>
-            <article className="dark">
-              <span>Aktif sevkiyat</span>
-              <strong>{matches.length}</strong>
-              <small>Operasyon takibinde</small>
-            </article>
-          </div>
-          <ActionCenter
-            role="yuk-veren"
-            counts={{
-              offers: marketOffers.filter((x) => x.status === "Bekliyor")
-                .length,
-              activeShipments: matches.length,
-              unread: 0,
-            }}
-            onNavigate={setActive}
-          />
-          <LoadList
-            loads={loads.slice(0, 3)}
-            onAll={() => setActive("İlanlarım")}
-            onCancel={cancelLoad}
-          />
-        </>
-      )}
-      {active === "İlanlarım" && (
-        <>
-          <PageHeading
-            kicker="İLAN YÖNETİMİ"
-            title="Tüm yük ilanlarınız."
-            text="Aktif, planlanmış ve tamamlanmış ilanlarınızı yönetin."
-            action={
-              <button className="portal-primary" onClick={() => setModal(true)}>
-                Yeni ilan <Package size={18} />
-              </button>
-            }
-          />
           <LoadList loads={loads} onCancel={cancelLoad} />
         </>
       )}
-      {active === "Teklifler" && (
+      {active === "Gelen Teklifler" && (
         <>
           <PageHeading
             kicker="TEKLİF MERKEZİ"
-            title="Doğru taşıyıcıyı seçin."
+            title="Gelen Teklifler"
             text="Teklifleri karşılaştırın, mesajlaşın ve kabul edilen işi sevkiyata dönüştürün."
           />
           <OfferComparison
@@ -1604,7 +1774,7 @@ export function ShipperPortal() {
           />
         </>
       )}
-      {active === "Aktif Sevkiyatlar" &&
+      {active === "Sevkiyatlarım" &&
         (liveMarketplaceEnabled() ? (
           <EmptyState
             icon={<Route />}
@@ -1625,7 +1795,7 @@ export function ShipperPortal() {
       {active === "Mesajlar" && (
         <MessagesCenter
           demo={!liveMarketplaceEnabled()}
-          onOpenShipment={() => setActive("Aktif Sevkiyatlar")}
+          onOpenShipment={() => setActive("Sevkiyatlarım")}
         />
       )}{" "}
       {active === "Geçmiş" && (

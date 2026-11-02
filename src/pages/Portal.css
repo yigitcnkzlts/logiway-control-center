@@ -682,3 +682,69 @@ button:focus:not(:focus-visible){outline:none}
 @media(prefers-reduced-motion:reduce){
   .role-card,.role-card:before,.role-continue{transition:none}
 }
+
+/* ── Shipper Overview ───────────────────────────────────────────── */
+.shipper-overview{padding-bottom:50px}
+
+/* Stat cards */
+.so-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;padding:0 40px;margin-bottom:4px}
+.so-stat{padding:22px;border:1px solid #dfe5dc;border-radius:16px;background:#fff;display:flex;flex-direction:column}
+.so-stat--dark{background:#102a20;color:#fff;border-color:#102a20}
+.so-stat--urgent{border-color:#e6a817;background:#fffbf0}
+.so-stat-label{font-size:11px;color:#718078;font-weight:700}
+.so-stat--dark .so-stat-label{color:#a7b5ad}
+.so-stat--urgent .so-stat-label{color:#8a6214}
+.so-stat-value{font:800 32px Manrope;margin:8px 0 4px;letter-spacing:-.04em}
+.so-stat-sub{font-size:10px;color:#849087}
+.so-stat--dark .so-stat-sub{color:#c8f368}
+.so-stat--urgent .so-stat-value{color:#8a6214}
+
+/* Quick actions */
+.so-quick-actions{margin:20px 40px 0;padding:18px 20px;border:1px solid #dfe5dc;border-radius:16px;background:#fff}
+.so-qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.so-qa-btn{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #dfe5dc;border-radius:12px;background:#f7f9f5;text-align:left;cursor:pointer;transition:.15s}
+.so-qa-btn:hover{background:#edf4e9;border-color:#b8d9a8}
+.so-qa-btn:focus-visible{outline:2px solid #5a8a3f;outline-offset:2px}
+.so-qa-btn--primary{background:#102a20;color:#fff;border-color:#102a20}
+.so-qa-btn--primary:hover{background:#1e4032;border-color:#1e4032}
+.so-qa-btn--primary small{color:#a7b5ad}
+.so-qa-btn>svg:first-child{flex-shrink:0;color:#527342}
+.so-qa-btn--primary>svg:first-child{color:#c8f368}
+.so-qa-btn>div{flex:1;display:flex;flex-direction:column;gap:2px}
+.so-qa-btn strong{font-size:13px}
+.so-qa-btn small{font-size:10px;color:#718078}
+.so-qa-btn>svg:last-child{color:#aab6a8;flex-shrink:0}
+.so-qa-btn--primary>svg:last-child{color:#c8f368}
+
+/* Recent loads */
+.so-recent-loads{margin:20px 40px 0;background:#fff;border:1px solid #dfe5dc;border-radius:16px;overflow:hidden}
+.so-section-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #edf0eb}
+.so-see-all{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:#527342;font-size:11px;font-weight:800;cursor:pointer}
+.so-load-list{display:flex;flex-direction:column}
+.so-load-row{display:grid;grid-template-columns:auto 1fr auto auto auto auto;align-items:center;gap:14px;padding:14px 20px;border-top:1px solid #edf0eb;transition:.1s}
+.so-load-row:hover{background:#fafcf9}
+.so-load-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#edf4e9;color:#527342;flex-shrink:0}
+.so-load-route{display:flex;flex-direction:column;gap:3px;min-width:0}
+.so-load-route strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.so-load-route small{font-size:9px;color:#849087}
+.so-load-meta{display:flex;flex-direction:column;gap:2px;text-align:right}
+.so-load-meta small{font-size:8px;color:#849087;font-weight:800}
+.so-load-meta span{font-size:11px;font-weight:700}
+
+/* Empty state */
+.so-empty{padding:48px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.so-empty svg{color:#b0c0b0}
+.so-empty h3{font:800 16px Manrope;color:#233d31;margin:0}
+.so-empty p{color:#829087;font-size:12px;margin:0;max-width:360px}
+.so-empty .portal-primary{width:auto;padding:0 20px;margin-top:4px}
+
+/* Mobile */
+@media(max-width:1000px){.so-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){
+  .so-stats{padding:0 18px;grid-template-columns:1fr 1fr}
+  .so-quick-actions{margin:14px 18px 0}
+  .so-qa-grid{grid-template-columns:1fr}
+  .so-recent-loads{margin:14px 18px 0}
+  .so-load-row{grid-template-columns:auto 1fr auto auto;gap:10px}
+  .so-load-meta:first-of-type{display:none}
+}

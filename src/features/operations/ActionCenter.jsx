@@ -17,7 +17,7 @@ const SHIPPER_ITEMS = [
     icon: Wallet,
     label: (n) => `${n} yeni teklif`,
     sublabel: "Değerlendirme bekliyor",
-    target: "Teklifler",
+    target: "Gelen Teklifler",
     variant: "primary",
   },
   {
@@ -25,7 +25,7 @@ const SHIPPER_ITEMS = [
     icon: Wallet,
     label: (n) => `${n} karşı teklif`,
     sublabel: "Yanıt bekleniyor",
-    target: "Teklifler",
+    target: "Gelen Teklifler",
     variant: "warning",
   },
   {
@@ -33,7 +33,7 @@ const SHIPPER_ITEMS = [
     icon: Route,
     label: (n) => `${n} aktif sevkiyat`,
     sublabel: "Operasyon takibinde",
-    target: "Aktif Sevkiyatlar",
+    target: "Sevkiyatlarım",
     variant: "default",
   },
   {
@@ -41,7 +41,7 @@ const SHIPPER_ITEMS = [
     icon: AlertTriangle,
     label: (n) => `${n} gecikmeli sevkiyat`,
     sublabel: "Müdahale gerekebilir",
-    target: "Aktif Sevkiyatlar",
+    target: "Sevkiyatlarım",
     variant: "danger",
   },
   {
