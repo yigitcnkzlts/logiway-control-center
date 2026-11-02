@@ -870,3 +870,28 @@ button:focus:not(:focus-visible){outline:none}
 @media(max-width:400px){
   .vehicle-options{grid-template-columns:1fr}
 }
+
+/* ── Commercial step (step 3) improvements ─────────────────────── */
+.commercial-grid{grid-template-columns:1fr 1fr}
+.commercial-grid .wide{grid-column:1/-1}
+
+.field-hint{
+  display:block;
+  font-size:10px;font-weight:500;
+  color:#829087;margin:3px 0 5px;
+}
+
+.commercial-info{
+  margin:16px 0 0;
+  padding:11px 14px;
+  border-radius:10px;
+  background:#f0f5ec;
+  border:1px solid #c8dfc0;
+  color:#3a5430;
+  font-size:11px;line-height:1.6;
+}
+
+@media(max-width:600px){
+  .commercial-grid{grid-template-columns:1fr}
+  .commercial-grid .wide{grid-column:auto}
+}

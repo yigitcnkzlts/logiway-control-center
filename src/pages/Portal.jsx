@@ -1681,7 +1681,7 @@ export function ShipperPortal() {
       deliveryAddress: f.get("deliveryAddress"),
       vehicle: f.get("vehicle"),
       weight: `${f.get("weight")} ${f.get("unit")}`,
-      price: `${Number(f.get("price")).toLocaleString("de-DE")} ${symbol}`,
+      price: f.get("price") ? `${Number(f.get("price")).toLocaleString("de-DE")} ${symbol}` : "Bütçe belirtilmedi",
       date: f.get("pickupDate").split("-").reverse().slice(0, 2).join("."),
       status: "Teklif alıyor",
       offers: 0,
@@ -2283,21 +2283,30 @@ function LoadModal({ onClose, onSubmit }) {
           </div>
         </div>
         <div className={step === 3 ? "wizard-step active" : "wizard-step"}>
-          <div className="form-grid">
+          <div className="form-grid commercial-grid">
+            {/* Bütçe + para birimi yan yana */}
             <label>
-              Hedef bütçe
-              <input required name="price" type="number" min="1" />
+              Hedef taşıma bütçesi
+              <span className="field-hint">İsteğe bağlı — boş bırakırsanız tüm teklifler gelir.</span>
+              <input
+                name="price"
+                type="number"
+                min="1"
+                step="any"
+                placeholder="Örn. 15000"
+              />
             </label>
             <label>
               Para birimi
-              <select name="currency">
-                <option value="EUR">Euro (EUR)</option>
+              <select name="currency" defaultValue="TRY">
                 <option value="TRY">Türk Lirası (TRY)</option>
+                <option value="EUR">Euro (EUR)</option>
                 <option value="GBP">Sterlin (GBP)</option>
               </select>
             </label>
             <label className="wide">
               Ödeme koşulu
+              <span className="field-hint">Vade, teslimattan itibaren hesaplanır.</span>
               <select name="payment">
                 <option>Teslimatta ödeme</option>
                 <option>7 gün vadeli</option>
@@ -2306,6 +2315,9 @@ function LoadModal({ onClose, onSubmit }) {
               </select>
             </label>
           </div>
+          <p className="commercial-info">
+            Hedef bütçeniz referans tutardır. Taşıyıcı firmalar farklı fiyatlarla teklif sunabilir.
+          </p>
         </div>
         <div className={step === 4 ? "wizard-step active" : "wizard-step"}>
           <div className="review-panel">
