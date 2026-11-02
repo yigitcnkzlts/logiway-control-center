@@ -2170,26 +2170,16 @@ function LoadModal({ onClose, onSubmit }) {
               <input
                 required
                 name="cargo"
-                placeholder="Örn. Paletli otomotiv parçası"
+                placeholder="Örn. Coca-Cola içecek sevkiyatı, çelik bobin, tekstil ürünleri"
               />
             </label>
             <label>
               Yük tipi
-              <select name="loadType">
-                <option>Genel kargo</option>
-                <option>Soğuk zincir</option>
-                <option>Tehlikeli madde</option>
-                <option>Proje yükü</option>
-              </select>
-            </label>
-            <label>
-              Ambalaj
-              <select name="packaging">
-                <option>Euro palet</option>
-                <option>Kolili</option>
-                <option>Çuvallı</option>
-                <option>Dökme</option>
-                <option>Diğer</option>
+              <select name="loadType" required>
+                <option value="Genel kargo">Genel kargo</option>
+                <option value="Soğuk zincir">Soğuk zincir</option>
+                <option value="Tehlikeli madde">Tehlikeli madde</option>
+                <option value="Proje yükü">Proje yükü</option>
               </select>
             </label>
             <label>
@@ -2200,27 +2190,17 @@ function LoadModal({ onClose, onSubmit }) {
                 type="number"
                 min="0.1"
                 step="0.1"
+                placeholder="Örn. 20"
               />
               <input type="hidden" name="unit" value="ton" />
             </label>
-            <label>
-              Hacim (m³)
-              <input name="volume" type="number" min="0" step="0.1" />
-            </label>
-            <label>
-              Palet sayısı
-              <input name="pallets" type="number" min="0" />
-            </label>
-            <label>
-              İstiflenebilir
-              <select name="stackable">
-                <option>Evet</option>
-                <option>Hayır</option>
-              </select>
-            </label>
             <label className="wide">
-              Açıklama / not
-              <textarea name="notes" rows="4" />
+              Açıklama / Not
+              <textarea
+                name="notes"
+                rows="3"
+                placeholder="Örn. Paletli içecek ürünleri taşınacaktır."
+              />
             </label>
           </div>
         </div>
