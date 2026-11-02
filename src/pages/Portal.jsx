@@ -68,7 +68,7 @@ import {
   PASSWORD_PATTERN,
   PASSWORD_REQUIREMENTS,
 } from "../api/authValidation";
-import { DEMO_CREDENTIALS } from "../api/demoAuth";
+import { DEMO_CREDENTIALS, enterDemoSession, isDemoSession } from "../api/demoAuth";
 import {
   acceptLiveOffer,
   cancelLiveLoad,
@@ -755,14 +755,25 @@ export function PortalLogin() {
                 E-posta ve şifre ekranına dön
               </button>
             )}
+            {isDemoMode() && !mfaToken && (
+              <div className="demo-divider"><span>ya da</span></div>
+            )}
+            {isDemoMode() && !mfaToken && (
+              <button
+                type="button"
+                className="demo-continue-btn"
+                onClick={() => { enterDemoSession(role); navigate(`/${role}/panel`); }}
+                aria-label={`Demo olarak ${role} paneline gir`}
+              >
+                <span className="demo-badge-inline">DEMO</span>
+                Demo olarak devam et
+              </button>
+            )}
             <div className="demo-note">
               {isBackendConfigured() ? (
                 "Güvenli API bağlantısı etkin."
               ) : isDemoMode() ? (
-                <>
-                  Demo hesabı: <strong>{DEMO_CREDENTIALS.email}</strong> ·
-                  Şifre: <strong>{DEMO_CREDENTIALS.password}</strong>
-                </>
+                "Demo modu: gerçek hesap veya backend gerekmez."
               ) : (
                 "Canlı backend bağlantısı bekleniyor."
               )}
@@ -989,14 +1000,25 @@ export function PortalLogin() {
               E-posta ve şifre ekranına dön
             </button>
           )}
+          {isDemoMode() && !mfaToken && (
+            <div className="demo-divider"><span>ya da</span></div>
+          )}
+          {isDemoMode() && !mfaToken && (
+            <button
+              type="button"
+              className="demo-continue-btn"
+              onClick={() => { enterDemoSession(role); navigate(`/${role}/panel`); }}
+              aria-label={`Demo olarak ${role} paneline gir`}
+            >
+              <span className="demo-badge-inline">DEMO</span>
+              Demo olarak devam et
+            </button>
+          )}
           <div className="demo-note">
             {isBackendConfigured() ? (
               "Güvenli API bağlantısı etkin."
             ) : isDemoMode() ? (
-              <>
-                Demo hesabı: <strong>{DEMO_CREDENTIALS.email}</strong> · Şifre:{" "}
-                <strong>{DEMO_CREDENTIALS.password}</strong>
-              </>
+              "Demo modu: gerçek hesap veya backend gerekmez."
             ) : (
               "Canlı backend bağlantısı bekleniyor."
             )}
@@ -1296,6 +1318,20 @@ function PortalShell({ role, children, active, onSelect }) {
             onClearSearches={clearRecentSearches}
             recentlyViewed={prefs.recentlyViewed}
           />
+        )}
+
+        {isDemoSession() && (
+          <div className="demo-mode-banner" role="status" aria-live="polite">
+            <span className="demo-badge-inline">DEMO</span>
+            Bu oturum demo modunda çalışıyor. Veriler gerçek değildir.{" "}
+            <button
+              className="demo-banner-exit"
+              onClick={() => { logout(); }}
+              aria-label="Demo oturumunu sonlandır ve giriş sayfasına dön"
+            >
+              Çıkış Yap
+            </button>
+          </div>
         )}
 
         {children}

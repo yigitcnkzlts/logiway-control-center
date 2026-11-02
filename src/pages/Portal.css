@@ -748,3 +748,51 @@ button:focus:not(:focus-visible){outline:none}
   .so-load-row{grid-template-columns:auto 1fr auto auto;gap:10px}
   .so-load-meta:first-of-type{display:none}
 }
+
+/* ── Demo mode UI ───────────────────────────────────────────────── */
+.demo-mode-banner{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 24px;
+  background:#fff8e1;
+  border-bottom:1px solid #f0d060;
+  color:#7a5c00;
+  font-size:12px;font-weight:600;
+  position:sticky;top:0;z-index:30;
+}
+.demo-badge-inline{
+  display:inline-flex;align-items:center;
+  padding:2px 7px;border-radius:99px;
+  background:#f0d060;color:#5c4300;
+  font-size:9px;font-weight:900;letter-spacing:.08em;
+  flex-shrink:0;
+}
+.demo-banner-exit{
+  margin-left:auto;
+  border:1px solid #c9aa30;border-radius:99px;background:transparent;
+  color:#7a5c00;font-size:10px;font-weight:800;
+  padding:4px 12px;cursor:pointer;
+  transition:.15s;
+}
+.demo-banner-exit:hover{background:#f0d060}
+
+/* Demo divider between login-button and demo button */
+.demo-divider{
+  display:flex;align-items:center;gap:10px;
+  margin:18px 0 0;color:#9aaa9a;font-size:11px;
+}
+.demo-divider::before,.demo-divider::after{
+  content:"";flex:1;height:1px;background:#d7dfd4;
+}
+
+/* One-click demo continue button */
+.demo-continue-btn{
+  width:100%;height:48px;
+  border:1.5px dashed #c0a820;border-radius:12px;
+  background:#fdfae8;color:#5c4300;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-size:13px;font-weight:700;
+  cursor:pointer;transition:.15s;
+  margin-top:10px;
+}
+.demo-continue-btn:hover{background:#fdf3b0;border-style:solid}
+.demo-continue-btn:focus-visible{outline:2px solid #c0a820;outline-offset:2px}
