@@ -895,3 +895,55 @@ button:focus:not(:focus-visible){outline:none}
   .commercial-grid{grid-template-columns:1fr}
   .commercial-grid .wide{grid-column:auto}
 }
+
+/* ── Review summary (step 4) ────────────────────────────────────── */
+.review-summary{display:flex;flex-direction:column;gap:12px}
+
+.rs-section{
+  border:1px solid #dfe5dc;border-radius:13px;
+  background:#fff;overflow:hidden;
+}
+.rs-section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;
+  background:#f7f9f5;
+  border-bottom:1px solid #edf0eb;
+}
+.rs-section-title{font:700 11px Manrope;color:#102a20;letter-spacing:.06em;text-transform:uppercase}
+.rs-edit{
+  border:0;background:transparent;
+  color:#527342;font-size:11px;font-weight:700;
+  cursor:pointer;padding:3px 8px;border-radius:6px;
+  transition:.12s;
+}
+.rs-edit:hover{background:#edf4e9}
+.rs-edit:focus-visible{outline:2px solid #5a8a3f;outline-offset:2px}
+
+.rs-facts{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;padding:14px 16px;
+}
+.rs-facts>div{display:flex;flex-direction:column;gap:3px}
+.rs-facts small{font-size:9px;color:#829087;font-weight:800;letter-spacing:.08em}
+.rs-facts strong{font-size:12px;color:#102a20;line-height:1.4}
+.rs-wide{grid-column:1/-1}
+
+.rs-mode-note{
+  display:flex;align-items:center;gap:8px;
+  padding:11px 14px;border-radius:10px;
+  background:#f0f5ec;border:1px solid #c8dfc0;
+  color:#3a5430;font-size:11px;font-weight:600;
+}
+
+/* Spinner (reuse) */
+.button-spinner{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .6s linear infinite;
+}
+
+@media(max-width:600px){
+  .rs-facts{grid-template-columns:1fr}
+  .rs-wide{grid-column:auto}
+}

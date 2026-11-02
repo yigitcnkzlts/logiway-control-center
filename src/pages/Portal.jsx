@@ -2020,6 +2020,8 @@ function LoadDetails({ load }) {
 function LoadModal({ onClose, onSubmit }) {
   const [step, setStep] = useState(0);
   const [loadType, setLoadType] = useState("Genel kargo");
+  const [formData, setFormData] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const steps = [
     "Rota",
     "Yük bilgileri",
@@ -2027,21 +2029,47 @@ function LoadModal({ onClose, onSubmit }) {
     "Ticari bilgiler",
     "Kontrol ve yayınla",
   ];
+
+  /** Capture current step's form values into formData state */
+  function captureStep(form) {
+    const active = form.querySelector(".wizard-step.active");
+    if (!active) return;
+    const entries = {};
+    active.querySelectorAll("[name]").forEach((el) => {
+      if (el.type === "checkbox") {
+        if (el.checked) entries[el.name] = el.value;
+      } else if (el.type === "radio") {
+        if (el.checked) entries[el.name] = el.value;
+      } else {
+        entries[el.name] = el.value;
+      }
+    });
+    setFormData((prev) => ({ ...prev, ...entries }));
+  }
+
   function next(event) {
     event.preventDefault();
-    const current = event.currentTarget
-      .closest("form")
-      .querySelector(".wizard-step.active");
+    const form = event.currentTarget.closest("form");
+    const current = form.querySelector(".wizard-step.active");
     const invalid = current.querySelector(":invalid");
-    if (invalid) {
-      invalid.reportValidity();
-      return;
-    }
+    if (invalid) { invalid.reportValidity(); return; }
+    captureStep(form);
     setStep((value) => Math.min(steps.length - 1, value + 1));
+  }
+
+  function goToStep(index) {
+    setStep(index);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    try { await onSubmit(e); } finally { setSubmitting(false); }
   }
   return (
     <div className="portal-modal" role="dialog" aria-modal="true">
-      <form onSubmit={onSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="modal-head">
           <div>
             <span>YENİ YÜK İLANI</span>
@@ -2320,20 +2348,92 @@ function LoadModal({ onClose, onSubmit }) {
           </p>
         </div>
         <div className={step === 4 ? "wizard-step active" : "wizard-step"}>
-          <div className="review-panel">
-            <BadgeCheck />
-            <div>
-              <h3>İlanınız yayınlanmaya hazır</h3>
-              <p>
-                Rota, yük, araç ve ticari bilgileri kontrol ettiniz.
-                Koordinatlar kullanıcıdan istenmez; geocoding entegrasyonu
-                geldiğinde adres üzerinden arka planda üretilecektir.
-              </p>
-              <span>
-                {liveMarketplaceEnabled()
-                  ? "Canlı API'ye kaydedilecek"
-                  : "Demo geliştirme verisi olarak kaydedilecek"}
-              </span>
+          <div className="review-summary">
+            {/* Rota */}
+            <div className="rs-section">
+              <div className="rs-section-head">
+                <span className="rs-section-title">Rota</span>
+                <button type="button" className="rs-edit" onClick={() => goToStep(0)} aria-label="Rota adımına dön">
+                  Düzenle
+                </button>
+              </div>
+              <div className="rs-facts">
+                {formData.fromCity && (
+                  <div><small>KALKIŞ</small><strong>{formData.fromCity}{formData.fromCountry ? `, ${formData.fromCountry}` : ""}</strong></div>
+                )}
+                {formData.toCity && (
+                  <div><small>VARIŞ</small><strong>{formData.toCity}{formData.toCountry ? `, ${formData.toCountry}` : ""}</strong></div>
+                )}
+                {formData.pickupDate && (
+                  <div><small>YÜKLEME TARİHİ</small><strong>{formData.pickupDate}</strong></div>
+                )}
+              </div>
+            </div>
+
+            {/* Yük bilgileri */}
+            <div className="rs-section">
+              <div className="rs-section-head">
+                <span className="rs-section-title">Yük Bilgileri</span>
+                <button type="button" className="rs-edit" onClick={() => goToStep(1)} aria-label="Yük bilgileri adımına dön">
+                  Düzenle
+                </button>
+              </div>
+              <div className="rs-facts">
+                {formData.cargo && <div><small>YÜK ADI</small><strong>{formData.cargo}</strong></div>}
+                {formData.loadType && <div><small>YÜK TİPİ</small><strong>{formData.loadType}</strong></div>}
+                {formData.weight && <div><small>AĞIRLIK</small><strong>{formData.weight} ton</strong></div>}
+                {formData.notes && <div className="rs-wide"><small>AÇIKLAMA</small><strong>{formData.notes}</strong></div>}
+              </div>
+            </div>
+
+            {/* Araç gereksinimi */}
+            <div className="rs-section">
+              <div className="rs-section-head">
+                <span className="rs-section-title">Araç Gereksinimi</span>
+                <button type="button" className="rs-edit" onClick={() => goToStep(2)} aria-label="Araç gereksinimi adımına dön">
+                  Düzenle
+                </button>
+              </div>
+              <div className="rs-facts">
+                {formData.vehicle && <div><small>ARAÇ TİPİ</small><strong>{formData.vehicle}</strong></div>}
+                {(formData.adr || formData.temperatureControl || formData.insurance || formData.tracking) && (
+                  <div className="rs-wide">
+                    <small>EK GEREKSİNİMLER</small>
+                    <strong>
+                      {[
+                        formData.adr === "Evet" && "ADR",
+                        formData.temperatureControl === "Evet" && "Sıcaklık kontrolü",
+                        formData.insurance === "Evet" && "Ek sigorta",
+                        formData.tracking === "Zorunlu" && "Takip zorunluluğu",
+                      ].filter(Boolean).join(", ") || "—"}
+                    </strong>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Ticari bilgiler */}
+            <div className="rs-section">
+              <div className="rs-section-head">
+                <span className="rs-section-title">Ticari Bilgiler</span>
+                <button type="button" className="rs-edit" onClick={() => goToStep(3)} aria-label="Ticari bilgiler adımına dön">
+                  Düzenle
+                </button>
+              </div>
+              <div className="rs-facts">
+                {formData.price
+                  ? <div><small>HEDEF BÜTÇE</small><strong>{Number(formData.price).toLocaleString("tr-TR")} {formData.currency || "TRY"}</strong></div>
+                  : <div><small>HEDEF BÜTÇE</small><strong>Belirtilmedi — tüm teklifler alınır</strong></div>
+                }
+                {formData.payment && <div><small>ÖDEME KOŞULU</small><strong>{formData.payment}</strong></div>}
+              </div>
+            </div>
+
+            <div className="rs-mode-note">
+              {liveMarketplaceEnabled()
+                ? <><BadgeCheck size={14} aria-hidden="true" /> Canlı API üzerinden yayınlanacak.</>
+                : <><span className="demo-badge-inline">DEMO</span> Demo ilanı olarak kaydedilecek. Gerçek taşıyıcılara görünmez.</>
+              }
             </div>
           </div>
         </div>
@@ -2349,8 +2449,8 @@ function LoadModal({ onClose, onSubmit }) {
               Devam et <ArrowRight />
             </button>
           ) : (
-            <button className="login-button">
-              Kontrol et ve yayınla <ArrowRight />
+            <button className="login-button" disabled={submitting} aria-busy={submitting}>
+              {submitting ? <><span className="button-spinner" /> Yayınlanıyor…</> : <>İlanı yayınla <ArrowRight /></>}
             </button>
           )}
         </div>
