@@ -3,6 +3,8 @@ package com.guclogistics.matching.application;
 import com.guclogistics.matching.domain.ShipmentStatus;
 import com.guclogistics.matching.infrastructure.persistence.ShipmentEntity;
 import com.guclogistics.matching.infrastructure.persistence.ShipmentJpaRepository;
+import com.guclogistics.matching.infrastructure.persistence.MatchEntity;
+import com.guclogistics.matching.infrastructure.persistence.MatchJpaRepository;
 import com.guclogistics.shared.exception.DomainException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ShipmentServiceTest {
     @Mock ShipmentJpaRepository repository;
+    @Mock MatchJpaRepository matchRepository;
     @Mock EntityManager entityManager;
     @InjectMocks ShipmentService service;
 
@@ -72,15 +75,14 @@ class ShipmentServiceTest {
         shipment.setDriverProfileId(UUID.randomUUID());
         shipment.setStatus(ShipmentStatus.ASSIGNED);
         shipment.setUpdatedAt(java.time.Instant.now());
-        Query query = mock(Query.class);
-        when(entityManager.createNativeQuery(contains("accessible shipments for participant"))).thenReturn(query);
-        when(query.setParameter(1, userId)).thenReturn(query);
-        when(query.getResultList()).thenReturn(List.of(shipment.getId()));
-        when(repository.findAllById(List.of(shipment.getId()))).thenReturn(List.of(shipment));
+        MatchEntity match = new MatchEntity();
+        match.setId(shipment.getMatchId());
+        when(matchRepository.findForUser(userId)).thenReturn(List.of(match));
+        when(repository.findByMatchIdInOrderByUpdatedAtDesc(List.of(match.getId()))).thenReturn(List.of(shipment));
 
         var result = service.listForUser(userId);
 
         org.assertj.core.api.Assertions.assertThat(result).hasSize(1);
-        verify(repository).findAllById(List.of(shipment.getId()));
+        verify(repository).findByMatchIdInOrderByUpdatedAtDesc(List.of(match.getId()));
     }
 }

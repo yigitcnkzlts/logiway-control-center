@@ -18,6 +18,8 @@ public interface OfferJpaRepository extends JpaRepository<OfferEntity, UUID> {
 
     List<OfferEntity> findByLoadIdOrderByCreatedAtDesc(UUID loadId);
 
+    List<OfferEntity> findByLoadIdInOrderByCreatedAtDesc(List<UUID> loadIds);
+
     Optional<OfferEntity> findByIdAndCreatedByUserId(UUID id, UUID createdByUserId);
 
     @Modifying

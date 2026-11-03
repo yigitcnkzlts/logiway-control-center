@@ -4,6 +4,7 @@ import com.guclogistics.matching.application.dto.ShipmentResponse;
 import com.guclogistics.matching.domain.ShipmentStatus;
 import com.guclogistics.matching.infrastructure.persistence.ShipmentEntity;
 import com.guclogistics.matching.infrastructure.persistence.ShipmentJpaRepository;
+import com.guclogistics.matching.infrastructure.persistence.MatchJpaRepository;
 import com.guclogistics.shared.exception.DomainException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ShipmentService {
     private final ShipmentJpaRepository repository;
+    private final MatchJpaRepository matchRepository;
     private final EntityManager entityManager;
 
     @Transactional
@@ -63,22 +65,11 @@ public class ShipmentService {
 
     @Transactional(readOnly = true)
     public List<ShipmentResponse> listForUser(UUID userId) {
-        @SuppressWarnings("unchecked")
-        var shipmentIds = (List<UUID>) entityManager.createNativeQuery("""
-                SELECT s.id /* accessible shipments for participant */
-                FROM shipments s
-                WHERE EXISTS (
-                    SELECT 1 FROM company_members cm
-                    WHERE cm.user_id = ?1
-                      AND (cm.company_id = s.shipper_company_id OR cm.company_id = s.carrier_company_id)
-                ) OR EXISTS (
-                    SELECT 1 FROM driver_profiles dp
-                    WHERE dp.id = s.driver_profile_id AND dp.user_id = ?1
-                )
-                ORDER BY s.updated_at DESC
-                """).setParameter(1, userId).getResultList();
-        return repository.findAllById(shipmentIds).stream()
-                .sorted(java.util.Comparator.comparing(ShipmentEntity::getUpdatedAt).reversed())
+        var matchIds = matchRepository.findForUser(userId).stream()
+                .map(match -> match.getId())
+                .toList();
+        if (matchIds.isEmpty()) return List.of();
+        return repository.findByMatchIdInOrderByUpdatedAtDesc(matchIds).stream()
                 .map(this::toResponse)
                 .toList();
     }

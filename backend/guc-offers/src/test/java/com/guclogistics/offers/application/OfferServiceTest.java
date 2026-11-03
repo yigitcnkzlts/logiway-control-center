@@ -68,8 +68,8 @@ class OfferServiceTest {
                         "driver@guclogistics.com", "+905551112233"});
             } else if (sql.contains("shipper ownership check")) {
                 when(query.getSingleResult()).thenReturn(currentShipperMembershipCount);
-            } else if (sql.contains("incoming offers for shipper")) {
-                when(query.getResultList()).thenReturn(currentIncomingOfferIds);
+            } else if (sql.contains("shipper accessible load ids")) {
+                when(query.getResultList()).thenReturn(currentIncomingLoadIds);
             } else if (sql.contains("SELECT COUNT(*)")) {
                 when(query.getSingleResult()).thenReturn(currentMembershipCount);
             }
@@ -88,7 +88,7 @@ class OfferServiceTest {
     private UUID currentOffererCompanyId = UUID.randomUUID();
     private long currentMembershipCount = 1L;
     private long currentShipperMembershipCount = 0L;
-    private List<UUID> currentIncomingOfferIds = List.of();
+    private List<UUID> currentIncomingLoadIds = List.of();
 
     @Test
     void submitOfferForPublishedLoad() {
@@ -222,13 +222,13 @@ class OfferServiceTest {
         UUID userId = UUID.randomUUID();
         OfferEntity offer = pendingOffer(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         offer.setCreatedAt(java.time.Instant.now());
-        currentIncomingOfferIds = List.of(offer.getId());
-        when(offerRepository.findAllById(currentIncomingOfferIds)).thenReturn(List.of(offer));
+        currentIncomingLoadIds = List.of(offer.getLoadId());
+        when(offerRepository.findByLoadIdInOrderByCreatedAtDesc(currentIncomingLoadIds)).thenReturn(List.of(offer));
 
         var result = offerService.listIncoming(userId);
 
         org.assertj.core.api.Assertions.assertThat(result).hasSize(1);
-        verify(offerRepository).findAllById(currentIncomingOfferIds);
+        verify(offerRepository).findByLoadIdInOrderByCreatedAtDesc(currentIncomingLoadIds);
     }
 
     @Test
