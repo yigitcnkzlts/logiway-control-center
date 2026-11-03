@@ -14,11 +14,11 @@ const MAX_COMPARE = 4;
  * Props:
  *   offers       – normalized offer objects from ShipperPortal
  *   loadId       – the load these offers belong to
- *   onAccept     – (offer) => void
+ *   onChange     – (action, offer) => void after a successful operation
  *   onMessage    – (offer) => void
  *   onClose      – () => void  (used when shown as a panel)
  */
-export default function OfferComparison({ offers = [], onAccept, onMessage }) {
+export default function OfferComparison({ offers = [], onChange, onMessage }) {
   const [selected, setSelected] = useState(() => offers.slice(0, 2).map((o) => o.id));
   const [counterTarget, setCounterTarget] = useState(null); // offer id
   const [counterAmount, setCounterAmount] = useState("");
@@ -58,7 +58,7 @@ export default function OfferComparison({ offers = [], onAccept, onMessage }) {
     setBusy(offer.id);
     try {
       if (liveMarketplaceEnabled()) await acceptLiveOffer(offer.id);
-      onAccept?.(offer);
+      onChange?.("accepted", offer);
       setNotice(`${offer.company || offer.driver} ile eşleşme tamamlandı.`);
     } catch (e) {
       setNotice(e.message || "Kabul işlemi başarısız.");
@@ -74,7 +74,7 @@ export default function OfferComparison({ offers = [], onAccept, onMessage }) {
     try {
       if (liveMarketplaceEnabled()) await rejectLiveOffer(offer.id);
       setNotice(`Teklif reddedildi.`);
-      onAccept?.({ ...offer, status: "Reddedildi" });
+      onChange?.("rejected", offer);
     } catch (e) {
       setNotice(e.message || "Reddetme işlemi başarısız.");
     } finally {
@@ -94,6 +94,7 @@ export default function OfferComparison({ offers = [], onAccept, onMessage }) {
       setCounterTarget(null);
       setCounterAmount("");
       setCounterNote("");
+      onChange?.("countered", offer);
     } catch (e) {
       setNotice(e.message || "Karşı teklif gönderilemedi.");
     } finally {

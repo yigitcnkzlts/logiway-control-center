@@ -71,7 +71,6 @@ import {
 } from "../api/authValidation";
 import { DEMO_CREDENTIALS, enterDemoSession, isDemoSession } from "../api/demoAuth";
 import {
-  acceptLiveOffer,
   cancelLiveLoad,
   createAndPublishLoad,
   duplicateLiveLoad,
@@ -1598,6 +1597,7 @@ export function ShipperPortal() {
     error: "",
   });
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedOfferLoad, setSelectedOfferLoad] = useState("");
   useEffect(
     () =>
       subscribeMarketplace(() => {
@@ -1632,7 +1632,8 @@ export function ShipperPortal() {
             company:
               o.offererType === "COMPANY"
                 ? "Lojistik firması"
-                : "Bağımsız şoför",
+                : o.driverName || "Bağımsız şoför",
+            verified: false,
             vehicle: `${o.vehicleType} · ${o.vehiclePlate}`,
             score: "—",
             trips: 0,
@@ -1752,33 +1753,30 @@ export function ShipperPortal() {
     setSuccess("İlan yayınlandı; şoför eşleştirme havuzuna anında eklendi.");
     setTimeout(() => setSuccess(""), 3500);
   }
-  async function acceptOffer(o) {
+  function handleOfferChange(action, o) {
     const load = loads.find((x) => x.id === o.load);
     if (!load) return;
     if (liveMarketplaceEnabled()) {
-      try {
-        await acceptLiveOffer(o.id);
-        setLoads(await loadMyLoads());
-        setSuccess(`${o.driver} ile eşleşme tamamlandı.`);
-        return;
-      } catch (reason) {
-        setSuccess(reason.message);
-        return;
-      }
+      setLoadRequest({ loading: true, error: "" });
+      setReloadKey((value) => value + 1);
+      if (action === "accepted") setSuccess(`${o.company || o.driver} ile eşleşme tamamlandı.`);
+      return;
     }
-    const updatedOffers = marketOffers.map((x) =>
-      x.load === o.load
-        ? { ...x, status: x.id === o.id ? "Kabul edildi" : "Reddedildi" }
-        : x,
-    );
-    const updatedLoads = loads.map((x) =>
-      x.id === o.load ? { ...x, status: "Şoför eşleşti" } : x,
-    );
+    const updatedOffers = marketOffers.map((x) => {
+      if (x.id === o.id && action === "rejected") return { ...x, status: "Reddedildi" };
+      if (x.load === o.load && action === "accepted") {
+        return { ...x, status: x.id === o.id ? "Kabul edildi" : "Reddedildi" };
+      }
+      return x;
+    });
+    const updatedLoads = action === "accepted"
+      ? loads.map((x) => x.id === o.load ? { ...x, status: "Şoför eşleşti" } : x)
+      : loads;
     setMarketOffers(updatedOffers);
     setLoads(updatedLoads);
     saveOffers(updatedOffers);
     saveLoads(updatedLoads);
-    setSuccess(`${o.driver} ile eşleşme tamamlandı.`);
+    if (action === "accepted") setSuccess(`${o.company || o.driver} ile eşleşme tamamlandı.`);
     setTimeout(() => setSuccess(""), 3500);
   }
   async function cancelLoad(load) {
@@ -1823,7 +1821,13 @@ export function ShipperPortal() {
     setSuccess(`${load.cargo} ilanı kopyalandı.`);
     setTimeout(() => setSuccess(""), 3500);
   }
-  const pendingOffers = marketOffers.filter((o) => o.status !== "Reddedildi");
+  const offerLoads = loads.filter((load) =>
+    marketOffers.some((offer) => offer.load === load.id),
+  );
+  const activeOfferLoadId = offerLoads.some((load) => load.id === selectedOfferLoad)
+    ? selectedOfferLoad
+    : offerLoads[0]?.id || "";
+  const displayedOffers = marketOffers.filter((offer) => offer.load === activeOfferLoadId);
   return (
     <PortalShell
       role="yuk-veren"
@@ -1897,9 +1901,36 @@ export function ShipperPortal() {
             title="Gelen Teklifler"
             text="Teklifleri karşılaştırın, mesajlaşın ve kabul edilen işi sevkiyata dönüştürün."
           />
+          {offerLoads.length > 0 && (
+            <div className="offer-load-picker" role="group" aria-label="Teklifleri görüntülenecek yük ilanı">
+              <div>
+                <small>YÜK İLANI</small>
+                <strong>Karşılaştırmak istediğiniz ilanı seçin</strong>
+              </div>
+              <div className="offer-load-picker__items">
+                {offerLoads.map((load) => {
+                  const count = marketOffers.filter((offer) => offer.load === load.id).length;
+                  return (
+                    <button
+                      type="button"
+                      key={load.id}
+                      className={activeOfferLoadId === load.id ? "active" : ""}
+                      aria-pressed={activeOfferLoadId === load.id}
+                      onClick={() => setSelectedOfferLoad(load.id)}
+                    >
+                      <span>{load.cargo}</span>
+                      <small>{load.from} → {load.to}</small>
+                      <b>{count} teklif</b>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <OfferComparison
-            offers={pendingOffers}
-            onAccept={acceptOffer}
+            key={activeOfferLoadId || "no-offers"}
+            offers={displayedOffers}
+            onChange={handleOfferChange}
             onMessage={() => setActive("Mesajlar")}
           />
         </>
