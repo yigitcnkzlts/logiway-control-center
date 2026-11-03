@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -157,6 +157,20 @@ const EUROPEAN_COUNTRIES = [
   "Yunanistan",
 ];
 const makeRecordId = (prefix) => `${prefix}-${Date.now().toString().slice(-6)}`;
+const SHIPPER_SECTION_SLUGS = {
+  "Genel Bakış": "genel-bakis",
+  "Yük İlanlarım": "yuk-ilanlarim",
+  "Gelen Teklifler": "gelen-teklifler",
+  "Sevkiyatlarım": "sevkiyatlarim",
+  Mesajlar: "mesajlar",
+  Geçmiş: "gecmis",
+  Belgeler: "belgeler",
+  Ödemeler: "odemeler",
+  "Firma ve Ekip": "firma-ekip",
+};
+const SHIPPER_SLUG_SECTIONS = Object.fromEntries(
+  Object.entries(SHIPPER_SECTION_SLUGS).map(([section, slug]) => [slug, section]),
+);
 
 const seedLoads = [
   {
@@ -1579,7 +1593,17 @@ function ShipperOverview({
 }
 
 export function ShipperPortal() {
-  const [active, setActive] = useState("Genel Bakış");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const active = SHIPPER_SLUG_SECTIONS[searchParams.get("section")] || "Genel Bakış";
+  function setActive(section) {
+    const slug = SHIPPER_SECTION_SLUGS[section];
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (!slug || section === "Genel Bakış") next.delete("section");
+      else next.set("section", slug);
+      return next;
+    });
+  }
   const [loads, setLoads] = useState(() =>
     liveMarketplaceEnabled() ? [] : getLoads(seedLoads),
   );
@@ -1642,10 +1666,18 @@ export function ShipperPortal() {
             score: "—",
             trips: 0,
             amount: `${Number(o.amount).toLocaleString("tr-TR")} ${o.currency}`,
+            amountValue: Number(o.amount),
             eta: o.availableAt
               ? new Date(o.availableAt).toLocaleString("tr-TR")
               : "Belirtilmedi",
             status: o.status === "PENDING" ? "Bekliyor" : o.status,
+            currency: o.currency,
+            version: o.version,
+            validUntil: o.validUntil,
+            availableAt: o.availableAt,
+            createdAt: o.createdAt,
+            estimatedTransitHours: o.estimatedTransitHours,
+            message: o.message,
           }));
         if (mounted) {
           setLoads(loadsWithOfferCounts);
@@ -1935,6 +1967,7 @@ export function ShipperPortal() {
           <OfferComparison
             key={activeOfferLoadId || "no-offers"}
             offers={displayedOffers}
+            targetBudget={loads.find((load) => load.id === activeOfferLoadId)?.expectedPrice}
             onChange={handleOfferChange}
             onMessage={() => setActive("Mesajlar")}
           />

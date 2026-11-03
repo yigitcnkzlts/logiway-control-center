@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Check, ChevronDown, ChevronUp, MessageCircle, ShieldCheck, Truck, X, Zap,
+  AlertTriangle, Check, ChevronDown, ChevronUp, MessageCircle, ShieldCheck, Truck, X, Zap,
 } from "lucide-react";
 import { acceptLiveOffer, counterLiveOffer, loadOfferRounds, rejectLiveOffer } from "../../api/marketplaceClient";
 import { liveMarketplaceEnabled } from "../../api/marketplaceClient";
@@ -18,7 +18,7 @@ const MAX_COMPARE = 4;
  *   onMessage    – (offer) => void
  *   onClose      – () => void  (used when shown as a panel)
  */
-export default function OfferComparison({ offers = [], onChange, onMessage }) {
+export default function OfferComparison({ offers = [], targetBudget, onChange, onMessage }) {
   const [selected, setSelected] = useState(() => offers.slice(0, 2).map((o) => o.id));
   const [counterTarget, setCounterTarget] = useState(null); // offer id
   const [counterAmount, setCounterAmount] = useState("");
@@ -28,6 +28,8 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
   const [rounds, setRounds] = useState({}); // offerId → round[]
   const [expandedTimeline, setExpandedTimeline] = useState(null);
   const [expandDetail, setExpandDetail] = useState(null);
+  const [sortBy, setSortBy] = useState("newest");
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
   // Load offer rounds when available
   useEffect(() => {
@@ -51,7 +53,12 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
     );
   }
 
-  const comparing = offers.filter((o) => selected.includes(o.id));
+  const sortedOffers = [...offers].sort((a, b) => {
+    if (sortBy === "price") return Number(a.amountValue ?? Number.MAX_VALUE) - Number(b.amountValue ?? Number.MAX_VALUE);
+    if (sortBy === "availability") return new Date(a.availableAt || a.eta || 8640000000000000) - new Date(b.availableAt || b.eta || 8640000000000000);
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
+  const comparing = sortedOffers.filter((o) => selected.includes(o.id));
 
   async function handleAccept(offer) {
     if (busy) return;
@@ -60,6 +67,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
       if (liveMarketplaceEnabled()) await acceptLiveOffer(offer.id);
       onChange?.("accepted", offer);
       setNotice(`${offer.company || offer.driver} ile eşleşme tamamlandı.`);
+      setConfirmTarget(null);
     } catch (e) {
       setNotice(e.message || "Kabul işlemi başarısız.");
     } finally {
@@ -105,6 +113,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
 
   const isAccepted = (o) => o.status === "Kabul edildi" || o.status === "ACCEPTED";
   const isRejected = (o) => o.status === "Reddedildi" || o.status === "REJECTED";
+  const isExpired = (o) => Boolean(o.validUntil && new Date(o.validUntil).getTime() <= Date.now());
 
   // ── EMPTY ──
   if (!offers.length) {
@@ -127,10 +136,18 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
 
       {/* ── SELECTOR ── */}
       <div className="oc-selector" aria-label="Karşılaştırılacak teklifler">
-        <span className="section-kicker">TEKLİF KARŞILAŞTIRMA</span>
-        <p>En fazla {MAX_COMPARE} teklifi aynı anda karşılaştırabilirsiniz.</p>
+        <div className="oc-selector-heading">
+          <div><span className="section-kicker">TEKLİF KARŞILAŞTIRMA</span><p>En fazla {MAX_COMPARE} teklifi aynı anda karşılaştırabilirsiniz.</p></div>
+          <label> Sırala
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Teklifleri sırala">
+              <option value="newest">En yeni</option>
+              <option value="price">En düşük fiyat</option>
+              <option value="availability">En erken müsaitlik</option>
+            </select>
+          </label>
+        </div>
         <div className="oc-selector-chips" role="group" aria-label="Teklif seçimi">
-          {offers.map((o) => {
+          {sortedOffers.map((o) => {
             const active = selected.includes(o.id);
             return (
               <button
@@ -146,6 +163,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                   <small>{o.amount}</small>
                 </span>
                 {isAccepted(o) && <Check size={13} aria-hidden="true" />}
+                {isExpired(o) && <small className="oc-expired">Süresi doldu</small>}
               </button>
             );
           })}
@@ -187,6 +205,16 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                   </td>
                 ))}
               </tr>
+
+              {targetBudget && (
+                <tr className="oc-row">
+                  <th scope="row">Hedef Bütçe Farkı</th>
+                  {comparing.map((o) => {
+                    const difference = Number(o.amountValue) - Number(targetBudget);
+                    return <td key={o.id} className={difference <= 0 ? "oc-budget-good" : "oc-budget-high"}>{difference === 0 ? "Bütçeyle aynı" : `${Math.abs(difference).toLocaleString("tr-TR")} ${o.currency || ""} ${difference < 0 ? "daha düşük" : "daha yüksek"}`}</td>;
+                  })}
+                </tr>
+              )}
 
               {/* 2 – Pickup ETA */}
               <tr className="oc-row">
@@ -242,6 +270,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                     <span className={`oc-status-badge ${isAccepted(o) ? "accepted" : isRejected(o) ? "rejected" : "pending"}`}>
                       {o.status || "Bekliyor"}
                     </span>
+                    {isExpired(o) && <span className="oc-expired-label">Geçerlilik süresi doldu</span>}
                   </td>
                 ))}
               </tr>
@@ -266,12 +295,12 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                 {comparing.map((o) => (
                   <td key={o.id}>
                     <div className="oc-actions">
-                      {!isAccepted(o) && !isRejected(o) && (
+                      {!isAccepted(o) && !isRejected(o) && !isExpired(o) && (
                         <>
                           {/* Primary */}
                           <button
                             className="oc-btn oc-btn--primary"
-                            onClick={() => handleAccept(o)}
+                            onClick={() => setConfirmTarget(o)}
                             disabled={!!busy}
                             aria-label={`${o.company || o.driver} teklifini kabul et`}
                           >
@@ -324,7 +353,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                     {counterTarget === o.id && (
                       <div className="oc-counter" role="form" aria-label="Karşı teklif formu">
                         <label>
-                          <span>Teklifiniz (€)</span>
+                          <span>Teklifiniz ({o.currency || "EUR"})</span>
                           <input
                             type="number"
                             min="1"
@@ -372,7 +401,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
 
       {/* ── MOBILE STACKED CARDS ── */}
       <div className="oc-mobile-cards" aria-label="Teklif kartları">
-        {offers.map((o) => {
+        {sortedOffers.map((o) => {
           const open = expandDetail === o.id;
           return (
             <div
@@ -395,7 +424,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                   )}
                 </div>
                 <span className={`oc-status-badge ${isAccepted(o) ? "accepted" : isRejected(o) ? "rejected" : "pending"}`}>
-                  {o.status || "Bekliyor"}
+                  {isExpired(o) ? "Süresi doldu" : o.status || "Bekliyor"}
                 </span>
               </div>
 
@@ -456,9 +485,9 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
               )}
 
               {/* CTA row */}
-              {!isAccepted(o) && !isRejected(o) && (
+              {!isAccepted(o) && !isRejected(o) && !isExpired(o) && (
                 <div className="oc-card-cta">
-                  <button className="oc-btn oc-btn--primary" onClick={() => handleAccept(o)} disabled={!!busy} aria-label={`${o.company || o.driver} teklifini kabul et`}>
+                  <button className="oc-btn oc-btn--primary" onClick={() => setConfirmTarget(o)} disabled={!!busy} aria-label={`${o.company || o.driver} teklifini kabul et`}>
                     <Check size={13} aria-hidden="true" /> Kabul Et
                   </button>
                   <button className="oc-btn oc-btn--secondary" onClick={() => setCounterTarget(counterTarget === o.id ? null : o.id)} aria-expanded={counterTarget === o.id}>
@@ -477,7 +506,7 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
               {counterTarget === o.id && (
                 <div className="oc-counter" role="form" aria-label="Karşı teklif formu">
                   <label>
-                    <span>Teklifiniz (€)</span>
+                    <span>Teklifiniz ({o.currency || "EUR"})</span>
                     <input type="number" min="1" value={counterAmount} onChange={(e) => setCounterAmount(e.target.value)} placeholder="Örn. 4200" />
                   </label>
                   <label>
@@ -513,6 +542,20 @@ export default function OfferComparison({ offers = [], onChange, onMessage }) {
                 </div>
               ) : null
             )}
+          </div>
+        </div>
+      )}
+
+      {confirmTarget && (
+        <div className="portal-modal oc-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="offer-confirm-title">
+          <div className="oc-confirm-dialog">
+            <AlertTriangle size={24} aria-hidden="true" />
+            <h3 id="offer-confirm-title">Teklifi kabul etmek üzeresiniz</h3>
+            <p><strong>{confirmTarget.company || confirmTarget.driver}</strong> tarafından verilen <strong>{confirmTarget.amount}</strong> tutarındaki teklif kabul edilecek. Diğer bekleyen teklifler kapanacak ve sevkiyat oluşturulacak.</p>
+            <div>
+              <button type="button" className="oc-btn oc-btn--ghost" onClick={() => setConfirmTarget(null)}>Vazgeç</button>
+              <button type="button" className="oc-btn oc-btn--primary" onClick={() => handleAccept(confirmTarget)} disabled={!!busy}>{busy ? "İşleniyor…" : "Teklifi kabul et"}</button>
+            </div>
           </div>
         </div>
       )}
