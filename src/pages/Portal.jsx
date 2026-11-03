@@ -81,6 +81,7 @@ import {
   loadMyMatches,
   loadMyShipments,
   myOffers as loadMyOffers,
+  offersForLoad,
   submitLiveOffer,
 } from "../api/marketplaceClient";
 import {
@@ -1640,9 +1641,14 @@ export function ShipperPortal() {
       .then(async (remoteLoads) => {
         if (!mounted) return;
         const [incomingOffers, remoteMatches, remoteShipments] = await Promise.all([
-          loadIncomingOffers(),
-          loadMyMatches(),
-          loadMyShipments(),
+          loadIncomingOffers().catch(async () => {
+            const perLoad = await Promise.all(
+              remoteLoads.map((load) => offersForLoad(load.id)),
+            );
+            return perLoad.flat();
+          }),
+          loadMyMatches().catch(() => []),
+          loadMyShipments().catch(() => []),
         ]);
         const groups = remoteLoads.map((load) =>
           incomingOffers.filter((offer) => offer.loadId === load.id),
