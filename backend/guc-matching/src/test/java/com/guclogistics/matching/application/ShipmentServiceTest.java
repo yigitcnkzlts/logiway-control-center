@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,5 +57,25 @@ class ShipmentServiceTest {
 
         assertThatThrownBy(()->service.transition(shipment.getId(),userId,ShipmentStatus.DELIVERED))
                 .isInstanceOf(DomainException.class).hasMessageContaining("Invalid shipment status");
+    }
+
+    @Test
+    void listsOnlyShipmentsReturnedByTheParticipantScopedQuery() {
+        UUID userId = UUID.randomUUID();
+        ShipmentEntity shipment = new ShipmentEntity();
+        shipment.setId(UUID.randomUUID());
+        shipment.setLoadId(UUID.randomUUID());
+        shipment.setAcceptedOfferId(UUID.randomUUID());
+        shipment.setMatchId(UUID.randomUUID());
+        shipment.setShipperCompanyId(UUID.randomUUID());
+        shipment.setVehicleId(UUID.randomUUID());
+        shipment.setDriverProfileId(UUID.randomUUID());
+        shipment.setStatus(ShipmentStatus.ASSIGNED);
+        when(repository.findAccessibleForUser(userId)).thenReturn(List.of(shipment));
+
+        var result = service.listForUser(userId);
+
+        org.assertj.core.api.Assertions.assertThat(result).hasSize(1);
+        verify(repository).findAccessibleForUser(userId);
     }
 }

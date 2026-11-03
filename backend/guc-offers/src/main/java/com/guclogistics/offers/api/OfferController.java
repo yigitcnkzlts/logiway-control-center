@@ -73,6 +73,11 @@ public class OfferController {
         return offerService.listMine(user.userId());
     }
 
+    @GetMapping("/api/v1/offers/incoming")
+    public List<OfferResponse> listIncoming(@AuthenticationPrincipal AuthenticatedUser user) {
+        return offerService.listIncoming(user.userId());
+    }
+
     @GetMapping("/api/v1/loads/{loadId}/offers")
     public List<OfferResponse> listForLoad(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable UUID loadId) {
         return offerService.listForLoad(loadId, user.userId());

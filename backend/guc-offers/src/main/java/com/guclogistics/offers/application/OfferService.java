@@ -234,6 +234,13 @@ public class OfferService {
     }
 
     @Transactional(readOnly = true)
+    public List<OfferResponse> listIncoming(UUID userId) {
+        return offerRepository.findIncomingForShipperUser(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<OfferResponse> listForLoad(UUID loadId, UUID userId) {
         LoadSnapshot load = requireLoad(loadId);
         requireLoadMember(load, userId);

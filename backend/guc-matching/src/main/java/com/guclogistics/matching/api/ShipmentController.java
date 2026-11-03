@@ -11,12 +11,18 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/shipments")
 @RequiredArgsConstructor
 public class ShipmentController {
     private final ShipmentService service;
+
+    @GetMapping
+    public List<ShipmentResponse> listMine(@AuthenticationPrincipal AuthenticatedUser user) {
+        return service.listForUser(user.userId());
+    }
 
     @PostMapping("/{id}/status")
     public ShipmentResponse transition(@AuthenticationPrincipal AuthenticatedUser user,

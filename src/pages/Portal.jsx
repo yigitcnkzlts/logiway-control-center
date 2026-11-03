@@ -73,13 +73,14 @@ import { DEMO_CREDENTIALS, enterDemoSession, isDemoSession } from "../api/demoAu
 import {
   cancelLiveLoad,
   createAndPublishLoad,
-  duplicateLiveLoad,
+  duplicateLiveLoadAsDraft,
   liveMarketplaceEnabled,
   loadMarketplace,
+  loadIncomingOffers,
   loadMyLoads,
   loadMyMatches,
+  loadMyShipments,
   myOffers as loadMyOffers,
-  offersForLoad,
   submitLiveOffer,
 } from "../api/marketplaceClient";
 import {
@@ -1588,6 +1589,7 @@ export function ShipperPortal() {
   const [matches, setMatches] = useState(() =>
     liveMarketplaceEnabled() ? [] : getMatches(),
   );
+  const [shipments, setShipments] = useState([]);
   const [modal, setModal] = useState(false);
   const [success, setSuccess] = useState("");
   const [loadFilters, setLoadFilters] = useState({ status: "Tümü", search: "" });
@@ -1613,12 +1615,14 @@ export function ShipperPortal() {
     loadMyLoads()
       .then(async (remoteLoads) => {
         if (!mounted) return;
-        const [groups, remoteMatches] = await Promise.all([
-          Promise.all(
-            remoteLoads.map((load) => offersForLoad(load.id).catch(() => [])),
-          ),
-          loadMyMatches().catch(() => []),
+        const [incomingOffers, remoteMatches, remoteShipments] = await Promise.all([
+          loadIncomingOffers(),
+          loadMyMatches(),
+          loadMyShipments(),
         ]);
+        const groups = remoteLoads.map((load) =>
+          incomingOffers.filter((offer) => offer.loadId === load.id),
+        );
         const loadsWithOfferCounts = remoteLoads.map((load, index) => ({
           ...load,
           offers: groups[index]?.length || 0,
@@ -1663,6 +1667,7 @@ export function ShipperPortal() {
               };
             }),
           );
+          setShipments(remoteShipments);
           setLoadRequest({ loading: false, error: "" });
         }
       })
@@ -1796,10 +1801,10 @@ export function ShipperPortal() {
   async function copyLoad(load) {
     if (liveMarketplaceEnabled()) {
       try {
-        await duplicateLiveLoad(load.id);
+        await duplicateLiveLoadAsDraft(load.id);
         setLoadRequest({ loading: true, error: "" });
         setReloadKey((value) => value + 1);
-        setSuccess(`${load.cargo} ilanının kopyası yayınlandı.`);
+        setSuccess(`${load.cargo} ilanının güvenli taslak kopyası oluşturuldu. Yayınlamadan önce tarih ve bilgileri kontrol edin.`);
         setTimeout(() => setSuccess(""), 3500);
       } catch (reason) {
         setSuccess(reason.message);
@@ -1937,18 +1942,11 @@ export function ShipperPortal() {
       )}
       {active === "Sevkiyatlarım" &&
         (liveMarketplaceEnabled() ? (
-          <EmptyState
-            icon={<Route />}
-            title={
-              matches.length
-                ? "Sevkiyat detay bağlantısı hazırlanıyor"
-                : "Aktif sevkiyat bulunmuyor"
-            }
-            text={
-              matches.length
-                ? "Eşleşmeleriniz kaydedildi. Canlı detay ve durum akışı backend sözleşmesi tamamlandığında burada açılacak."
-                : "Bir teklif kabul edildiğinde sevkiyat burada görünecek."
-            }
+          <ShipperShipmentList
+            shipments={shipments}
+            loads={loads}
+            offers={marketOffers}
+            onMessage={() => setActive("Mesajlar")}
           />
         ) : (
           <ShipmentDetail onMessage={() => setActive("Mesajlar")} />
@@ -1984,6 +1982,103 @@ export function ShipperPortal() {
         <LoadModal onClose={() => setModal(false)} onSubmit={addLoad} />
       )}
     </PortalShell>
+  );
+}
+
+const SHIPMENT_STEPS = ["ASSIGNED", "PICKED_UP", "IN_TRANSIT", "DELIVERED"];
+const SHIPMENT_LABELS = {
+  CREATED: "Oluşturuldu",
+  ASSIGNED: "Araç ve şoför atandı",
+  PICKED_UP: "Yük alındı",
+  IN_TRANSIT: "Yolda",
+  DELIVERED: "Teslim edildi",
+  CANCELLED: "İptal edildi",
+};
+
+function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
+  const [expanded, setExpanded] = useState(null);
+  const activeCount = shipments.filter((shipment) =>
+    !["DELIVERED", "CANCELLED"].includes(shipment.status),
+  ).length;
+
+  return (
+    <>
+      <PageHeading
+        kicker="SEVKİYAT YÖNETİMİ"
+        title="Sevkiyatlarım"
+        text="Kabul edilen tekliflerden oluşan gerçek taşıma operasyonlarını takip edin."
+      />
+      {!shipments.length ? (
+        <EmptyState
+          icon={<Route />}
+          title="Aktif sevkiyat bulunmuyor"
+          text="Bir taşıyıcı teklifini kabul ettiğinizde oluşan sevkiyat burada görünecek."
+        />
+      ) : (
+        <section className="shipper-shipments" aria-label="Sevkiyat listesi">
+          <div className="shipper-shipments__summary">
+            <span><strong>{activeCount}</strong> devam eden</span>
+            <span><strong>{shipments.filter((item) => item.status === "DELIVERED").length}</strong> tamamlanan</span>
+            <span><strong>{shipments.length}</strong> toplam sevkiyat</span>
+          </div>
+          <div className="shipper-shipments__list">
+            {shipments.map((shipment) => {
+              const load = loads.find((item) => item.id === shipment.loadId);
+              const offer = offers.find((item) => item.id === shipment.acceptedOfferId);
+              const currentStep = SHIPMENT_STEPS.indexOf(shipment.status);
+              const isOpen = expanded === shipment.id;
+              return (
+                <article className="shipper-shipment-card" key={shipment.id}>
+                  <header>
+                    <div><small>SEVKİYAT</small><strong>{shipment.id}</strong></div>
+                    <span className={`shipment-state shipment-state--${shipment.status.toLowerCase()}`}>
+                      {SHIPMENT_LABELS[shipment.status] || shipment.status}
+                    </span>
+                  </header>
+                  <div className="shipper-shipment-card__route">
+                    <span><i /><small>YÜKLEME</small><strong>{load?.from || "Rota bilgisi yükleniyor"}</strong></span>
+                    <ArrowRight aria-hidden="true" />
+                    <span><i /><small>TESLİMAT</small><strong>{load?.to || "Rota bilgisi yükleniyor"}</strong></span>
+                  </div>
+                  <div className="shipper-shipment-card__meta">
+                    <span><small>Yük</small><strong>{load?.cargo || shipment.loadId}</strong></span>
+                    <span><small>Taşıyıcı</small><strong>{offer?.company || offer?.driver || "Kabul edilen taşıyıcı"}</strong></span>
+                    <span><small>Teklif</small><strong>{offer?.amount || "—"}</strong></span>
+                    <span><small>Son güncelleme</small><strong>{new Date(shipment.updatedAt).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</strong></span>
+                  </div>
+                  {shipment.status !== "CANCELLED" && (
+                    <div className="shipper-shipment-card__steps" aria-label="Sevkiyat ilerlemesi">
+                      {SHIPMENT_STEPS.map((step, index) => (
+                        <span className={index <= currentStep ? "done" : ""} key={step}>
+                          <i>{index < currentStep ? <Check size={11} /> : index + 1}</i>
+                          <small>{SHIPMENT_LABELS[step]}</small>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <footer>
+                    <button type="button" className="portal-secondary" onClick={() => setExpanded(isOpen ? null : shipment.id)} aria-expanded={isOpen}>
+                      {isOpen ? "Detayı kapat" : "Detayı göster"}
+                    </button>
+                    <button type="button" className="portal-primary" onClick={onMessage}>
+                      <MessageCircle size={15} /> Mesajlar
+                    </button>
+                  </footer>
+                  {isOpen && (
+                    <div className="shipper-shipment-card__detail">
+                      <span><small>Yük ID</small><code>{shipment.loadId}</code></span>
+                      <span><small>Eşleşme ID</small><code>{shipment.matchId}</code></span>
+                      <span><small>Araç ID</small><code>{shipment.vehicleId}</code></span>
+                      <span><small>Şoför profili ID</small><code>{shipment.driverProfileId}</code></span>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </>
   );
 }
 

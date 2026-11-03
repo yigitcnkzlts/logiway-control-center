@@ -59,14 +59,15 @@ export function loadToCreatePayload(source){
   return Object.fromEntries(fields.map(field=>[field,source[field]]));
 }
 
-export async function duplicateLiveLoad(id){
+export async function duplicateLiveLoadAsDraft(id){
   const source=await request(`/api/v1/loads/${id}`);
-  const created=await request("/api/v1/loads",{method:"POST",body:JSON.stringify(loadToCreatePayload(source))});
-  return request(`/api/v1/loads/${created.id}/publish`,{method:"POST"});
+  return request("/api/v1/loads",{method:"POST",body:JSON.stringify(loadToCreatePayload(source))});
 }
 
 export async function myOffers(){return request("/api/v1/offers/mine")}
+export async function loadIncomingOffers(){return request("/api/v1/offers/incoming")}
 export async function loadMyMatches(){return request("/api/v1/matches")}
+export async function loadMyShipments(){return request("/api/v1/shipments")}
 export async function offersForLoad(loadId){return request(`/api/v1/loads/${loadId}/offers`)}
 export async function submitLiveOffer(job){
   const companies=await request("/api/v1/companies/mine");const company=companies.find(x=>x.type==="LOGISTICS");

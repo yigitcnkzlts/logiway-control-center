@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +59,11 @@ public class ShipmentService {
                 .orElseThrow(() -> DomainException.notFound("Shipment not found"));
         requireParticipant(shipment, userId);
         return toResponse(shipment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShipmentResponse> listForUser(UUID userId) {
+        return repository.findAccessibleForUser(userId).stream().map(this::toResponse).toList();
     }
 
     private boolean allowed(ShipmentStatus from, ShipmentStatus to) {

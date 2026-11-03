@@ -23,6 +23,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -211,6 +212,18 @@ class OfferServiceTest {
         assertThatThrownBy(() -> offerService.listForLoad(currentLoadId, UUID.randomUUID()))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("access denied");
+    }
+
+    @Test
+    void incomingOffersAreLoadedThroughTheShipperScopedRepositoryQuery() {
+        UUID userId = UUID.randomUUID();
+        OfferEntity offer = pendingOffer(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        when(offerRepository.findIncomingForShipperUser(userId)).thenReturn(List.of(offer));
+
+        var result = offerService.listIncoming(userId);
+
+        org.assertj.core.api.Assertions.assertThat(result).hasSize(1);
+        verify(offerRepository).findIncomingForShipperUser(userId);
     }
 
     @Test
