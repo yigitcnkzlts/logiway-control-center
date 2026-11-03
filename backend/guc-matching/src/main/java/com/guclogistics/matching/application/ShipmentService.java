@@ -63,7 +63,24 @@ public class ShipmentService {
 
     @Transactional(readOnly = true)
     public List<ShipmentResponse> listForUser(UUID userId) {
-        return repository.findAccessibleForUser(userId).stream().map(this::toResponse).toList();
+        @SuppressWarnings("unchecked")
+        var shipmentIds = (List<UUID>) entityManager.createNativeQuery("""
+                SELECT s.id /* accessible shipments for participant */
+                FROM shipments s
+                WHERE EXISTS (
+                    SELECT 1 FROM company_members cm
+                    WHERE cm.user_id = ?1
+                      AND (cm.company_id = s.shipper_company_id OR cm.company_id = s.carrier_company_id)
+                ) OR EXISTS (
+                    SELECT 1 FROM driver_profiles dp
+                    WHERE dp.id = s.driver_profile_id AND dp.user_id = ?1
+                )
+                ORDER BY s.updated_at DESC
+                """).setParameter(1, userId).getResultList();
+        return repository.findAllById(shipmentIds).stream()
+                .sorted(java.util.Comparator.comparing(ShipmentEntity::getUpdatedAt).reversed())
+                .map(this::toResponse)
+                .toList();
     }
 
     private boolean allowed(ShipmentStatus from, ShipmentStatus to) {

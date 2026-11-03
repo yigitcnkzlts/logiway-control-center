@@ -18,18 +18,6 @@ public interface OfferJpaRepository extends JpaRepository<OfferEntity, UUID> {
 
     List<OfferEntity> findByLoadIdOrderByCreatedAtDesc(UUID loadId);
 
-    @Query(value = """
-            SELECT o.* FROM offers o
-            JOIN loads l ON l.id = o.load_id
-            WHERE l.created_by_user_id = :userId
-               OR EXISTS (
-                    SELECT 1 FROM company_members cm
-                    WHERE cm.user_id = :userId AND cm.company_id = l.shipper_company_id
-               )
-            ORDER BY o.created_at DESC
-            """, nativeQuery = true)
-    List<OfferEntity> findIncomingForShipperUser(@Param("userId") UUID userId);
-
     Optional<OfferEntity> findByIdAndCreatedByUserId(UUID id, UUID createdByUserId);
 
     @Modifying

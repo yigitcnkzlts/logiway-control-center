@@ -71,11 +71,16 @@ class ShipmentServiceTest {
         shipment.setVehicleId(UUID.randomUUID());
         shipment.setDriverProfileId(UUID.randomUUID());
         shipment.setStatus(ShipmentStatus.ASSIGNED);
-        when(repository.findAccessibleForUser(userId)).thenReturn(List.of(shipment));
+        shipment.setUpdatedAt(java.time.Instant.now());
+        Query query = mock(Query.class);
+        when(entityManager.createNativeQuery(contains("accessible shipments for participant"))).thenReturn(query);
+        when(query.setParameter(1, userId)).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(shipment.getId()));
+        when(repository.findAllById(List.of(shipment.getId()))).thenReturn(List.of(shipment));
 
         var result = service.listForUser(userId);
 
         org.assertj.core.api.Assertions.assertThat(result).hasSize(1);
-        verify(repository).findAccessibleForUser(userId);
+        verify(repository).findAllById(List.of(shipment.getId()));
     }
 }

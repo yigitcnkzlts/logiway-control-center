@@ -235,7 +235,20 @@ public class OfferService {
 
     @Transactional(readOnly = true)
     public List<OfferResponse> listIncoming(UUID userId) {
-        return offerRepository.findIncomingForShipperUser(userId).stream()
+        @SuppressWarnings("unchecked")
+        var offerIds = (java.util.List<UUID>) entityManager.createNativeQuery("""
+                SELECT o.id /* incoming offers for shipper */
+                FROM offers o
+                JOIN loads l ON l.id = o.load_id
+                WHERE l.created_by_user_id = ?1
+                   OR EXISTS (
+                        SELECT 1 FROM company_members cm
+                        WHERE cm.user_id = ?1 AND cm.company_id = l.shipper_company_id
+                   )
+                ORDER BY o.created_at DESC
+                """).setParameter(1, userId).getResultList();
+        return offerRepository.findAllById(offerIds).stream()
+                .sorted(java.util.Comparator.comparing(OfferEntity::getCreatedAt).reversed())
                 .map(this::toResponse)
                 .toList();
     }
