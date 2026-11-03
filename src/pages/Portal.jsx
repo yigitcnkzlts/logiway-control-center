@@ -1050,7 +1050,7 @@ function PasswordChecklist({ password }) {
   );
 }
 
-function PortalShell({ role, children, active, onSelect }) {
+function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
   const routerNavigate = useNavigate();
   const info = roleInfo[role];
   const Icon = info.icon;
@@ -1083,6 +1083,7 @@ function PortalShell({ role, children, active, onSelect }) {
       "Yük İlanlarım": "My loads",
       "Gelen Teklifler": "Offers",
       "Sevkiyatlarım": "My shipments",
+      "Firma ve Ekip": "Company & team",
       Geçmiş: "History",
       Belgeler: "Documents",
       Ödemeler: "Payments",
@@ -1097,6 +1098,7 @@ function PortalShell({ role, children, active, onSelect }) {
       "Yük İlanlarım": "Meine Ladungen",
       "Gelen Teklifler": "Angebote",
       "Sevkiyatlarım": "Meine Sendungen",
+      "Firma ve Ekip": "Unternehmen & Team",
       Geçmiş: "Verlauf",
       Belgeler: "Dokumente",
       Ödemeler: "Zahlungen",
@@ -1111,6 +1113,7 @@ function PortalShell({ role, children, active, onSelect }) {
       "Yük İlanlarım": "I miei carichi",
       "Gelen Teklifler": "Offerte",
       "Sevkiyatlarım": "Le mie spedizioni",
+      "Firma ve Ekip": "Azienda e team",
       Geçmiş: "Storico",
       Belgeler: "Documenti",
       Ödemeler: "Pagamenti",
@@ -1124,15 +1127,15 @@ function PortalShell({ role, children, active, onSelect }) {
   const menu =
     role === "yuk-veren"
       ? [
-          ["Genel Bakış", <ClipboardList size={18} />],
-          ["Yük İlanlarım", <Package size={18} />],
-          ["Gelen Teklifler", <Wallet size={18} />],
-          ["Sevkiyatlarım", <Route size={18} />],
-          ["Mesajlar", <MessageCircle size={18} />],
-          ["Geçmiş", <Clock3 size={18} />],
-          ["Belgeler", <FileText size={18} />],
-          ["Ödemeler", <CreditCard size={18} />],
-          ["Firma & Ekip", <Users size={18} />],
+          ["Genel Bakış", <ClipboardList size={18} />, null, "Operasyon"],
+          ["Yük İlanlarım", <Package size={18} />, navCounts.loads, "Operasyon"],
+          ["Gelen Teklifler", <Wallet size={18} />, navCounts.offers, "Operasyon"],
+          ["Sevkiyatlarım", <Route size={18} />, navCounts.shipments, "Operasyon"],
+          ["Mesajlar", <MessageCircle size={18} />, null, "Operasyon"],
+          ["Geçmiş", <Clock3 size={18} />, null, "Finans ve Kayıtlar"],
+          ["Belgeler", <FileText size={18} />, null, "Finans ve Kayıtlar"],
+          ["Ödemeler", <CreditCard size={18} />, null, "Finans ve Kayıtlar"],
+          ["Firma ve Ekip", <Users size={18} />, null, "Yönetim"],
         ]
       : role === "lojistik"
         ? [
@@ -1156,6 +1159,13 @@ function PortalShell({ role, children, active, onSelect }) {
             ["Mesajlar", <MessageCircle size={18} />],
             ["Belgeler", <FileText size={18} />],
           ];
+  const menuSections = menu.reduce((sections, item) => {
+    const sectionName = item[3] || "";
+    const section = sections.find((candidate) => candidate.name === sectionName);
+    if (section) section.items.push(item);
+    else sections.push({ name: sectionName, items: [item] });
+    return sections;
+  }, []);
   function changeLanguage(e) {
     setLang(e.target.value);
     localStorage.setItem("logiway-language", e.target.value);
@@ -1212,17 +1222,24 @@ function PortalShell({ role, children, active, onSelect }) {
               ? "Yük Bul"
               : "Görevi Aç"}
         </button>
-        <nav>
-          {menu.map(([label, icon, badge]) => (
-            <button
-              onClick={() => navigate(label)}
-              className={active === label ? "active" : ""}
-              key={label}
-            >
-              {icon}
-              <span>{labels[lang]?.[label] || label}</span>
-              {badge && <b>{badge}</b>}
-            </button>
+        <nav aria-label={`${info.title} panel menüsü`}>
+          {menuSections.map((section) => (
+            <div className="portal-nav-group" key={section.name || "main"}>
+              {section.name && <small className="portal-nav-label">{section.name}</small>}
+              {section.items.map(([label, icon, badge]) => (
+                <button
+                  type="button"
+                  onClick={() => navigate(label)}
+                  className={active === label ? "active" : ""}
+                  aria-current={active === label ? "page" : undefined}
+                  key={label}
+                >
+                  {icon}
+                  <span>{labels[lang]?.[label] || label}</span>
+                  {Number(badge) > 0 && <b aria-label={`${badge} kayıt`}>{badge > 99 ? "99+" : badge}</b>}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <button type="button" className="logout" onClick={logout}>
@@ -1292,7 +1309,7 @@ function PortalShell({ role, children, active, onSelect }) {
               onClick={() =>
                 navigate(
                   role === "yuk-veren"
-                    ? "Firma & Ekip"
+                    ? "Firma ve Ekip"
                     : role === "lojistik"
                       ? "Ekip"
                       : "Belgeler",
@@ -1781,6 +1798,13 @@ export function ShipperPortal() {
     <PortalShell
       role="yuk-veren"
       active={active}
+      navCounts={{
+        loads: loads.length,
+        offers: marketOffers.filter((offer) =>
+          ["Bekliyor", "PENDING"].includes(offer.status),
+        ).length,
+        shipments: matches.length,
+      }}
       onSelect={(next) =>
         next === "Yeni Yük" ? setModal(true) : setActive(next)
       }
@@ -1882,7 +1906,7 @@ export function ShipperPortal() {
         ) : (
           <PaymentCenter />
         ))}
-      {active === "Firma & Ekip" && (
+      {active === "Firma ve Ekip" && (
         <EmptyState
           icon={<Users />}
           title="Firma ve ekip yönetimi"
