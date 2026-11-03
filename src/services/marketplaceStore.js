@@ -2,6 +2,7 @@ const KEYS = {
   loads: "logiway-loads",
   offers: "logiway-offers",
   matches: "logiway-matches",
+  drafts: "logiway-drafts",
 };
 
 function read(key, fallback = []) {
@@ -90,4 +91,25 @@ export function loadToJob(load, preferences = {}) {
 
 export function getMarketplaceSnapshot() {
   return { loads: getLoads(), offers: getOffers(), matches: getMatches() };
+}
+
+// ── Draft helpers ────────────────────────────────────────────────────────────
+/** Returns all demo drafts (objects with status "DRAFT"). */
+export function getDrafts() {
+  return read(KEYS.drafts, []);
+}
+
+/** Upsert a draft by id. If no id, assigns a new one via the caller. */
+export function saveDraft(draft) {
+  const all = getDrafts();
+  const idx = all.findIndex((d) => d.id === draft.id);
+  const next = idx >= 0
+    ? all.map((d) => (d.id === draft.id ? { ...draft, updatedAt: new Date().toISOString() } : d))
+    : [{ ...draft, status: "DRAFT", updatedAt: new Date().toISOString() }, ...all];
+  return write(KEYS.drafts, next);
+}
+
+/** Delete a draft by id (e.g. after publishing). */
+export function deleteDraft(id) {
+  return write(KEYS.drafts, getDrafts().filter((d) => d.id !== id));
 }

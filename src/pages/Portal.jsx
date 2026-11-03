@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -27,9 +27,11 @@ import {
   Package,
   PackageCheck,
   PauseCircle,
+  Pencil,
   Plus,
   Route,
   Search,
+  Send,
   ShieldCheck,
   Timer,
   TrendingUp,
@@ -43,10 +45,12 @@ import {
   X,
 } from "lucide-react";
 import {
+  deleteDraft,
   getLoads,
   getMatches,
   getOffers,
   loadToJob,
+  saveDraft,
   saveLoads,
   saveOffers,
   subscribeMarketplace,
@@ -1616,6 +1620,7 @@ export function ShipperPortal() {
   );
   const [shipments, setShipments] = useState([]);
   const [modal, setModal] = useState(false);
+  const [editingLoad, setEditingLoad] = useState(null); // load being edited/drafted
   const [success, setSuccess] = useState("");
   const [loadFilters, setLoadFilters] = useState({ status: "Tümü", search: "" });
   const [confirmCancel, setConfirmCancel] = useState(null); // load object pending cancel
@@ -1721,34 +1726,14 @@ export function ShipperPortal() {
       mounted = false;
     };
   }, [reloadKey]);
-  async function addLoad(e) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
+  /** Build a load object from FormData (shared by addLoad + saveDraftLoad). */
+  function buildLoadFromForm(f, status = "Teklif alıyor", existingId = null) {
     const symbol =
-      f.get("currency") === "EUR"
-        ? "€"
-        : f.get("currency") === "GBP"
-          ? "£"
-          : "kr";
-    if (liveMarketplaceEnabled()) {
-      try {
-        await createAndPublishLoad(f);
-        const remoteLoads = await loadMyLoads();
-        setLoads(remoteLoads);
-        setModal(false);
-        setActive("Yük İlanlarım");
-        setSuccess(
-          "İlan merkezi veritabanına kaydedildi ve eşleştirme havuzunda yayınlandı.",
-        );
-        setTimeout(() => setSuccess(""), 3500);
-        return;
-      } catch (reason) {
-        setSuccess(reason.message);
-        return;
-      }
-    }
-    const next = {
-      id: makeRecordId("LW"),
+      f.get("currency") === "EUR" ? "€"
+      : f.get("currency") === "GBP" ? "£"
+      : "₺";
+    return {
+      id: existingId || makeRecordId("LW"),
       cargo: f.get("cargo"),
       from: `${f.get("fromCity")}, ${f.get("fromCountry")} · ${f.get("fromPostal")}`,
       to: `${f.get("toCity")}, ${f.get("toCountry")} · ${f.get("toPostal")}`,
@@ -1762,23 +1747,29 @@ export function ShipperPortal() {
       pickupAddress: f.get("pickupAddress"),
       deliveryAddress: f.get("deliveryAddress"),
       vehicle: f.get("vehicle"),
-      weight: `${f.get("weight")} ${f.get("unit")}`,
-      price: f.get("price") ? `${Number(f.get("price")).toLocaleString("de-DE")} ${symbol}` : "Bütçe belirtilmedi",
-      date: f.get("pickupDate").split("-").reverse().slice(0, 2).join("."),
-      status: "Teklif alıyor",
+      weight: `${f.get("weight")} ${f.get("unit") || "ton"}`,
+      price: f.get("price")
+        ? `${Number(f.get("price")).toLocaleString("de-DE")} ${symbol}`
+        : "Bütçe belirtilmedi",
+      date: f.get("pickupDate")
+        ? f.get("pickupDate").split("-").reverse().slice(0, 2).join(".")
+        : "—",
+      status,
       offers: 0,
       createdAt: new Date().toISOString(),
+      demo: !liveMarketplaceEnabled() || undefined,
       packaging: f.get("packaging"),
       payment: f.get("payment"),
       notes: f.get("notes"),
+      loadType: f.get("loadType"),
       details: {
         pickupContact: f.get("pickupContact"),
         pickupPhone: f.get("pickupPhone"),
-        pickupWindow: `${f.get("pickupStart")}–${f.get("pickupEnd")}`,
+        pickupWindow: `${f.get("pickupStart") || ""}–${f.get("pickupEnd") || ""}`,
         deliveryContact: f.get("deliveryContact"),
         deliveryPhone: f.get("deliveryPhone"),
         deliveryDate: f.get("deliveryDate"),
-        deliveryWindow: `${f.get("deliveryStart")}–${f.get("deliveryEnd")}`,
+        deliveryWindow: `${f.get("deliveryStart") || ""}–${f.get("deliveryEnd") || ""}`,
         volume: f.get("volume"),
         pallets: f.get("pallets"),
         stackable: f.get("stackable"),
@@ -1788,13 +1779,79 @@ export function ShipperPortal() {
         tracking: f.get("tracking"),
       },
     };
-    const nextLoads = [next, ...loads];
+  }
+
+  async function addLoad(e) {
+    e.preventDefault();
+    if (liveMarketplaceEnabled()) {
+      try {
+        await createAndPublishLoad(new FormData(e.currentTarget));
+        const remoteLoads = await loadMyLoads();
+        setLoads(remoteLoads);
+        setModal(false);
+        setEditingLoad(null);
+        setActive("Yük İlanlarım");
+        setSuccess("İlan merkezi veritabanına kaydedildi ve eşleştirme havuzunda yayınlandı.");
+        setTimeout(() => setSuccess(""), 3500);
+        return;
+      } catch (reason) {
+        setSuccess(reason.message);
+        return;
+      }
+    }
+    const f = new FormData(e.currentTarget);
+    const existingId = editingLoad?.id || null;
+    const next = buildLoadFromForm(f, "Teklif alıyor", existingId);
+    // If editing a draft, remove old draft entry
+    if (existingId) {
+      deleteDraft(existingId);
+    }
+    const nextLoads = existingId
+      ? loads.map((x) => (x.id === existingId ? next : x))
+      : [next, ...loads];
     setLoads(nextLoads);
     saveLoads(nextLoads);
     setModal(false);
+    setEditingLoad(null);
     setActive("Yük İlanlarım");
     setSuccess("İlan yayınlandı; şoför eşleştirme havuzuna anında eklendi.");
     setTimeout(() => setSuccess(""), 3500);
+  }
+
+  /** Save current form as a DRAFT (no validation, called from LoadModal). */
+  function saveDraftLoad(f, existingId = null) {
+    const draft = buildLoadFromForm(f, "DRAFT", existingId || makeRecordId("LW"));
+    // Persist in separate drafts key AND in main loads list
+    saveDraft(draft);
+    const inLoads = loads.some((x) => x.id === draft.id);
+    const nextLoads = inLoads
+      ? loads.map((x) => (x.id === draft.id ? draft : x))
+      : [draft, ...loads];
+    setLoads(nextLoads);
+    saveLoads(nextLoads);
+    setModal(false);
+    setEditingLoad(null);
+    setActive("Yük İlanlarım");
+    setSuccess("Taslak kaydedildi. İstediğinizde düzenleyip yayınlayabilirsiniz.");
+    setTimeout(() => setSuccess(""), 4000);
+  }
+
+  /** Publish an existing DRAFT load by id. */
+  function publishDraft(load) {
+    const next = loads.map((x) =>
+      x.id === load.id ? { ...x, status: "Teklif alıyor" } : x,
+    );
+    deleteDraft(load.id);
+    setLoads(next);
+    saveLoads(next);
+    setSuccess(`"${load.cargo}" ilanı yayınlandı; taşıyıcılara açıldı.`);
+    setTimeout(() => setSuccess(""), 3500);
+  }
+
+  /** Open LoadModal pre-filled with an existing load for editing. */
+  function openEditModal(load) {
+    setEditingLoad(load);
+    setModal(true);
   }
   function handleOfferChange(action, o) {
     const load = loads.find((x) => x.id === o.load);
@@ -1842,7 +1899,7 @@ export function ShipperPortal() {
         await duplicateLiveLoadAsDraft(load.id);
         setLoadRequest({ loading: true, error: "" });
         setReloadKey((value) => value + 1);
-        setSuccess(`${load.cargo} ilanının güvenli taslak kopyası oluşturuldu. Yayınlamadan önce tarih ve bilgileri kontrol edin.`);
+        setSuccess(`${load.cargo} ilanının taslak kopyası oluşturuldu. Tarih ve bilgileri kontrol edip yayınlayın.`);
         setTimeout(() => setSuccess(""), 3500);
       } catch (reason) {
         setSuccess(reason.message);
@@ -1852,16 +1909,17 @@ export function ShipperPortal() {
     const copy = {
       ...load,
       id: makeRecordId("LW"),
-      status: "Teklif alıyor",
+      status: "DRAFT",          // ← demo'da da DRAFT olarak başlasın
       offers: 0,
       createdAt: new Date().toISOString(),
       date: new Date().toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit" }).replace("/", "."),
-      demo: !liveMarketplaceEnabled() || undefined,
+      demo: true,
     };
+    saveDraft(copy);
     const next = [copy, ...loads];
     setLoads(next);
     saveLoads(next);
-    setSuccess(`${load.cargo} ilanı kopyalandı.`);
+    setSuccess(`"${load.cargo}" ilanı taslak olarak kopyalandı. Düzenleyip yayınlayabilirsiniz.`);
     setTimeout(() => setSuccess(""), 3500);
   }
   const offerLoads = loads.filter((load) =>
@@ -1920,6 +1978,8 @@ export function ShipperPortal() {
             onFilterChange={setLoadFilters}
             onCancel={(load) => setConfirmCancel(load)}
             onCopy={copyLoad}
+            onEdit={openEditModal}
+            onPublish={publishDraft}
             isDemo={!liveMarketplaceEnabled()}
             loading={loadRequest.loading}
             error={loadRequest.error}
@@ -2018,7 +2078,12 @@ export function ShipperPortal() {
         />
       )}
       {modal && (
-        <LoadModal onClose={() => setModal(false)} onSubmit={addLoad} />
+        <LoadModal
+          onClose={() => { setModal(false); setEditingLoad(null); }}
+          onSubmit={addLoad}
+          onSaveDraft={saveDraftLoad}
+          initialData={editingLoad}
+        />
       )}
     </PortalShell>
   );
@@ -2145,10 +2210,27 @@ function ConfirmCancelDialog({ load, onConfirm, onClose }) {
 }
 
 // ─── LoadListFull ─────────────────────────────────────────────────────────────
-function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo, loading, error, onRetry }) {
+
+/** Map raw status values (backend enum or demo strings) to Turkish display labels. */
+function statusLabel(status) {
+  const MAP = {
+    DRAFT:            "Taslak",
+    PUBLISHED:        "Teklif alıyor",
+    "Teklif alıyor":  "Teklif alıyor",
+    "Şoför eşleşti":  "Taşıyıcı seçildi",
+    MATCHED:          "Taşıyıcı seçildi",
+    CANCELLED:        "İptal edildi",
+    IN_TRANSIT:       "Yolda",
+    DELIVERED:        "Teslim edildi",
+    Planlandı:        "Planlandı",
+  };
+  return MAP[status] || status;
+}
+
+function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit, onPublish, isDemo, loading, error, onRetry }) {
   const [expanded, setExpanded] = useState(null);
 
-  const STATUS_OPTIONS = ["Tümü", "Teklif alıyor", "Şoför eşleşti", "CANCELLED", "Planlandı"];
+  const STATUS_OPTIONS = ["Tümü", "DRAFT", "Teklif alıyor", "Şoför eşleşti", "CANCELLED"];
 
   // Apply filters
   const visible = loads.filter((x) => {
@@ -2161,9 +2243,10 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo
   });
 
   function statusClass(status) {
-    if (status === "Teklif alıyor") return "portal-status green";
-    if (status === "Şoför eşleşti") return "portal-status blue";
-    if (status === "CANCELLED")     return "portal-status cancelled";
+    if (status === "Teklif alıyor" || status === "PUBLISHED") return "portal-status green";
+    if (status === "Şoför eşleşti" || status === "MATCHED")   return "portal-status blue";
+    if (status === "CANCELLED")                                return "portal-status cancelled";
+    if (status === "DRAFT")                                    return "portal-status draft";
     return "portal-status";
   }
 
@@ -2193,7 +2276,7 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo
               onClick={() => onFilterChange({ ...filters, status: s })}
               aria-pressed={filters.status === s}
             >
-              {s === "CANCELLED" ? "İptal" : s}
+              {statusLabel(s)}
               {s !== "Tümü" && (
                 <span className="llf-tab-count">
                   {loads.filter((x) => x.status === s).length}
@@ -2275,9 +2358,12 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo
             </div>
 
             <div className="llf-badges">
-              <span className={statusClass(x.status)}>{x.status === "CANCELLED" ? "İptal" : x.status}</span>
+              <span className={statusClass(x.status)}>{statusLabel(x.status)}</span>
               {isDemo && x.demo !== false && (
                 <span className="demo-badge-inline" title="Demo ilanı">DEMO</span>
+              )}
+              {x.status === "DRAFT" && (
+                <span className="draft-badge" title="Taslak ilan">TASLAK</span>
               )}
             </div>
 
@@ -2286,24 +2372,44 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo
               <button
                 className="llf-action-btn"
                 title="Detaylar"
-                aria-label={`${x.cargo} detaylarını ${expanded === x.id ? "kapat" : "aç"}`}
+                aria-label={`${x.cargo || x.id} detaylarını ${expanded === x.id ? "kapat" : "aç"}`}
                 onClick={() => setExpanded(expanded === x.id ? null : x.id)}
               >
                 <ChevronRight size={15} className={expanded === x.id ? "llf-chevron open" : "llf-chevron"} />
               </button>
+              {x.status === "DRAFT" && onEdit && (
+                <button
+                  className="llf-action-btn llf-action-btn--edit"
+                  title="Düzenle"
+                  aria-label={`${x.cargo || x.id} taslağını düzenle`}
+                  onClick={() => onEdit(x)}
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
+              {x.status === "DRAFT" && onPublish && (
+                <button
+                  className="llf-action-btn llf-action-btn--publish"
+                  title="Yayınla"
+                  aria-label={`${x.cargo || x.id} ilanını yayınla`}
+                  onClick={() => onPublish(x)}
+                >
+                  <Send size={14} />
+                </button>
+              )}
               <button
                 className="llf-action-btn"
                 title="Kopyala"
-                aria-label={`${x.cargo} ilanını kopyala`}
+                aria-label={`${x.cargo || x.id} ilanını kopyala`}
                 onClick={() => onCopy(x)}
               >
                 <Copy size={14} />
               </button>
-              {(x.status === "Teklif alıyor" || x.status === "DRAFT") && (
+              {(x.status === "Teklif alıyor" || x.status === "DRAFT" || x.status === "PUBLISHED") && (
                 <button
                   className="llf-action-btn llf-action-btn--danger"
                   title="İptal et"
-                  aria-label={`${x.cargo} ilanını iptal et`}
+                  aria-label={`${x.cargo || x.id} ilanını iptal et`}
                   onClick={() => onCancel(x)}
                 >
                   <X size={14} />
@@ -2474,11 +2580,49 @@ function LoadDetails({ load }) {
   );
 }
 
-function LoadModal({ onClose, onSubmit }) {
+function LoadModal({ onClose, onSubmit, onSaveDraft, initialData }) {
+  // If editing an existing load/draft, pre-fill formData from initialData
   const [step, setStep] = useState(0);
-  const [loadType, setLoadType] = useState("Genel kargo");
-  const [formData, setFormData] = useState({});
+  const [loadType, setLoadType] = useState(initialData?.loadType || "Genel kargo");
+  const [formData, setFormData] = useState(() => {
+    if (!initialData) return {};
+    // Flatten initialData + details into formData shape
+    const d = initialData.details || {};
+    return {
+      fromCity:      initialData.fromCity       || "",
+      fromCountry:   initialData.originCountry  || "Türkiye",
+      fromPostal:    initialData.fromPostal      || "",
+      pickupAddress: initialData.pickupAddress   || "",
+      pickupDate:    initialData.pickupDate      || "",
+      pickupStart:   d.pickupWindow?.split("–")[0] || "",
+      pickupEnd:     d.pickupWindow?.split("–")[1] || "",
+      pickupContact: d.pickupContact             || "",
+      pickupPhone:   d.pickupPhone               || "",
+      toCity:        initialData.toCity          || "",
+      toCountry:     initialData.destinationCountry || "Almanya",
+      toPostal:      initialData.toPostal        || "",
+      deliveryAddress: initialData.deliveryAddress || "",
+      deliveryDate:  d.deliveryDate              || initialData.deliveryDate || "",
+      deliveryStart: d.deliveryWindow?.split("–")[0] || "",
+      deliveryEnd:   d.deliveryWindow?.split("–")[1] || "",
+      deliveryContact: d.deliveryContact         || "",
+      deliveryPhone: d.deliveryPhone             || "",
+      cargo:         initialData.cargo           || "",
+      loadType:      initialData.loadType        || "Genel kargo",
+      weight:        initialData.weight?.split(" ")[0] || "",
+      notes:         initialData.notes           || "",
+      vehicle:       initialData.vehicle         || "",
+      adr:           d.adr                       || "",
+      temperatureControl: d.temperature          || "",
+      insurance:     d.insurance                 || "",
+      tracking:      d.tracking                  || "",
+      price:         initialData._rawPrice       || "",
+      currency:      initialData.currency        || "TRY",
+      payment:       initialData.payment         || "Teslimatta ödeme",
+    };
+  });
   const [submitting, setSubmitting] = useState(false);
+  const formRef = useRef(null);
   const steps = [
     "Rota",
     "Yük bilgileri",
@@ -2524,12 +2668,19 @@ function LoadModal({ onClose, onSubmit }) {
     setSubmitting(true);
     try { await onSubmit(e); } finally { setSubmitting(false); }
   }
+
+  function handleSaveDraft(e) {
+    e.preventDefault();
+    if (!formRef.current) return;
+    const f = new FormData(formRef.current);
+    onSaveDraft(f, initialData?.id || null);
+  }
   return (
     <div className="portal-modal" role="dialog" aria-modal="true">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} ref={formRef}>
         <div className="modal-head">
           <div>
-            <span>YENİ YÜK İLANI</span>
+            <span>{initialData?.status === "DRAFT" ? "TASLAK DÜZENLE" : "YENİ YÜK İLANI"}</span>
             <h2>{steps[step]}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Kapat">
@@ -2556,7 +2707,7 @@ function LoadModal({ onClose, onSubmit }) {
           <div className="form-grid form-grid-3">
             <label>
               Ülke
-              <select name="fromCountry" defaultValue="Türkiye">
+              <select name="fromCountry" defaultValue={formData.fromCountry || "Türkiye"}>
                 {EUROPEAN_COUNTRIES.map((x) => (
                   <option key={x}>{x}</option>
                 ))}
@@ -2564,11 +2715,11 @@ function LoadModal({ onClose, onSubmit }) {
             </label>
             <label>
               Şehir
-              <input required name="fromCity" placeholder="Tekirdağ" />
+              <input required name="fromCity" placeholder="Tekirdağ" defaultValue={formData.fromCity || ""} />
             </label>
             <label>
               Posta kodu
-              <input required name="fromPostal" placeholder="59000" />
+              <input required name="fromPostal" placeholder="59000" defaultValue={formData.fromPostal || ""} />
             </label>
             <label className="wide">
               Açık adres
@@ -2576,27 +2727,28 @@ function LoadModal({ onClose, onSubmit }) {
                 required
                 name="pickupAddress"
                 placeholder="Cadde, bina/depo adı ve kapı numarası"
+                defaultValue={formData.pickupAddress || ""}
               />
             </label>
             <label>
               Yükleme tarihi
-              <input required name="pickupDate" type="date" />
+              <input required name="pickupDate" type="date" defaultValue={formData.pickupDate || ""} />
             </label>
             <label>
               Saat başlangıcı
-              <input required name="pickupStart" type="time" />
+              <input required name="pickupStart" type="time" defaultValue={formData.pickupStart || ""} />
             </label>
             <label>
               Saat bitişi
-              <input required name="pickupEnd" type="time" />
+              <input required name="pickupEnd" type="time" defaultValue={formData.pickupEnd || ""} />
             </label>
             <label>
               Yetkili kişi
-              <input required name="pickupContact" />
+              <input required name="pickupContact" defaultValue={formData.pickupContact || ""} />
             </label>
             <label>
               Telefon
-              <input required name="pickupPhone" type="tel" />
+              <input required name="pickupPhone" type="tel" defaultValue={formData.pickupPhone || ""} />
             </label>
           </div>
           <div className="form-section-title">
@@ -2605,7 +2757,7 @@ function LoadModal({ onClose, onSubmit }) {
           <div className="form-grid form-grid-3">
             <label>
               Ülke
-              <select name="toCountry" defaultValue="Almanya">
+              <select name="toCountry" defaultValue={formData.toCountry || "Almanya"}>
                 {EUROPEAN_COUNTRIES.map((x) => (
                   <option key={x}>{x}</option>
                 ))}
@@ -2613,11 +2765,11 @@ function LoadModal({ onClose, onSubmit }) {
             </label>
             <label>
               Şehir
-              <input required name="toCity" placeholder="Berlin" />
+              <input required name="toCity" placeholder="Berlin" defaultValue={formData.toCity || ""} />
             </label>
             <label>
               Posta kodu
-              <input required name="toPostal" placeholder="10115" />
+              <input required name="toPostal" placeholder="10115" defaultValue={formData.toPostal || ""} />
             </label>
             <label className="wide">
               Açık adres
@@ -2625,27 +2777,28 @@ function LoadModal({ onClose, onSubmit }) {
                 required
                 name="deliveryAddress"
                 placeholder="Cadde, tesis/depo adı ve kapı numarası"
+                defaultValue={formData.deliveryAddress || ""}
               />
             </label>
             <label>
               Teslim tarihi
-              <input required name="deliveryDate" type="date" />
+              <input required name="deliveryDate" type="date" defaultValue={formData.deliveryDate || ""} />
             </label>
             <label>
               Saat başlangıcı
-              <input required name="deliveryStart" type="time" />
+              <input required name="deliveryStart" type="time" defaultValue={formData.deliveryStart || ""} />
             </label>
             <label>
               Saat bitişi
-              <input required name="deliveryEnd" type="time" />
+              <input required name="deliveryEnd" type="time" defaultValue={formData.deliveryEnd || ""} />
             </label>
             <label>
               Yetkili kişi
-              <input required name="deliveryContact" />
+              <input required name="deliveryContact" defaultValue={formData.deliveryContact || ""} />
             </label>
             <label>
               Telefon
-              <input required name="deliveryPhone" type="tel" />
+              <input required name="deliveryPhone" type="tel" defaultValue={formData.deliveryPhone || ""} />
             </label>
           </div>
         </div>
@@ -2657,11 +2810,12 @@ function LoadModal({ onClose, onSubmit }) {
                 required
                 name="cargo"
                 placeholder="Örn. Coca-Cola içecek sevkiyatı, çelik bobin, tekstil ürünleri"
+                defaultValue={formData.cargo || ""}
               />
             </label>
             <label>
               Yük tipi
-              <select name="loadType" required onChange={(e) => setLoadType(e.target.value)}>
+              <select name="loadType" required defaultValue={formData.loadType || "Genel kargo"} onChange={(e) => setLoadType(e.target.value)}>
                 <option value="Genel kargo">Genel kargo</option>
                 <option value="Soğuk zincir">Soğuk zincir</option>
                 <option value="Tehlikeli madde">Tehlikeli madde</option>
@@ -2677,6 +2831,7 @@ function LoadModal({ onClose, onSubmit }) {
                 min="0.1"
                 step="0.1"
                 placeholder="Örn. 20"
+                defaultValue={formData.weight || ""}
               />
               <input type="hidden" name="unit" value="ton" />
             </label>
@@ -2686,6 +2841,7 @@ function LoadModal({ onClose, onSubmit }) {
                 name="notes"
                 rows="3"
                 placeholder="Örn. Paletli içecek ürünleri taşınacaktır."
+                defaultValue={formData.notes || ""}
               />
             </label>
           </div>
@@ -2728,7 +2884,7 @@ function LoadModal({ onClose, onSubmit }) {
               { value: "Diğer",   label: "Diğer",   desc: "Özel araç ihtiyacı olan taşımalar için." },
             ].map(({ value, label, desc }) => (
               <label key={value} className="vehicle-card">
-                <input required type="radio" name="vehicle" value={value} />
+                <input required type="radio" name="vehicle" value={value} defaultChecked={formData.vehicle === value} />
                 <Truck size={24} aria-hidden="true" />
                 <span className="vehicle-card-name">{label}</span>
                 <span className="vehicle-card-desc">{desc}</span>
@@ -2738,28 +2894,28 @@ function LoadModal({ onClose, onSubmit }) {
 
           <div className="special-requirements">
             <label className="req-item">
-              <input type="checkbox" name="adr" value="Evet" />
+              <input type="checkbox" name="adr" value="Evet" defaultChecked={formData.adr === "Evet"} />
               <span className="req-label">
                 ADR
                 <small>Tehlikeli madde taşımacılığı için gerekli uygunluk ve yetkinlikler.</small>
               </span>
             </label>
             <label className="req-item">
-              <input type="checkbox" name="temperatureControl" value="Evet" />
+              <input type="checkbox" name="temperatureControl" value="Evet" defaultChecked={formData.temperatureControl === "Evet"} />
               <span className="req-label">
                 Sıcaklık kontrolü
                 <small>Yükün belirlenen sıcaklık koşullarında taşınması.</small>
               </span>
             </label>
             <label className="req-item">
-              <input type="checkbox" name="insurance" value="Evet" />
+              <input type="checkbox" name="insurance" value="Evet" defaultChecked={formData.insurance === "Evet"} />
               <span className="req-label">
                 Ek sigorta
                 <small>Taşıma için ilave sigorta teminatı talebi.</small>
               </span>
             </label>
             <label className="req-item">
-              <input type="checkbox" name="tracking" value="Zorunlu" />
+              <input type="checkbox" name="tracking" value="Zorunlu" defaultChecked={formData.tracking === "Zorunlu"} />
               <span className="req-label">
                 Takip zorunluluğu
                 <small>Sevkiyat konumunun takip edilmesi talebi.</small>
@@ -2779,11 +2935,12 @@ function LoadModal({ onClose, onSubmit }) {
                 min="1"
                 step="any"
                 placeholder="Örn. 15000"
+                defaultValue={formData.price || ""}
               />
             </label>
             <label>
               Para birimi
-              <select name="currency" defaultValue="TRY">
+              <select name="currency" defaultValue={formData.currency || "TRY"}>
                 <option value="TRY">Türk Lirası (TRY)</option>
                 <option value="EUR">Euro (EUR)</option>
                 <option value="GBP">Sterlin (GBP)</option>
@@ -2792,7 +2949,7 @@ function LoadModal({ onClose, onSubmit }) {
             <label className="wide">
               Ödeme koşulu
               <span className="field-hint">Vade, teslimattan itibaren hesaplanır.</span>
-              <select name="payment">
+              <select name="payment" defaultValue={formData.payment || "Teslimatta ödeme"}>
                 <option>Teslimatta ödeme</option>
                 <option>7 gün vadeli</option>
                 <option>15 gün vadeli</option>
@@ -2901,6 +3058,16 @@ function LoadModal({ onClose, onSubmit }) {
           >
             {step ? "Geri" : "Vazgeç"}
           </button>
+          {onSaveDraft && (
+            <button
+              type="button"
+              className="draft-save-btn"
+              onClick={handleSaveDraft}
+              title="Taslak olarak kaydet, sonra yayınlayabilirsiniz"
+            >
+              Taslak Kaydet
+            </button>
+          )}
           {step < steps.length - 1 ? (
             <button type="button" className="login-button" onClick={next}>
               Devam et <ArrowRight />

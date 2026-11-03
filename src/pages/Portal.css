@@ -1054,3 +1054,34 @@ button:focus:not(:focus-visible){outline:none}
 
 /* Offer safety and sorting */
 .oc-selector-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.oc-selector-heading>div p{margin-bottom:12px}.oc-selector-heading>label{display:flex;align-items:center;gap:8px;color:#718078;font-size:10px;font-weight:800}.oc-selector-heading select{height:36px;border:1px solid #d7dfd4;border-radius:9px;background:#fff;color:#102a20;padding:0 28px 0 10px;font-size:10px;font-weight:700}.oc-expired{margin-left:auto!important;color:#9b352d!important;font-size:8px!important}.oc-expired-label{display:block;margin-top:4px;color:#9b352d;font-size:8px;font-weight:700}.oc-budget-good{color:#3e7029;font-weight:700}.oc-budget-high{color:#9b5f24;font-weight:700}.oc-confirm-overlay{z-index:120}.oc-confirm-dialog{width:min(440px,100%);padding:26px;border-radius:18px;background:#fff;box-shadow:0 30px 90px #102a2040;text-align:center}.oc-confirm-dialog>svg{color:#8a6214}.oc-confirm-dialog h3{margin:13px 0 8px;font:800 19px Manrope}.oc-confirm-dialog p{margin:0;color:#66756c;font-size:12px;line-height:1.65}.oc-confirm-dialog>div{display:flex;justify-content:center;gap:8px;margin-top:20px}.oc-confirm-dialog .oc-btn{padding:11px 16px}@media(max-width:760px){.oc-selector-heading{flex-direction:column}.oc-selector-heading>label{width:100%;justify-content:space-between}.oc-confirm-dialog>div{flex-direction:column-reverse}.oc-confirm-dialog .oc-btn{width:100%}}
+
+/* ── Draft & status additions ──────────────────────────────────── */
+.portal-status.draft{
+  background:#fdf3e0;color:#8a5c00;
+  border:1px solid #f0d580;
+}
+.draft-badge{
+  display:inline-flex;align-items:center;
+  padding:2px 7px;border-radius:99px;
+  font-size:9px;font-weight:800;letter-spacing:.06em;
+  background:#fdf3e0;color:#8a5c00;border:1px solid #f0d580;
+}
+
+/* Düzenle (edit) action button */
+.llf-action-btn--edit{color:#527342;border-color:#c8dfc0}
+.llf-action-btn--edit:hover{background:#edf4e9;border-color:#8dc87a}
+
+/* Yayınla (publish) action button */
+.llf-action-btn--publish{color:#1a5c9e;border-color:#c0d8f0}
+.llf-action-btn--publish:hover{background:#e5f0fb;border-color:#90bce8}
+
+/* Draft save button in modal actions */
+.draft-save-btn{
+  height:44px;padding:0 18px;
+  border:1px solid #c8dfc0;border-radius:99px;
+  background:#f2f8ee;color:#3a5430;
+  font-size:12px;font-weight:700;
+  cursor:pointer;transition:.14s;flex-shrink:0;
+}
+.draft-save-btn:hover{background:#e2f0db;border-color:#8dc87a}
+.draft-save-btn:focus-visible{outline:2px solid #5a8a3f;outline-offset:2px}
