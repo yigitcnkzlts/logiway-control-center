@@ -1,4 +1,4 @@
-import { apiJson, isApiConfigured, isDemoMode } from "./apiClient";
+import { apiJson, isApiConfigured, isDemoMode } from "./apiClient.js";
 const COUNTRY_CODES={"Almanya":"DE","Avusturya":"AT","Belçika":"BE","Birleşik Krallık":"GB","Bulgaristan":"BG","Çekya":"CZ","Danimarka":"DK","Estonya":"EE","Finlandiya":"FI","Fransa":"FR","Hırvatistan":"HR","Hollanda":"NL","İrlanda":"IE","İspanya":"ES","İsveç":"SE","İsviçre":"CH","İtalya":"IT","İzlanda":"IS","Letonya":"LV","Litvanya":"LT","Lüksemburg":"LU","Macaristan":"HU","Norveç":"NO","Polonya":"PL","Portekiz":"PT","Romanya":"RO","Sırbistan":"RS","Slovakya":"SK","Slovenya":"SI","Türkiye":"TR","Ukrayna":"UA","Yunanistan":"GR"};
 const COUNTRY_NAMES=Object.fromEntries(Object.entries(COUNTRY_CODES).map(([name,code])=>[code,name]));
 
@@ -9,10 +9,40 @@ const money=(amount,currency)=>`${Number(amount||0).toLocaleString("tr-TR")} ${c
 
 export const liveMarketplaceEnabled=()=>isApiConfigured()&&!isDemoMode();
 
+export function mapLoad(x){
+  return {
+    ...x,
+    id:x.id,
+    shipperCompanyId:x.shipperCompanyId,
+    cargo:x.title,
+    from:`${x.pickupCity}, ${country(x.pickupCountry)}`,
+    to:`${x.dropoffCity}, ${country(x.dropoffCountry)}`,
+    originCountry:country(x.pickupCountry),
+    destinationCountry:country(x.dropoffCountry),
+    fromCity:x.pickupCity,
+    toCity:x.dropoffCity,
+    pickupDate:x.readyFrom?.slice(0,10),
+    deliveryDate:x.readyTo?.slice(0,10),
+    pickupAddress:x.pickupAddress,
+    deliveryAddress:x.dropoffAddress,
+    vehicle:x.vehicleRequirements||"Tır",
+    weight:`${Number(x.weightKg)/1000} ton`,
+    price:money(x.expectedPrice,x.currency),
+    currency:x.currency,
+    expectedPrice:x.expectedPrice,
+    date:x.readyFrom?new Date(x.readyFrom).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}):"—",
+    status:x.status==="PUBLISHED"?"Teklif alıyor":x.status,
+    offers:Number(x.offers||0),
+    createdAt:x.createdAt,
+    volume:x.volumeM3,
+    company:"Doğrulanmış yük veren"
+  };
+}
+
 export async function loadMarketplace(status="PUBLISHED",mine=false){
   const params=new URLSearchParams({size:"100",mine:String(mine)});if(status)params.set("status",status);
   const page=await request(`/api/v1/loads?${params}`);
-  return (page.content||page.items||[]).map(x=>({id:x.id,shipperCompanyId:x.shipperCompanyId,cargo:x.title,from:`${x.pickupCity}, ${country(x.pickupCountry)}`,to:`${x.dropoffCity}, ${country(x.dropoffCountry)}`,originCountry:country(x.pickupCountry),destinationCountry:country(x.dropoffCountry),fromCity:x.pickupCity,toCity:x.dropoffCity,pickupDate:x.readyFrom?.slice(0,10),deliveryDate:x.readyTo?.slice(0,10),pickupAddress:x.pickupAddress,deliveryAddress:x.dropoffAddress,vehicle:x.vehicleRequirements||"Tır",weight:`${Number(x.weightKg)/1000} ton`,price:money(x.expectedPrice,x.currency),currency:x.currency,expectedPrice:x.expectedPrice,date:new Date(x.readyFrom).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}),status:x.status==="PUBLISHED"?"Teklif alıyor":x.status,offers:0,createdAt:x.createdAt,volume:x.volumeM3,company:"Doğrulanmış yük veren"}));
+  return (page.content||page.items||[]).map(mapLoad);
 }
 
 export const loadMyLoads=()=>loadMarketplace(null,true);
@@ -21,6 +51,17 @@ export async function createAndPublishLoad(form){
   const companies=await request("/api/v1/companies/mine");const company=companies.find(x=>x.type==="SHIPPER")||companies[0];if(!company)throw new Error("Önce yük veren firma hesabı oluşturmalısınız.");
   const pickupDate=form.get("pickupDate"),deliveryDate=form.get("deliveryDate")||pickupDate;
   const created=await request("/api/v1/loads",{method:"POST",body:JSON.stringify({shipperCompanyId:company.id,title:form.get("cargo"),description:form.get("notes"),pickupCountry:iso(form.get("fromCountry")),pickupCity:form.get("fromCity"),pickupPostalCode:form.get("fromPostal"),pickupAddress:form.get("pickupAddress"),pickupLat:null,pickupLng:null,dropoffCountry:iso(form.get("toCountry")),dropoffCity:form.get("toCity"),dropoffPostalCode:form.get("toPostal"),dropoffAddress:form.get("deliveryAddress"),dropoffLat:null,dropoffLng:null,readyFrom:`${pickupDate}T${form.get("pickupStart")||"08:00"}:00Z`,readyTo:`${deliveryDate}T${form.get("deliveryEnd")||"18:00"}:00Z`,weightKg:Number(form.get("weight"))*1000,volumeM3:Number(form.get("volume"))||null,vehicleRequirements:form.get("vehicle"),currency:form.get("currency"),loadType:form.get("loadType")||form.get("cargo"),palletCount:Number(form.get("pallets"))||null,packagingType:form.get("packaging"),contactPerson:form.get("pickupContact"),contactPhone:form.get("pickupPhone"),adr:form.get("adr")==="Evet",coldChain:form.get("temperatureControl")==="Evet",insuranceRequired:form.get("insurance")==="Evet",trackingRequired:form.get("tracking")==="Zorunlu",expectedPrice:form.get("price")?Number(form.get("price"))||null:null})});
+  return request(`/api/v1/loads/${created.id}/publish`,{method:"POST"});
+}
+
+export function loadToCreatePayload(source){
+  const fields=["shipperCompanyId","title","description","pickupCountry","pickupCity","pickupAddress","pickupLat","pickupLng","dropoffCountry","dropoffCity","dropoffAddress","dropoffLat","dropoffLng","readyFrom","readyTo","weightKg","volumeM3","vehicleRequirements","currency","loadType","palletCount","packagingType","cargoValue","contactPerson","contactPhone","referenceNo","doorRamp","adr","unNumber","coldChain","temperatureMin","temperatureMax","tailLift","forklift","customsRequired","customsReference","insuranceRequired","expectedPrice"];
+  return Object.fromEntries(fields.map(field=>[field,source[field]]));
+}
+
+export async function duplicateLiveLoad(id){
+  const source=await request(`/api/v1/loads/${id}`);
+  const created=await request("/api/v1/loads",{method:"POST",body:JSON.stringify(loadToCreatePayload(source))});
   return request(`/api/v1/loads/${created.id}/publish`,{method:"POST"});
 }
 

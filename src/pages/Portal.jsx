@@ -74,6 +74,7 @@ import {
   acceptLiveOffer,
   cancelLiveLoad,
   createAndPublishLoad,
+  duplicateLiveLoad,
   liveMarketplaceEnabled,
   loadMarketplace,
   loadMyLoads,
@@ -1592,6 +1593,11 @@ export function ShipperPortal() {
   const [success, setSuccess] = useState("");
   const [loadFilters, setLoadFilters] = useState({ status: "Tümü", search: "" });
   const [confirmCancel, setConfirmCancel] = useState(null); // load object pending cancel
+  const [loadRequest, setLoadRequest] = useState({
+    loading: liveMarketplaceEnabled(),
+    error: "",
+  });
+  const [reloadKey, setReloadKey] = useState(0);
   useEffect(
     () =>
       subscribeMarketplace(() => {
@@ -1607,13 +1613,16 @@ export function ShipperPortal() {
     loadMyLoads()
       .then(async (remoteLoads) => {
         if (!mounted) return;
-        setLoads(remoteLoads);
         const [groups, remoteMatches] = await Promise.all([
           Promise.all(
             remoteLoads.map((load) => offersForLoad(load.id).catch(() => [])),
           ),
-          loadMyMatches(),
+          loadMyMatches().catch(() => []),
         ]);
+        const loadsWithOfferCounts = remoteLoads.map((load, index) => ({
+          ...load,
+          offers: groups[index]?.length || 0,
+        }));
         const normalizedOffers = groups
           .flat()
           .map((o) => ({
@@ -1634,10 +1643,11 @@ export function ShipperPortal() {
             status: o.status === "PENDING" ? "Bekliyor" : o.status,
           }));
         if (mounted) {
+          setLoads(loadsWithOfferCounts);
           setMarketOffers(normalizedOffers);
           setMatches(
             remoteMatches.map((match) => {
-              const load = remoteLoads.find((x) => x.id === match.loadId);
+              const load = loadsWithOfferCounts.find((x) => x.id === match.loadId);
               const offer = normalizedOffers.find(
                 (x) => x.id === match.offerId,
               );
@@ -1652,13 +1662,21 @@ export function ShipperPortal() {
               };
             }),
           );
+          setLoadRequest({ loading: false, error: "" });
         }
       })
-      .catch((reason) => mounted && setSuccess(reason.message));
+      .catch((reason) => {
+        if (mounted) {
+          setLoadRequest({
+            loading: false,
+            error: reason.message || "Yük ilanları alınamadı.",
+          });
+        }
+      });
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [reloadKey]);
   async function addLoad(e) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -1777,7 +1795,19 @@ export function ShipperPortal() {
       setSuccess(reason.message);
     }
   }
-  function copyLoad(load) {
+  async function copyLoad(load) {
+    if (liveMarketplaceEnabled()) {
+      try {
+        await duplicateLiveLoad(load.id);
+        setLoadRequest({ loading: true, error: "" });
+        setReloadKey((value) => value + 1);
+        setSuccess(`${load.cargo} ilanının kopyası yayınlandı.`);
+        setTimeout(() => setSuccess(""), 3500);
+      } catch (reason) {
+        setSuccess(reason.message);
+      }
+      return;
+    }
     const copy = {
       ...load,
       id: makeRecordId("LW"),
@@ -1844,6 +1874,12 @@ export function ShipperPortal() {
             onCancel={(load) => setConfirmCancel(load)}
             onCopy={copyLoad}
             isDemo={!liveMarketplaceEnabled()}
+            loading={loadRequest.loading}
+            error={loadRequest.error}
+            onRetry={() => {
+              setLoadRequest({ loading: true, error: "" });
+              setReloadKey((value) => value + 1);
+            }}
           />
           {confirmCancel && (
             <ConfirmCancelDialog
@@ -1944,7 +1980,7 @@ function ConfirmCancelDialog({ load, onConfirm, onClose }) {
 }
 
 // ─── LoadListFull ─────────────────────────────────────────────────────────────
-function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo }) {
+function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo, loading, error, onRetry }) {
   const [expanded, setExpanded] = useState(null);
 
   const STATUS_OPTIONS = ["Tümü", "Teklif alıyor", "Şoför eşleşti", "CANCELLED", "Planlandı"];
@@ -2004,8 +2040,26 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo
         </div>
       </div>
 
+      {loading && (
+        <div className="llf-request-state" role="status" aria-live="polite">
+          <div className="skel skel-text skel-text--lg" />
+          <div className="skel skel-text" />
+          <div className="skel skel-text skel-text--sm" />
+          <span>Yük ilanlarınız getiriliyor…</span>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="llf-request-state llf-request-state--error" role="alert">
+          <AlertTriangle size={26} aria-hidden="true" />
+          <h3>Yük ilanları yüklenemedi</h3>
+          <p>{error}</p>
+          <button type="button" onClick={onRetry}>Tekrar dene</button>
+        </div>
+      )}
+
       {/* Empty state */}
-      {visible.length === 0 && (
+      {!loading && !error && visible.length === 0 && (
         <div className="llf-empty" role="status">
           <Package size={28} aria-hidden="true" />
           <h3>
@@ -2022,7 +2076,7 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, isDemo
       )}
 
       {/* Load rows */}
-      {visible.map((x) => (
+      {!loading && !error && visible.map((x) => (
         <div className="load-entry" key={x.id}>
           <article className="load-row llf-row">
             <span className="load-box"><Package /></span>
