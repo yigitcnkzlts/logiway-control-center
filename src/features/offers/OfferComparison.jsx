@@ -5,6 +5,8 @@ import {
 import { acceptLiveOffer, counterLiveOffer, loadOfferRounds, rejectLiveOffer } from "../../api/marketplaceClient";
 import { liveMarketplaceEnabled } from "../../api/marketplaceClient";
 import OfferTimeline from "./OfferTimeline";
+import ExportButton from "../../components/ExportButton";
+import { exportCSV, exportXLSX, exportPDF, offersExportData } from "../../services/exportService";
 
 const MAX_COMPARE = 4;
 
@@ -30,6 +32,14 @@ export default function OfferComparison({ offers = [], targetBudget, onChange, o
   const [expandDetail, setExpandDetail] = useState(null);
   const [sortBy, setSortBy] = useState("newest");
   const [confirmTarget, setConfirmTarget] = useState(null);
+
+  async function handleOfferExport(format) {
+    const { headers, rows } = offersExportData(sortedOffers);
+    const file = "logiway-gelen-teklifler";
+    if (format === "csv")  return exportCSV(headers, rows, file);
+    if (format === "xlsx") return exportXLSX("Gelen Teklifler", headers, rows, file);
+    if (format === "pdf")  return exportPDF("Gelen Teklifler", headers, rows, file);
+  }
 
   // Load offer rounds when available
   useEffect(() => {
@@ -138,13 +148,19 @@ export default function OfferComparison({ offers = [], targetBudget, onChange, o
       <div className="oc-selector" aria-label="Karşılaştırılacak teklifler">
         <div className="oc-selector-heading">
           <div><span className="section-kicker">TEKLİF KARŞILAŞTIRMA</span><p>En fazla {MAX_COMPARE} teklifi aynı anda karşılaştırabilirsiniz.</p></div>
-          <label> Sırala
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Teklifleri sırala">
-              <option value="newest">En yeni</option>
-              <option value="price">En düşük fiyat</option>
-              <option value="availability">En erken müsaitlik</option>
-            </select>
-          </label>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <label> Sırala
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Teklifleri sırala">
+                <option value="newest">En yeni</option>
+                <option value="price">En düşük fiyat</option>
+                <option value="availability">En erken müsaitlik</option>
+              </select>
+            </label>
+            <ExportButton
+              onExport={handleOfferExport}
+              disabled={offers.length === 0}
+            />
+          </div>
         </div>
         <div className="oc-selector-chips" role="group" aria-label="Teklif seçimi">
           {sortedOffers.map((o) => {

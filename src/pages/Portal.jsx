@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import ExportButton from "../components/ExportButton";
+import {
+  exportCSV,
+  exportXLSX,
+  exportPDF,
+  loadsExportData,
+  shipmentsExportData,
+  historyExportData,
+  paymentsExportData,
+} from "../services/exportService";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -2057,7 +2067,7 @@ export function ShipperPortal() {
         />
       )}{" "}
       {active === "Geçmiş" && (
-        <MonthlyHistory role="yuk-veren" matches={matches} />
+        <MonthlyHistory role="yuk-veren" matches={matches} enableExport />
       )}{" "}
       {active === "Belgeler" && <DocumentCenter role="yuk-veren" />}
       {active === "Ödemeler" &&
@@ -2105,6 +2115,14 @@ function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
     !["DELIVERED", "CANCELLED"].includes(shipment.status),
   ).length;
 
+  async function handleShipmentExport(format) {
+    const { headers, rows } = shipmentsExportData(shipments, loads, offers);
+    const file = "logiway-sevkiyatlar";
+    if (format === "csv")  return exportCSV(headers, rows, file);
+    if (format === "xlsx") return exportXLSX("Sevkiyatlarım", headers, rows, file);
+    if (format === "pdf")  return exportPDF("Sevkiyatlarım", headers, rows, file);
+  }
+
   return (
     <>
       <PageHeading
@@ -2124,6 +2142,9 @@ function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
             <span><strong>{activeCount}</strong> devam eden</span>
             <span><strong>{shipments.filter((item) => item.status === "DELIVERED").length}</strong> tamamlanan</span>
             <span><strong>{shipments.length}</strong> toplam sevkiyat</span>
+            <div style={{ marginLeft: "auto" }}>
+              <ExportButton onExport={handleShipmentExport} disabled={shipments.length === 0} />
+            </div>
           </div>
           <div className="shipper-shipments__list">
             {shipments.map((shipment) => {
@@ -2250,6 +2271,15 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit
     return "portal-status";
   }
 
+  // ── Export handler ──────────────────────────────────────────────
+  async function handleLoadExport(format) {
+    const { headers, rows } = loadsExportData(visible);
+    const file = "logiway-yuk-ilanlari";
+    if (format === "csv")  return exportCSV(headers, rows, file);
+    if (format === "xlsx") return exportXLSX("Yük İlanlarım", headers, rows, file);
+    if (format === "pdf")  return exportPDF("Yük İlanlarım", headers, rows, file);
+  }
+
   return (
     <section className="portal-list load-list-full">
       {/* Filter bar */}
@@ -2287,6 +2317,17 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit
           ))}
         </div>
       </div>
+
+      {/* Export row */}
+      {!loading && !error && (
+        <div className="section-export-row">
+          <small>{visible.length} ilan{filters.search || filters.status !== "Tümü" ? " (filtrelenmiş)" : ""}</small>
+          <ExportButton
+            onExport={handleLoadExport}
+            disabled={visible.length === 0}
+          />
+        </div>
+      )}
 
       {loading && (
         <div className="llf-request-state" role="status" aria-live="polite">
@@ -3921,7 +3962,7 @@ const demoHistory = [
   },
 ];
 
-function MonthlyHistory({ role, matches }) {
+function MonthlyHistory({ role, matches, enableExport = false }) {
   const records = liveMarketplaceEnabled()
     ? matches
     : [
@@ -3944,6 +3985,15 @@ function MonthlyHistory({ role, matches }) {
     (sum, x) => sum + (Number(String(x.amount).replace(/[^0-9]/g, "")) || 0),
     0,
   );
+
+  async function handleHistoryExport(format) {
+    const { headers, rows } = historyExportData(visible, role);
+    const file = "logiway-gecmis";
+    if (format === "csv")  return exportCSV(headers, rows, file);
+    if (format === "xlsx") return exportXLSX("Geçmiş", headers, rows, file);
+    // PDF not in formats — only csv/xlsx for history per spec
+  }
+
   return (
     <section className="history-page">
       <PageHeading
@@ -3955,21 +4005,30 @@ function MonthlyHistory({ role, matches }) {
         }
         text="Önceki aylarda gerçekleşen eşleşmeleri, rotaları ve tutarları inceleyin."
         action={
-          <select
-            className="history-select"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          >
-            <option value="all">Tüm aylar</option>
-            {months.map((x) => (
-              <option value={x} key={x}>
-                {new Date(`${x}-01`).toLocaleDateString("tr-TR", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <select
+              className="history-select"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            >
+              <option value="all">Tüm aylar</option>
+              {months.map((x) => (
+                <option value={x} key={x}>
+                  {new Date(`${x}-01`).toLocaleDateString("tr-TR", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </option>
+              ))}
+            </select>
+            {enableExport && (
+              <ExportButton
+                formats={["csv", "xlsx"]}
+                onExport={handleHistoryExport}
+                disabled={visible.length === 0}
+              />
+            )}
+          </div>
         }
       />
       <div className="history-summary">
@@ -4148,6 +4207,20 @@ function PaymentCenter() {
     () => localStorage.getItem("logiway-payment-connected") === "true",
   );
   const [secured, setSecured] = useState(false);
+
+  // Static demo payment rows
+  const paymentRows = [
+    ["Bergen → Milano", "LW-2847", "EUR", "4.850 €", secured ? "Güvende" : "Hazır"],
+    ["Rotterdam → Paris", "LW-2848", "EUR", "2.750 €", "Vade: 7 gün"],
+  ];
+
+  async function handlePaymentExport(format) {
+    const { headers, rows } = paymentsExportData(paymentRows);
+    const file = "logiway-odemeler";
+    if (format === "xlsx") return exportXLSX("Ödemeler", headers, rows, file);
+    if (format === "pdf")  return exportPDF("Ödemeler", headers, rows, file);
+  }
+
   function connect() {
     setConnected(true);
     localStorage.setItem("logiway-payment-connected", "true");
@@ -4225,6 +4298,11 @@ function PaymentCenter() {
             <h2>Son hareketler</h2>
             <p>Para birimine göre mutabakat ve ödeme durumu</p>
           </div>
+          <ExportButton
+            formats={["xlsx", "pdf"]}
+            onExport={handlePaymentExport}
+            disabled={paymentRows.length === 0}
+          />
         </div>
         <div className="payment-row">
           <FileCheck2 />

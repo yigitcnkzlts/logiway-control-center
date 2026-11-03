@@ -1085,3 +1085,49 @@ button:focus:not(:focus-visible){outline:none}
 }
 .draft-save-btn:hover{background:#e2f0db;border-color:#8dc87a}
 .draft-save-btn:focus-visible{outline:2px solid #5a8a3f;outline-offset:2px}
+
+/* ── ExportButton ───────────────────────────────────────────────── */
+.export-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  height:36px;padding:0 14px;
+  border:1px solid #c8dfc0;border-radius:99px;
+  background:#f2f8ee;color:#3a5430;
+  font-size:12px;font-weight:700;font-family:Manrope,sans-serif;
+  cursor:pointer;white-space:nowrap;transition:.14s;
+}
+.export-btn:hover:not(:disabled){background:#e2f0db;border-color:#8dc87a}
+.export-btn:disabled{opacity:.45;cursor:not-allowed}
+.export-btn:focus-visible{outline:2px solid #5a8a3f;outline-offset:2px}
+
+.export-menu{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:200;
+  min-width:160px;
+  background:#fff;border:1px solid #d7dfd4;border-radius:12px;
+  box-shadow:0 8px 24px rgba(16,42,32,.12);
+  padding:6px;margin:0;list-style:none;
+}
+.export-menu li button{
+  width:100%;text-align:left;
+  padding:9px 12px;border:0;border-radius:8px;
+  background:transparent;color:#233d31;font-size:12px;font-weight:600;
+  cursor:pointer;transition:.12s;
+}
+.export-menu li button:hover{background:#f0f5ec}
+.export-menu li button:focus-visible{outline:2px solid #5a8a3f}
+.export-error{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:190;
+  width:220px;padding:8px 10px;border:1px solid #efc9c2;border-radius:9px;
+  background:#fff4f2;color:#8b3529;font-size:11px;line-height:1.4;
+}
+
+/* section-level export row (above list/table) */
+.section-export-row{
+  display:flex;align-items:center;justify-content:flex-end;
+  padding:0 0 10px;gap:8px;flex-wrap:wrap;
+}
+.section-export-row small{
+  font-size:11px;color:#829087;margin-right:auto;
+}
+@media(max-width:600px){
+  .section-export-row{justify-content:flex-start}
+}
