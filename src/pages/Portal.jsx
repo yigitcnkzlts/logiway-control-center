@@ -44,6 +44,7 @@ import {
   Send,
   ShieldCheck,
   Timer,
+  TrendingDown,
   TrendingUp,
   Truck,
   UploadCloud,
@@ -69,6 +70,17 @@ import {
   subscribeMessages,
   totalUnread,
 } from "../services/messageStore";
+import {
+  PAYMENT_STATUSES,
+  filterPayments,
+  formatPaymentAmount,
+  getPayments,
+  paymentDocumentLabel,
+  paymentStatusClass,
+  paymentStatusLabel,
+  paymentSummary,
+  subscribePayments,
+} from "../services/paymentStore";
 import {
   addDoc,
   deleteDoc,
@@ -2103,7 +2115,11 @@ export function ShipperPortal() {
             text="Gerçek ödeme sağlayıcısı bağlanmadan bakiye veya tahsilat işlemi gösterilmiyor."
           />
         ) : (
-          <PaymentCenter />
+          <PaymentCenter
+            loads={loads}
+            shipments={shipments}
+            onNavigate={setActive}
+          />
         ))}
       {active === "Firma ve Ekip" && (
         <EmptyState
@@ -4474,127 +4490,181 @@ function DocumentCenter({ loads = [], shipments = [] }) {
   );
 }
 
-function PaymentCenter() {
-  const [connected, setConnected] = useState(
-    () => localStorage.getItem("logiway-payment-connected") === "true",
-  );
-  const [secured, setSecured] = useState(false);
+const EMPTY_PAYMENT_FILTERS = {
+  status: "ALL",
+  date: "",
+  carrier: "ALL",
+  currency: "ALL",
+  query: "",
+};
 
-  // Static demo payment rows
-  const paymentRows = [
-    ["Bergen → Milano", "LW-2847", "EUR", "4.850 €", secured ? "Güvende" : "Hazır"],
-    ["Rotterdam → Paris", "LW-2848", "EUR", "2.750 €", "Vade: 7 gün"],
+function PaymentCenter({ loads = [], shipments = [], onNavigate }) {
+  const [payments, setPayments] = useState(() => getPayments());
+  const [filters, setFilters] = useState(EMPTY_PAYMENT_FILTERS);
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => subscribePayments(() => setPayments(getPayments())), []);
+
+  const carriers = useMemo(
+    () => [...new Set(payments.map((payment) => payment.carrier).filter(Boolean))].sort(),
+    [payments],
+  );
+  const currencies = useMemo(
+    () => [...new Set(payments.map((payment) => payment.currency).filter(Boolean))].sort(),
+    [payments],
+  );
+  const visiblePayments = useMemo(
+    () => filterPayments(payments, filters),
+    [payments, filters],
+  );
+  const summary = useMemo(() => paymentSummary(payments), [payments]);
+
+  const summaryCards = [
+    { key: "pending", title: "Bekleyen ödeme", text: "Henüz tamamlanmamış toplam", icon: <Clock3 /> },
+    { key: "paid", title: "Ödenen toplam", text: "Tamamlanan demo kayıtları", icon: <Check /> },
+    { key: "dueSoon", title: "Vadesi yaklaşan", text: "Yakında işlem gerektiriyor", icon: <Timer /> },
+    { key: "overdue", title: "Vadesi geçen", text: "Öncelikli kontrol gerekli", icon: <TrendingDown /> },
   ];
 
   async function handlePaymentExport(format) {
-    const { headers, rows } = paymentsExportData(paymentRows);
+    const { headers, rows } = paymentsExportData(visiblePayments);
     const file = "logiway-odemeler";
     if (format === "xlsx") return exportXLSX("Ödemeler", headers, rows, file);
-    if (format === "pdf")  return exportPDF("Ödemeler", headers, rows, file);
+    if (format === "pdf") return exportPDF("Ödemeler", headers, rows, file);
   }
 
-  function connect() {
-    setConnected(true);
-    localStorage.setItem("logiway-payment-connected", "true");
+  function updateFilter(name, value) {
+    setFilters((current) => ({ ...current, [name]: value }));
   }
+
+  const selectedLoad = selected
+    ? loads.find((load) => load.id === selected.loadId)
+    : null;
+  const selectedShipment = selected
+    ? shipments.find((shipment) => shipment.id === selected.shipmentId)
+    : null;
+
   return (
-    <section className="feature-page">
+    <section className="feature-page payment-center">
       <PageHeading
-        kicker="GÜVENLİ ÇOKLU PARA BİRİMİ"
-        title="Ödemelerinizi güvenceyle yönetin."
-        text="EUR, GBP ve NOK ödemelerini sefer durumuna bağlı olarak tek panelde takip edin."
+        kicker="FİNANSAL TAKİP"
+        title="Ödemeler ve vadeler"
+        text="Taşıma anlaşmalarınıza ait tutarları, vadeleri ve dekont durumlarını para birimlerini karıştırmadan izleyin."
+        action={<span className="pay-demo-badge">DEMO VERİLERİ</span>}
       />
-      <div className="payment-overview">
-        <article>
-          <span>Korumalı bakiye</span>
-          <strong>{secured ? "4.850 €" : "0 €"}</strong>
-          <small>Teslimata kadar güvenli hesapta</small>
-        </article>
-        <article>
-          <span>Bekleyen tahsilat</span>
-          <strong>9.250 €</strong>
-          <small>2 aktif uluslararası sefer</small>
-        </article>
-        <article className="dark">
-          <span>Ödenen</span>
-          <strong>38.400 €</strong>
-          <small>Bu yıl · 14 ödeme</small>
-        </article>
+
+      <div className="pay-summary" aria-label="Ödeme özeti">
+        {summaryCards.map((card) => {
+          const amounts = Object.entries(summary).filter(([, values]) => values[card.key] > 0);
+          return (
+            <article className={card.key === "overdue" ? "pay-summary-card pay-summary-card--alert" : "pay-summary-card"} key={card.key}>
+              <header><span>{card.icon}</span><small>{card.title}</small></header>
+              <div className="pay-summary-card__amounts">
+                {amounts.length ? amounts.map(([currency, values]) => (
+                  <strong key={currency}>{formatPaymentAmount(values[card.key], currency)}</strong>
+                )) : <strong>0</strong>}
+              </div>
+              <p>{card.text}</p>
+            </article>
+          );
+        })}
       </div>
-      <div className="secure-payment">
-        <div>
-          <span className="secure-icon">
-            <ShieldCheck />
-          </span>
+
+      <section className="pay-records" aria-label="Ödeme kayıtları">
+        <div className="pay-records__head">
           <div>
-            <h2>Logiway Güvenli Ödeme</h2>
-            <p>
-              Yük bedeli güvenli hesapta tutulur, dijital teslimat onayından
-              sonra şoföre aktarılır.
-            </p>
-            <span className="integration-note">
-              Ödeme sağlayıcısı entegrasyonuna hazır demo akış
-            </span>
-          </div>
-        </div>
-        <div className="payment-actions">
-          <button className="portal-secondary" onClick={connect}>
-            {connected ? (
-              <>
-                <Check /> Hesap bağlandı
-              </>
-            ) : (
-              <>
-                <CreditCard /> Ödeme hesabını bağla
-              </>
-            )}
-          </button>
-          <button
-            className="portal-primary"
-            disabled={!connected || secured}
-            onClick={() => setSecured(true)}
-          >
-            {secured ? (
-              <>
-                <Check /> Ödeme güvenceye alındı
-              </>
-            ) : (
-              "4.850 € güvenceye al"
-            )}
-          </button>
-        </div>
-      </div>
-      <section className="payment-list">
-        <div className="list-head">
-          <div>
-            <h2>Son hareketler</h2>
-            <p>Para birimine göre mutabakat ve ödeme durumu</p>
+            <span className="section-kicker">ÖDEME KAYITLARI</span>
+            <h2>Taşıma finans hareketleri</h2>
+            <p>{visiblePayments.length} kayıt gösteriliyor</p>
           </div>
           <ExportButton
             formats={["xlsx", "pdf"]}
             onExport={handlePaymentExport}
-            disabled={paymentRows.length === 0}
+            disabled={visiblePayments.length === 0}
           />
         </div>
-        <div className="payment-row">
-          <FileCheck2 />
-          <div>
-            <strong>Bergen → Milano</strong>
-            <small>LW-2847 · EUR</small>
-          </div>
-          <span>4.850 €</span>
-          <b>{secured ? "Güvende" : "Hazır"}</b>
+
+        <div className="pay-filters">
+          <label className="pay-search">
+            <Search size={15} aria-hidden="true" />
+            <input
+              value={filters.query}
+              onChange={(event) => updateFilter("query", event.target.value)}
+              placeholder="Yük, sevkiyat veya işlem no ara"
+              aria-label="Ödeme kayıtlarında ara"
+            />
+            {filters.query && <button onClick={() => updateFilter("query", "")} aria-label="Aramayı temizle"><X size={13} /></button>}
+          </label>
+          <label><span>Durum</span><select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}><option value="ALL">Tümü</option>{Object.entries(PAYMENT_STATUSES).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+          <label><span>Vade / ödeme tarihi</span><input type="date" value={filters.date} onChange={(event) => updateFilter("date", event.target.value)} /></label>
+          <label><span>Taşıyıcı</span><select value={filters.carrier} onChange={(event) => updateFilter("carrier", event.target.value)}><option value="ALL">Tümü</option>{carriers.map((carrier) => <option key={carrier}>{carrier}</option>)}</select></label>
+          <label><span>Para birimi</span><select value={filters.currency} onChange={(event) => updateFilter("currency", event.target.value)}><option value="ALL">Tümü</option>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label>
+          <button className="pay-reset" type="button" onClick={() => setFilters(EMPTY_PAYMENT_FILTERS)}>Filtreleri temizle</button>
         </div>
-        <div className="payment-row">
-          <Clock3 />
-          <div>
-            <strong>Rotterdam → Paris</strong>
-            <small>LW-2848 · EUR</small>
+
+        {!visiblePayments.length ? (
+          <div className="pay-empty" role="status">
+            <CreditCard />
+            <h3>Filtrelerle eşleşen ödeme bulunamadı</h3>
+            <p>Arama ölçütlerini temizleyerek diğer demo kayıtlarını görüntüleyebilirsiniz.</p>
+            <button type="button" onClick={() => setFilters(EMPTY_PAYMENT_FILTERS)}>Filtreleri temizle</button>
           </div>
-          <span>2.750 €</span>
-          <b className="waiting">Vade: 7 gün</b>
-        </div>
+        ) : (
+          <div className="pay-table-wrap">
+            <table className="pay-table">
+              <thead><tr><th>İşlem</th><th>Yük / sevkiyat</th><th>Taşıyıcı</th><th>Tutar</th><th>Koşul ve vade</th><th>Durum</th><th>Dekont</th><th><span className="sr-only">Detay</span></th></tr></thead>
+              <tbody>
+                {visiblePayments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td data-label="İşlem"><strong>{payment.id}</strong><small>{payment.demo ? "Demo kayıt" : "Finans kaydı"}</small></td>
+                    <td data-label="Yük / sevkiyat"><strong>{payment.loadTitle || payment.loadId}</strong><small>{payment.loadId} · {payment.shipmentId}</small></td>
+                    <td data-label="Taşıyıcı"><strong>{payment.carrier}</strong><small>{payment.route}</small></td>
+                    <td data-label="Tutar"><strong>{formatPaymentAmount(payment.amount, payment.currency)}</strong><small>{payment.currency}</small></td>
+                    <td data-label="Koşul ve tarihler">
+                      <strong>{payment.paymentTerm}</strong>
+                      <small>Vade: {new Date(`${payment.dueDate}T00:00:00`).toLocaleDateString("tr-TR")}</small>
+                      <small>Ödeme: {payment.paidDate ? new Date(`${payment.paidDate}T00:00:00`).toLocaleDateString("tr-TR") : "—"}</small>
+                    </td>
+                    <td data-label="Durum"><span className={paymentStatusClass(payment.status)}>{paymentStatusLabel(payment.status)}</span></td>
+                    <td data-label="Dekont"><span className={`pay-doc pay-doc--${String(payment.documentStatus || "missing").toLowerCase()}`}>{paymentDocumentLabel(payment.documentStatus)}</span></td>
+                    <td><button className="pay-detail-button" type="button" onClick={() => setSelected(payment)} aria-label={`${payment.id} ödeme detayını aç`}>Detay <ChevronRight size={14} /></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+
+      <p className="pay-demo-note"><ShieldCheck size={14} /> Bu ekran yalnızca demo finans kayıtlarını gösterir; para transferi yapmaz ve banka/kart bilgisi istemez.</p>
+
+      {selected && (
+        <div className="pay-detail-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>
+          <aside className="pay-detail" role="dialog" aria-modal="true" aria-labelledby="payment-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div><span className="section-kicker">ÖDEME DETAYI</span><h2 id="payment-detail-title">{selected.id}</h2></div>
+              <button onClick={() => setSelected(null)} aria-label="Ödeme detayını kapat"><X /></button>
+            </header>
+            <div className="pay-detail__hero"><span>{formatPaymentAmount(selected.amount, selected.currency)}</span><b className={paymentStatusClass(selected.status)}>{paymentStatusLabel(selected.status)}</b></div>
+            <dl>
+              <div><dt>İlgili yük</dt><dd>{selectedLoad?.cargo || selected.loadTitle || selected.loadId}<small>{selected.loadId}</small></dd></div>
+              <div><dt>Sevkiyat</dt><dd>{selectedShipment?.id || selected.shipmentId}</dd></div>
+              <div><dt>Kabul edilen teklif</dt><dd>{selected.offerId || "—"}</dd></div>
+              <div><dt>Taşıyıcı</dt><dd>{selected.carrier}</dd></div>
+              <div><dt>Güzergâh</dt><dd>{selectedLoad ? `${selectedLoad.from} → ${selectedLoad.to}` : selected.route}</dd></div>
+              <div><dt>Ödeme koşulu</dt><dd>{selected.paymentTerm}</dd></div>
+              <div><dt>Vade tarihi</dt><dd>{new Date(`${selected.dueDate}T00:00:00`).toLocaleDateString("tr-TR")}</dd></div>
+              <div><dt>Ödeme tarihi</dt><dd>{selected.paidDate ? new Date(`${selected.paidDate}T00:00:00`).toLocaleDateString("tr-TR") : "Henüz ödenmedi"}</dd></div>
+            </dl>
+            <section className="pay-detail__document">
+              <FileText />
+              <div><small>BELGE / DEKONT</small><strong>{paymentDocumentLabel(selected.documentStatus)}</strong></div>
+              {["AVAILABLE", "PENDING_REVIEW"].includes(selected.documentStatus) && <button type="button" onClick={() => { setSelected(null); onNavigate?.("Belgeler"); }}>Belgeler bölümüne git <ArrowRight size={13} /></button>}
+            </section>
+            {selected.note && <p className="pay-detail__note"><AlertTriangle size={14} /> {selected.note}</p>}
+          </aside>
+        </div>
+      )}
     </section>
   );
 }

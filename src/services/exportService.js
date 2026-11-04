@@ -331,15 +331,60 @@ export function historyExportData(records, role = "yuk-veren") {
   return { headers, rows };
 }
 
-/** Static demo payment rows (PaymentCenter has no prop-driven data). */
+/** Payment records export — full field set. */
 export function paymentsExportData(rows = []) {
-  const headers = [
-    "İşlem",
-    "Referans",
-    "Para Birimi",
-    "Tutar",
-    "Durum",
-  ];
+  // rows can be either:
+  //   (a) raw payment objects from paymentStore
+  //   (b) legacy string[][] (old PaymentCenter hardcoded rows) — kept for backward compat
+  const isObjects = rows.length > 0 && typeof rows[0] === "object" && !Array.isArray(rows[0]);
+
+  if (isObjects) {
+    const headers = [
+      "İşlem No",
+      "Yük İlanı",
+      "Yük Adı",
+      "Sevkiyat",
+      "Teklif",
+      "Taşıyıcı",
+      "Güzergah",
+      "Tutar",
+      "Para Birimi",
+      "Ödeme Koşulu",
+      "Vade Tarihi",
+      "Ödeme Tarihi",
+      "Durum",
+      "Belge / Dekont",
+    ];
+    const STATUS_MAP = {
+      PENDING: "Bekliyor", PAID: "Ödendi",
+      DUE_SOON: "Vadesi yaklaşıyor", OVERDUE: "Vadesi geçti", CANCELLED: "İptal edildi",
+    };
+    const exportRows = rows.map((p) => [
+      p.id ?? "",
+      p.loadId ?? "",
+      p.loadTitle ?? "",
+      p.shipmentId ?? "",
+      p.offerId ?? "",
+      p.carrier ?? "",
+      p.route ?? "",
+      String(p.amount ?? ""),
+      p.currency ?? "",
+      p.paymentTerm ?? "",
+      p.dueDate ?? "",
+      p.paidDate ?? "",
+      STATUS_MAP[p.status] || p.status || "",
+      ({
+        AVAILABLE: "Dekont mevcut",
+        PENDING_REVIEW: "İnceleniyor",
+        MISSING: "Belge bekleniyor",
+        NOT_REQUIRED: "Belge gerekmiyor",
+      })[p.documentStatus] || p.documentStatus || "",
+    ]);
+    return { headers, rows: exportRows };
+  }
+
+  // Legacy: rows is string[][]
+  const headers = ["İşlem", "Referans", "Para Birimi", "Tutar", "Durum"];
   return { headers, rows };
 }
 

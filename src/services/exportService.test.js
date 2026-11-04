@@ -79,3 +79,20 @@ test("boş ve demo veri kümeleri için rapor üreticileri sahte kayıt eklemez"
   const demoRows = [["Demo rota", "LW-DEMO", "EUR", "1.000 €", "Demo"]];
   assert.deepEqual(paymentsExportData(demoRows).rows, demoRows);
 });
+
+test("ödeme Excel ve PDF export kaynağı tüm finans alanlarını ve Türkçe durumları içerir", () => {
+  const payment = {
+    id: "PAY-1", loadId: "LW-1", shipmentId: "SHP-1", offerId: "OFF-1",
+    carrier: "Örnek Taşıma", route: "İstanbul → Münih", amount: 4850,
+    currency: "EUR", paymentTerm: "7 gün vadeli", dueDate: "2026-11-10",
+    paidDate: null, status: "DUE_SOON", documentStatus: "PENDING_REVIEW",
+  };
+  const { headers, rows } = paymentsExportData([payment]);
+  assert.deepEqual(headers, [
+    "İşlem No", "Yük İlanı", "Yük Adı", "Sevkiyat", "Teklif", "Taşıyıcı", "Güzergah",
+    "Tutar", "Para Birimi", "Ödeme Koşulu", "Vade Tarihi", "Ödeme Tarihi",
+    "Durum", "Belge / Dekont",
+  ]);
+  assert.equal(rows[0][12], "Vadesi yaklaşıyor");
+  assert.equal(rows[0][13], "İnceleniyor");
+});
