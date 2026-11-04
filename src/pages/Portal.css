@@ -1131,3 +1131,93 @@ button:focus:not(:focus-visible){outline:none}
 @media(max-width:600px){
   .section-export-row{justify-content:flex-start}
 }
+
+/* ── Messaging improvements ─────────────────────────────────────── */
+
+/* DEMO tag on conversation items */
+.conv-demo-tag{
+  display:inline-flex;align-items:center;
+  padding:1px 5px;border-radius:4px;
+  font-size:7px;font-weight:900;letter-spacing:.06em;
+  background:#fdf3e0;color:#8a5c00;border:1px solid #f0d580;
+  margin-left:4px;
+}
+
+/* Status pill colour variants */
+.conv-biz-pill--accepted{background:#e8f4e2;color:#3e7029}
+.conv-biz-pill--cancelled{background:#fae9e7;color:#9b352d}
+
+/* Contact card */
+.contact-card{
+  margin:8px 16px 0;
+  padding:10px 14px;
+  border:1px solid #dfe5dc;border-radius:12px;
+  background:#fff;
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.contact-card-icon{color:#527342;flex-shrink:0}
+.contact-card-body{
+  flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;
+}
+.contact-card-body strong{font-size:11px;color:#102a20}
+.contact-card-body small{font-size:9px;color:#7a8880}
+.contact-call-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 10px;border:0;border-radius:8px;
+  background:#102a20;color:#c8f368;
+  font-size:10px;font-weight:800;
+  white-space:nowrap;text-decoration:none;cursor:pointer;
+  flex-shrink:0;
+}
+.contact-call-btn:hover{background:#1e4032}
+.contact-restricted{
+  font-size:9px;color:#829087;font-style:italic;
+  flex-shrink:0;margin-left:auto;
+}
+
+/* Offer info panel */
+.offer-info-panel{
+  margin:8px 16px 0;
+  border:1px solid #dfe5dc;border-radius:12px;
+  background:#fff;flex-shrink:0;overflow:hidden;
+}
+.oip-header{
+  display:flex;align-items:center;gap:7px;
+  padding:9px 14px;
+  background:#f7faf5;border-bottom:1px solid #edf0eb;
+  font-size:10px;font-weight:800;color:#38542c;
+}
+.oip-header svg{color:#65814f;flex-shrink:0}
+.oip-body{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:0;padding:10px 14px;
+}
+.oip-row{
+  display:flex;flex-direction:column;gap:3px;
+  padding:4px 0;
+}
+.oip-row small{font-size:8px;font-weight:900;color:#829087;letter-spacing:.06em}
+.oip-row strong{font-size:11px;color:#102a20}
+.oip-amount{font-size:13px;color:#102a20}
+.oip-cta{
+  width:100%;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px;
+  border:0;border-top:1px solid #edf0eb;
+  background:#f0f5ec;color:#38542c;
+  font-size:10px;font-weight:800;cursor:pointer;transition:.12s;
+}
+.oip-cta:hover{background:#e2f0db}
+
+/* Tighter ref card when contact/offer panels follow */
+.ref-card{margin-bottom:0}
+
+/* System message with icon */
+.msg-system{display:flex;align-items:center;gap:5px}
+.msg-system svg{color:#527342;flex-shrink:0}
+
+@media(max-width:600px){
+  .oip-body{grid-template-columns:1fr}
+  .contact-card{flex-wrap:wrap}
+  .contact-call-btn{width:100%}
+}

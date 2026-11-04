@@ -66,6 +66,10 @@ import {
   subscribeMarketplace,
 } from "../services/marketplaceStore";
 import {
+  subscribeMessages,
+  totalUnread,
+} from "../services/messageStore";
+import {
   demoCompanyDashboard,
   getCompanyDashboard,
 } from "../api/companyDashboardClient";
@@ -1161,7 +1165,7 @@ function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
           ["Yük İlanlarım", <Package size={18} />, navCounts.loads, "Operasyon"],
           ["Gelen Teklifler", <Wallet size={18} />, navCounts.offers, "Operasyon"],
           ["Sevkiyatlarım", <Route size={18} />, navCounts.shipments, "Operasyon"],
-          ["Mesajlar", <MessageCircle size={18} />, null, "Operasyon"],
+          ["Mesajlar", <MessageCircle size={18} />, navCounts.messages, "Operasyon"],
           ["Geçmiş", <Clock3 size={18} />, null, "Finans ve Kayıtlar"],
           ["Belgeler", <FileText size={18} />, null, "Finans ve Kayıtlar"],
           ["Ödemeler", <CreditCard size={18} />, null, "Finans ve Kayıtlar"],
@@ -1634,6 +1638,7 @@ export function ShipperPortal() {
   const [success, setSuccess] = useState("");
   const [loadFilters, setLoadFilters] = useState({ status: "Tümü", search: "" });
   const [confirmCancel, setConfirmCancel] = useState(null); // load object pending cancel
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [loadRequest, setLoadRequest] = useState({
     loading: liveMarketplaceEnabled(),
     error: "",
@@ -1649,6 +1654,11 @@ export function ShipperPortal() {
       }),
     [],
   );
+  // Track unread message count for nav badge
+  useEffect(() => {
+    if (liveMarketplaceEnabled()) return;
+    return subscribeMessages(() => setUnreadMessages(totalUnread()));
+  }, []);
   useEffect(() => {
     if (!liveMarketplaceEnabled()) return;
     let mounted = true;
@@ -1949,6 +1959,7 @@ export function ShipperPortal() {
           ["Bekliyor", "PENDING"].includes(offer.status),
         ).length,
         shipments: matches.length,
+        messages: unreadMessages,
       }}
       onSelect={(next) =>
         next === "Yeni Yük" ? setModal(true) : setActive(next)
@@ -2064,6 +2075,9 @@ export function ShipperPortal() {
         <MessagesCenter
           demo={!liveMarketplaceEnabled()}
           onOpenShipment={() => setActive("Sevkiyatlarım")}
+          onOpenOffers={() => setActive("Gelen Teklifler")}
+          loads={loads}
+          offers={marketOffers}
         />
       )}{" "}
       {active === "Geçmiş" && (
