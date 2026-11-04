@@ -70,6 +70,17 @@ import {
   totalUnread,
 } from "../services/messageStore";
 import {
+  addDoc,
+  deleteDoc,
+  downloadDoc,
+  getDocs,
+  hasBlobInMemory,
+  subscribeDocs,
+  validateFile,
+  DOC_TYPES,
+  ALLOWED_EXTENSIONS,
+} from "../services/documentStore";
+import {
   demoCompanyDashboard,
   getCompanyDashboard,
 } from "../api/companyDashboardClient";
@@ -2083,7 +2094,7 @@ export function ShipperPortal() {
       {active === "Geçmiş" && (
         <MonthlyHistory role="yuk-veren" matches={matches} enableExport />
       )}{" "}
-      {active === "Belgeler" && <DocumentCenter role="yuk-veren" />}
+      {active === "Belgeler" && <DocumentCenter role="yuk-veren" loads={loads} shipments={shipments} />}
       {active === "Ödemeler" &&
         (liveMarketplaceEnabled() ? (
           <EmptyState
@@ -4099,119 +4110,366 @@ function MonthlyHistory({ role, matches, enableExport = false }) {
   );
 }
 
-function DocumentCenter({ role }) {
+function DocumentCenter({ loads = [], shipments = [] }) {
   const live = liveMarketplaceEnabled();
-  const defaults =
-    role === "sofor"
-      ? [
-          "Kimlik / pasaport",
-          "Sürücü belgesi",
-          "Mesleki yeterlilik (CPC)",
-          "Takograf kartı",
-          "Araç ruhsatı ve sigorta",
-        ]
-      : [
-          "Şirket sicil belgesi",
-          "Vergi / VAT numarası",
-          "EORI belgesi",
-          "Taşıma sorumluluk sigortası",
-          "e-CMR / eFTI yetkilendirmesi",
-        ];
-  const storageKey = `logiway-documents-${role}`;
-  const [documents, setDocuments] = useState(() =>
-    JSON.parse(localStorage.getItem(storageKey) || "{}"),
-  );
-  function upload(name, file) {
-    if (!file) return;
-    const next = {
-      ...documents,
-      [name]: { file: file.name, date: new Date().toLocaleDateString("tr-TR") },
-    };
-    setDocuments(next);
-    localStorage.setItem(storageKey, JSON.stringify(next));
+
+  // ── State ────────────────────────────────────────────────────────
+  const [docs, setDocs]         = useState(() => (live ? [] : getDocs()));
+  const [query, setQuery]       = useState("");
+  const [typeFilter, setTypeFilter] = useState("Tümü");
+  const [loadFilter, setLoadFilter] = useState("Tümü");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [notice, setNotice]     = useState({ text: "", error: false });
+  const fileInputRef            = useRef(null);
+
+  // Reload when another tab writes
+  useEffect(() => {
+    if (live) return;
+    return subscribeDocs(() => setDocs(getDocs()));
+  }, [live]);
+
+  // ── Upload form state ────────────────────────────────────────────
+  const [form, setForm] = useState({
+    docType: DOC_TYPES[0],
+    loadId: "",
+    shipmentId: "",
+  });
+
+  // ── Computed ─────────────────────────────────────────────────────
+  const loadOptions = [
+    ...new Set([
+      ...loads.map((l) => l.id),
+      ...docs.map((d) => d.loadId).filter(Boolean),
+    ]),
+  ];
+  const shipmentOptions = [
+    ...new Set([
+      ...shipments.map((s) => s.id),
+      ...docs.map((d) => d.shipmentId).filter(Boolean),
+    ]),
+  ];
+
+  const visible = docs.filter((d) => {
+    if (typeFilter !== "Tümü" && d.docType !== typeFilter) return false;
+    if (loadFilter !== "Tümü" && d.loadId !== loadFilter) return false;
+    const q = query.toLocaleLowerCase("tr");
+    if (q && !([d.name, d.docType, d.loadId, d.shipmentId, d.uploader]
+      .map((v) => String(v || "").toLocaleLowerCase("tr"))
+      .some((v) => v.includes(q)))) return false;
+    return true;
+  });
+
+  // ── Handlers ─────────────────────────────────────────────────────
+  function showNotice(text, error = false) {
+    setNotice({ text, error });
+    setTimeout(() => setNotice({ text: "", error: false }), 4000);
   }
-  const complete = defaults.filter((x) => documents[x]).length;
-  if (live)
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { ok, error } = validateFile(file);
+    if (!ok) { showNotice(error, true); e.target.value = ""; return; }
+
+    const result = addDoc(
+      {
+        docType: form.docType,
+        loadId: form.loadId || null,
+        shipmentId: form.shipmentId || null,
+        uploader: "Siz",
+      },
+      file,
+    );
+    if (!result.ok) { showNotice(result.error, true); e.target.value = ""; return; }
+
+    setDocs(getDocs());
+    setUploadOpen(false);
+    setForm({ docType: DOC_TYPES[0], loadId: "", shipmentId: "" });
+    e.target.value = "";
+    showNotice(`"${file.name}" başarıyla yüklendi.`);
+  }
+
+  function handleDownload(doc) {
+    const { ok, error } = downloadDoc(doc);
+    if (!ok) showNotice(error, true);
+  }
+
+  function handleDelete(doc) {
+    deleteDoc(doc.id);
+    setDocs(getDocs());
+    showNotice(`"${doc.name}" silindi.`);
+  }
+
+  // ── Live mode guard ──────────────────────────────────────────────
+  if (live) {
     return (
       <EmptyState
         icon={<FileText />}
-        title="Belge yükleme henüz etkin değil"
-        text="Belgeler yalnızca güvenli dosya depolama ve doğrulama API'si bağlandıktan sonra kabul edilecek."
+        title="Belge yönetimi henüz etkin değil"
+        text="Belgeler yalnızca güvenli dosya depolama API'si bağlandıktan sonra kullanılabilir. Mevcut backend sözleşmesi: POST /api/v1/loads/{id}/documents"
       />
     );
+  }
+
   return (
-    <section className="feature-page">
+    <section className="feature-page docs-center">
+      {/* ── Heading ── */}
       <PageHeading
-        kicker="DOĞRULAMA & UYUM"
-        title={
-          role === "sofor"
-            ? "Şoför ve araç belgeleriniz."
-            : "Şirketiniz Avrupa taşımacılığına hazır."
+        kicker="BELGE YÖNETİMİ"
+        title="Belgelerinizi tek merkezde yönetin."
+        text="Yük ilanlarına ve sevkiyatlara ait belgeleri yükleyin, görüntüleyin ve indirin."
+        action={
+          <button
+            className="portal-primary"
+            onClick={() => setUploadOpen(true)}
+          >
+            <UploadCloud size={16} aria-hidden="true" /> Belge Yükle
+          </button>
         }
-        text="Belgelerinizi tek merkezde yönetin; doğrulama durumunu eşleşmelerde güven göstergesi olarak kullanın."
       />
-      <div className="verification-summary">
-        <div>
-          <span className="verification-icon">
-            <BadgeCheck />
-          </span>
-          <div>
-            <small>PROFİL DOĞRULAMA</small>
-            <strong>
-              %{Math.round((complete / defaults.length) * 100)} tamamlandı
-            </strong>
-            <p>
-              {complete}/{defaults.length} belge yüklendi
+
+      {/* ── Notice banner ── */}
+      {notice.text && (
+        <div
+          className={`docs-notice ${notice.error ? "docs-notice--error" : "docs-notice--ok"}`}
+          role="status"
+          aria-live="polite"
+        >
+          {notice.error
+            ? <AlertTriangle size={14} aria-hidden="true" />
+            : <Check size={14} aria-hidden="true" />}
+          {notice.text}
+        </div>
+      )}
+
+      {/* ── Upload panel ── */}
+      {uploadOpen && (
+        <div className="docs-upload-panel">
+          <div className="docs-upload-panel__head">
+            <strong>Yeni Belge Yükle</strong>
+            <button
+              className="docs-upload-close"
+              onClick={() => setUploadOpen(false)}
+              aria-label="Kapat"
+            >
+              <X size={15} />
+            </button>
+          </div>
+          <div className="docs-upload-panel__body">
+            <label className="docs-field">
+              <span>Belge türü</span>
+              <select
+                value={form.docType}
+                onChange={(e) => setForm((p) => ({ ...p, docType: e.target.value }))}
+              >
+                {DOC_TYPES.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <label className="docs-field">
+              <span>İlgili yük ilanı <em>(opsiyonel)</em></span>
+              <select
+                value={form.loadId}
+                onChange={(e) => setForm((p) => ({ ...p, loadId: e.target.value }))}
+              >
+                <option value="">— Seçiniz —</option>
+                {loadOptions.map((id) => (
+                  <option key={id} value={id}>{id}</option>
+                ))}
+              </select>
+            </label>
+            {shipmentOptions.length > 0 && (
+              <label className="docs-field">
+                <span>İlgili sevkiyat <em>(opsiyonel)</em></span>
+                <select
+                  value={form.shipmentId}
+                  onChange={(e) => setForm((p) => ({ ...p, shipmentId: e.target.value }))}
+                >
+                  <option value="">— Seçiniz —</option>
+                  {shipmentOptions.map((id) => (
+                    <option key={id} value={id}>{id}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="docs-upload-area">
+              <UploadCloud size={22} aria-hidden="true" />
+              <p>
+                {ALLOWED_EXTENSIONS.join(", ")} · En fazla 10 MB
+              </p>
+              <label className="portal-primary docs-file-btn">
+                Dosya Seç
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ALLOWED_EXTENSIONS.map((e) => e).join(",")}
+                  onChange={handleFileChange}
+                  aria-label="Belge dosyası seç"
+                />
+              </label>
+            </div>
+            <p className="docs-security-note">
+              <ShieldCheck size={11} aria-hidden="true" />
+              Demo modunda dosyalar yalnızca bu tarayıcı oturumunda tutulur. Sayfa kapatıldığında içerik silinir, yalnızca isim ve tarih bilgisi saklanır.
             </p>
           </div>
         </div>
-        <div className="verify-progress">
-          <i style={{ width: `${(complete / defaults.length) * 100}%` }} />
-        </div>
-        <span className="integration-note">
-          KYC sağlayıcısı entegrasyonuna hazır
-        </span>
-      </div>
-      <div className="verification-grid">
-        {defaults.map((name, index) => (
-          <article
-            className={documents[name] ? "verify-card uploaded" : "verify-card"}
-            key={name}
-          >
-            <div className="doc-icon">
-              {documents[name] ? <FileCheck2 /> : <FileText />}
-            </div>
-            <div>
-              <strong>{name}</strong>
-              <small>
-                {documents[name]
-                  ? `${documents[name].file} · ${documents[name].date}`
-                  : "PDF, JPG veya PNG · En fazla 10 MB"}
-              </small>
-            </div>
-            <label>
-              <UploadCloud size={16} />
-              {documents[name] ? "Güncelle" : "Belge yükle"}
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => upload(name, e.target.files?.[0])}
-              />
+      )}
+
+      {/* ── Filters ── */}
+      <div className="docs-filters">
+        <label className="llf-search docs-search" aria-label="Belge ara">
+          <Search size={14} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Belge adı, tür veya ilan no ara"
+            aria-label="Belge ara"
+          />
+          {query && (
+            <button onClick={() => setQuery("")} aria-label="Aramayı temizle">
+              <X size={13} />
+            </button>
+          )}
+        </label>
+
+        <div className="docs-filter-row">
+          <label className="docs-filter-label">
+            <span>Tür</span>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="Tümü">Tüm türler</option>
+              {DOC_TYPES.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+
+          {loadOptions.length > 0 && (
+            <label className="docs-filter-label">
+              <span>Yük ilanı</span>
+              <select value={loadFilter} onChange={(e) => setLoadFilter(e.target.value)}>
+                <option value="Tümü">Tüm ilanlar</option>
+                {loadOptions.map((id) => (
+                  <option key={id}>{id}</option>
+                ))}
+              </select>
             </label>
-            <span className={documents[name] ? "doc-status ok" : "doc-status"}>
-              {documents[name] ? (
-                <>
-                  <Check /> Yüklendi
-                </>
-              ) : index < 2 ? (
-                "Gerekli"
-              ) : (
-                "Önerilen"
-              )}
-            </span>
-          </article>
-        ))}
+          )}
+
+          <small className="docs-count">
+            {visible.length} belge{(query || typeFilter !== "Tümü" || loadFilter !== "Tümü") ? " (filtrelenmiş)" : ""}
+          </small>
+        </div>
       </div>
+
+      {/* ── Empty state ── */}
+      {visible.length === 0 && (
+        <div className="llf-empty" role="status">
+          <FileText size={28} aria-hidden="true" />
+          <h3>
+            {docs.length === 0
+              ? "Henüz belge yüklenmedi"
+              : "Filtreyle eşleşen belge bulunamadı"}
+          </h3>
+          <p>
+            {docs.length === 0
+              ? "Yük ilanlarınıza ve sevkiyatlarınıza ait belgeleri buradan yönetin."
+              : "Farklı bir arama veya filtre deneyin."}
+          </p>
+        </div>
+      )}
+
+      {/* ── Documents table ── */}
+      {visible.length > 0 && (
+        <div className="docs-table-wrap" role="region" aria-label="Belgeler tablosu">
+          <table className="docs-table">
+            <thead>
+              <tr>
+                <th scope="col">Belge Adı</th>
+                <th scope="col">Tür</th>
+                <th scope="col">Yük / Sevkiyat</th>
+                <th scope="col">Yükleyen</th>
+                <th scope="col">Tarih</th>
+                <th scope="col">Boyut</th>
+                <th scope="col">Durum</th>
+                <th scope="col" aria-label="İşlemler" />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((doc) => {
+                const hasBlob = hasBlobInMemory(doc.id);
+                return (
+                  <tr key={doc.id} className="docs-row">
+                    <td className="docs-name-cell">
+                      <FileText size={13} aria-hidden="true" className="docs-file-icon" />
+                      <span>{doc.name}</span>
+                      {doc.demo && (
+                        <span className="demo-badge-inline" title="Demo belgesi">DEMO</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="docs-type-badge">{doc.docType}</span>
+                    </td>
+                    <td className="docs-ref-cell">
+                      {doc.loadId && (
+                        <span className="docs-ref-chip">
+                          <Package size={10} aria-hidden="true" /> {doc.loadId}
+                        </span>
+                      )}
+                      {doc.shipmentId && (
+                        <span className="docs-ref-chip docs-ref-chip--ship">
+                          <Route size={10} aria-hidden="true" /> {doc.shipmentId}
+                        </span>
+                      )}
+                      {!doc.loadId && !doc.shipmentId && (
+                        <span className="docs-ref-none">—</span>
+                      )}
+                    </td>
+                    <td>{doc.uploader}</td>
+                    <td>
+                      <time dateTime={doc.uploadedAtISO} title={doc.uploadedAtISO}>
+                        {doc.uploadedAt}
+                      </time>
+                    </td>
+                    <td>{doc.sizeFmt}</td>
+                    <td>
+                      {hasBlob ? (
+                        <span className="docs-status docs-status--ok">
+                          <Check size={11} aria-hidden="true" /> Mevcut
+                        </span>
+                      ) : (
+                        <span className="docs-status docs-status--stale" title="Dosya içeriği bu oturumda yüklenmedi">
+                          <Clock3 size={11} aria-hidden="true" /> Kayıtlı
+                        </span>
+                      )}
+                    </td>
+                    <td className="docs-actions-cell">
+                      <button
+                        className="llf-action-btn"
+                        title={hasBlob ? "İndir" : "Bu oturumda dosya mevcut değil"}
+                        aria-label={`${doc.name} dosyasını indir`}
+                        disabled={!hasBlob}
+                        onClick={() => handleDownload(doc)}
+                      >
+                        <ArrowRight size={13} style={{ transform: "rotate(90deg)" }} aria-hidden="true" />
+                      </button>
+                      <button
+                        className="llf-action-btn llf-action-btn--danger"
+                        title="Sil"
+                        aria-label={`${doc.name} belgesini sil`}
+                        onClick={() => handleDelete(doc)}
+                      >
+                        <X size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
