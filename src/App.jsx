@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "./layout/MainLayout";
 import ToastProvider from "./context/ToastContext";
@@ -12,8 +13,14 @@ import UsersList from "./pages/users/UsersList";
 import PendingUsers from "./pages/users/PendingUsers";
 import UserDetail from "./pages/users/UserDetail";
 import Landing from "./pages/Landing";
-import { CompanyPortal, DriverPortal, PortalLogin, RoleSelect, ShipperPortal } from "./pages/Portal";
 import { hasAnyRole, isAuthenticated } from "./api/authClient";
+
+const portalModule = () => import("./pages/Portal");
+const RoleSelect = lazy(() => portalModule().then((module) => ({ default: module.RoleSelect })));
+const PortalLogin = lazy(() => portalModule().then((module) => ({ default: module.PortalLogin })));
+const ShipperPortal = lazy(() => portalModule().then((module) => ({ default: module.ShipperPortal })));
+const CompanyPortal = lazy(() => portalModule().then((module) => ({ default: module.CompanyPortal })));
+const DriverPortal = lazy(() => portalModule().then((module) => ({ default: module.DriverPortal })));
 
 function ProtectedRoute({ children, roles, loginPath = "/giris" }) {
   if (!isAuthenticated()) return <Navigate to={loginPath} replace />;
@@ -27,7 +34,8 @@ const adminPage = (page, roles = ["ADMIN"]) => (
 
 export default function App() {
   return <ToastProvider>
-    <Routes>
+    <Suspense fallback={<main className="portal-loading" role="status" aria-live="polite">Çalışma alanı yükleniyor…</main>}>
+      <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/giris" element={<RoleSelect />} />
       <Route path="/giris/:role" element={<PortalLogin />} />
@@ -44,7 +52,8 @@ export default function App() {
       <Route path="/eslesmeler" element={adminPage(<Matches />)} />
       <Route path="/ayarlar" element={adminPage(<Settings />)} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
     <ToastContainer />
   </ToastProvider>;
 }

@@ -688,7 +688,7 @@ export default function MessagesCenter({
           <div className="conversation-placeholder" role="status">
             <MessageCircle size={32} aria-hidden="true" />
             <h3>Bir konuşma seçin</h3>
-            <p>Yük, teklif veya sevkiyata bağlı mesajları burada yönetin.</p>
+            <p>Teklif veya sevkiyat üzerinden bir görüşme başladığında burada görünecek. Soldaki listeden mevcut konuşmaları açabilirsiniz.</p>
           </div>
         )}
       </div>

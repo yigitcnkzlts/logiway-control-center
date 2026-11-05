@@ -52,6 +52,22 @@ const SHIPPER_ITEMS = [
     target: "Mesajlar",
     variant: "default",
   },
+  {
+    key: "dueSoonPayments",
+    icon: Wallet,
+    label: (n) => `${n} yaklaşan ödeme vadesi`,
+    sublabel: "Finans kontrolü gerekiyor",
+    target: "Ödemeler",
+    variant: "warning",
+  },
+  {
+    key: "missingDocuments",
+    icon: Package,
+    label: (n) => `${n} eksik belge`,
+    sublabel: "Belge veya dekont bekleniyor",
+    target: "Belgeler",
+    variant: "warning",
+  },
 ];
 
 const CARRIER_ITEMS = [
@@ -120,7 +136,9 @@ const DEFAULT_COUNTS = {
 };
 
 export default function ActionCenter({ role, counts: countsProp, onNavigate }) {
-  const counts = { ...DEFAULT_COUNTS, ...countsProp };
+  // A supplied count object is authoritative. Missing keys must be zero;
+  // otherwise demo defaults can contradict real dashboard counters.
+  const counts = countsProp ? { ...Object.fromEntries(Object.keys(DEFAULT_COUNTS).map((key) => [key, 0])), ...countsProp } : DEFAULT_COUNTS;
 
   const itemDefs =
     role === "yuk-veren" ? SHIPPER_ITEMS

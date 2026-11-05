@@ -2,26 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight, Check, Clock3, FileText,
   MessageCircle, Package, Route, Search,
-  ShieldCheck, Truck, Users, X, Zap,
+  Truck, Users, X, Zap,
 } from "lucide-react";
 import { RecentSearchBadges } from "../marketplace/RecentActivity";
-
-// ── Static search items (demo / passthrough until live search API) ─────────
-const SEARCH_ITEMS = [
-  { type: "Araç",     id: "34 ABC 123", label: "34 ABC 123",    sub: "Volvo FH",             icon: Truck },
-  { type: "Şoför",   id: "ahmet",      label: "Ahmet Yılmaz",  sub: "Aktif görevde",        icon: Users },
-  { type: "Sevkiyat",id: "SHP-2847",   label: "SHP-2847",      sub: "Bergen → Milano",      icon: Route },
-  { type: "Yük",     id: "LW-3012",    label: "LW-3012",       sub: "Tekirdağ → Berlin",    icon: Package },
-  { type: "Yük",     id: "LW-2847",    label: "LW-2847",       sub: "Bergen → Milano",      icon: Package },
-  { type: "Firma",   id: "abc",        label: "ABC Logistics", sub: "Doğrulanmış taşıyıcı", icon: ShieldCheck },
-];
 
 // ── Quick actions per role ──────────────────────────────────────────────────
 const QUICK_ACTIONS = {
   "yuk-veren": [
     { id: "new-load",    label: "Yeni Yük Oluştur",       icon: Package,        target: "Yeni Yük",          kbd: "N" },
-    { id: "offers",      label: "Teklifleri Aç",           icon: FileText,       target: "Teklifler",         kbd: "O" },
-    { id: "shipments",   label: "Aktif Sevkiyatları Aç",   icon: Route,          target: "Aktif Sevkiyatlar", kbd: "S" },
+    { id: "offers",      label: "Teklifleri Aç",           icon: FileText,       target: "Gelen Teklifler",   kbd: "O" },
+    { id: "shipments",   label: "Aktif Sevkiyatları Aç",   icon: Route,          target: "Sevkiyatlarım",     kbd: "S" },
     { id: "messages",    label: "Mesajları Aç",            icon: MessageCircle,  target: "Mesajlar",          kbd: "M" },
   ],
   lojistik: [
@@ -57,6 +47,7 @@ export function CommandPalette({
   onSearch,
   onClearSearches,
   recentlyViewed = [],
+  searchItems = [],
 }) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -80,11 +71,12 @@ export function CommandPalette({
 
   // Build result list
   const searchResults = q
-    ? SEARCH_ITEMS.filter(
+    ? searchItems.filter(
         (item) =>
           item.label.toLowerCase().includes(q) ||
           item.sub.toLowerCase().includes(q) ||
-          item.type.toLowerCase().includes(q)
+          item.type.toLowerCase().includes(q) ||
+          String(item.keywords || "").toLowerCase().includes(q)
       )
     : [];
 
@@ -116,6 +108,7 @@ export function CommandPalette({
   function pick(item) {
     if (item.kind === "search") {
       onSearch?.(item.label);
+      onNavigate?.(item.target);
     }
     if (item.kind === "action") {
       onNavigate?.(item.target);

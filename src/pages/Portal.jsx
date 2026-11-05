@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ExportButton from "../components/ExportButton";
+import ShipperCompanyTeam from "../features/companies/ShipperCompanyTeam";
 import {
   exportCSV,
   exportXLSX,
@@ -63,10 +64,12 @@ import {
   loadToJob,
   saveDraft,
   saveLoads,
+  saveMatches,
   saveOffers,
   subscribeMarketplace,
 } from "../services/marketplaceStore";
 import {
+  ensureConversation,
   subscribeMessages,
   totalUnread,
 } from "../services/messageStore";
@@ -81,6 +84,14 @@ import {
   paymentSummary,
   subscribePayments,
 } from "../services/paymentStore";
+import {
+  LOAD_STATUS_FILTERS,
+  buildShipperNotifications,
+  buildShipperSearchItems,
+  filterAndSortLoads,
+  missingDraftFields,
+  normalizeLoadStatus,
+} from "../services/shipperExperience";
 import {
   addDoc,
   deleteDoc,
@@ -1107,7 +1118,7 @@ function PasswordChecklist({ password }) {
   );
 }
 
-function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
+function PortalShell({ role, children, active, onSelect, navCounts = {}, searchItems = [], notifications = null }) {
   const routerNavigate = useNavigate();
   const info = roleInfo[role];
   const Icon = info.icon;
@@ -1115,6 +1126,16 @@ function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
     () => localStorage.getItem("logiway-language") || "TR",
   );
   const [overlay, setOverlay] = useState(null);
+  const [notificationUnread, setNotificationUnread] = useState(
+    () => Array.isArray(notifications) ? notifications.filter((item) => !item.readAt).length : 0,
+  );
+  // Track IDs that the user has clicked (demo read state)
+  const [readNotifIds, setReadNotifIds] = useState([]);
+  const visibleNotificationUnread = Array.isArray(notifications)
+    ? Math.max(0, notifications.filter((item) => !item.readAt).length - readNotifIds.filter((id) =>
+        notifications.some((n) => n.id === id && !n.readAt)
+      ).length)
+    : notificationUnread;
   const session = getSession() || {};
   const companyName = session.companyName || "Firma çalışma alanı";
   const { prefs, addRecentSearch, clearRecentSearches } = usePreferences();
@@ -1347,6 +1368,7 @@ function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
               aria-expanded={overlay === "notifications"}
             >
               <Bell />
+              {visibleNotificationUnread > 0 && <b aria-label={`${visibleNotificationUnread} okunmamış bildirim`}>{visibleNotificationUnread > 9 ? "9+" : visibleNotificationUnread}</b>}
             </button>
             <label className="language-picker">
               <Languages size={15} />
@@ -1378,7 +1400,8 @@ function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
             </button>
           </div>
           {overlay === "notifications" && (
-            <NotificationCenter onNavigate={navigate} />
+            <NotificationCenter onNavigate={navigate} items={notifications} onUnreadChange={setNotificationUnread}
+              onRead={(item) => setReadNotifIds((prev) => prev.includes(item.id) ? prev : [...prev, item.id])} />
           )}
         </header>
 
@@ -1392,6 +1415,7 @@ function PortalShell({ role, children, active, onSelect, navCounts = {} }) {
             onSearch={handleSearch}
             onClearSearches={clearRecentSearches}
             recentlyViewed={prefs.recentlyViewed}
+            searchItems={searchItems}
           />
         )}
 
@@ -1440,13 +1464,15 @@ function ShipperOverview({
   onNewLoad,
   onCancelLoad,
   liveMode,
+  unreadMessages = 0,
+  actionCounts = {},
 }) {
-  const activeLoads    = loads.filter((x) => x.status === "Teklif alıyor").length;
-  const pendingOffers  = marketOffers.filter((x) => x.status === "Bekliyor").length;
-  const activeShipments = matches.length;
+  const activeLoads = loads.filter((load) => normalizeLoadStatus(load.status) === "PUBLISHED").length;
+  const pendingOffers = marketOffers.filter((offer) => ["Bekliyor", "PENDING", "COUNTERED"].includes(offer.status)).length;
   const completedMatches = matches.filter(
     (x) => x.status === "Tamamlandı" || x.status === "COMPLETED",
   ).length;
+  const activeShipments = Math.max(0, matches.length - completedMatches);
 
   const recentLoads = loads.slice(0, 5);
 
@@ -1512,8 +1538,10 @@ function ShipperOverview({
         role="yuk-veren"
         counts={{
           offers: pendingOffers,
+          counterOffers: marketOffers.filter((offer) => offer.status === "COUNTERED" || offer.status === "Karşı teklif").length,
           activeShipments,
-          unread: 0,
+          unread: unreadMessages,
+          ...actionCounts,
         }}
         onNavigate={onNavigate}
       />
@@ -1524,18 +1552,6 @@ function ShipperOverview({
         <div className="so-qa-grid">
           <button
             className="so-qa-btn so-qa-btn--primary"
-            onClick={onNewLoad}
-            aria-label="Yeni yük ilanı oluştur"
-          >
-            <Package size={18} aria-hidden="true" />
-            <div>
-              <strong>Yeni Yük İlanı</strong>
-              <small>Taşıyıcıları bilgilendir</small>
-            </div>
-            <ArrowRight size={15} aria-hidden="true" />
-          </button>
-          <button
-            className="so-qa-btn"
             onClick={() => onNavigate("Gelen Teklifler")}
             aria-label="Gelen teklifleri incele"
           >
@@ -1548,6 +1564,11 @@ function ShipperOverview({
                   : "Teklif bekleniyor"}
               </small>
             </div>
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+          <button className="so-qa-btn" onClick={() => onNavigate("Sevkiyatlarım")} aria-label="Sevkiyatları görüntüle">
+            <Route size={18} aria-hidden="true" />
+            <div><strong>Sevkiyatları İzle</strong><small>{activeShipments ? `${activeShipments} operasyon sürüyor` : "Aktif operasyon yok"}</small></div>
             <ArrowRight size={15} aria-hidden="true" />
           </button>
         </div>
@@ -1625,6 +1646,9 @@ function ShipperOverview({
                       <X size={14} aria-hidden="true" />
                     </button>
                   )}
+                <button className="so-load-detail" onClick={() => onNavigate("Yük İlanlarım")} aria-label={`${load.id} ilan detayına git`}>
+                  Detay <ChevronRight size={13} />
+                </button>
               </article>
             ))}
           </div>
@@ -1659,9 +1683,9 @@ export function ShipperPortal() {
   const [modal, setModal] = useState(false);
   const [editingLoad, setEditingLoad] = useState(null); // load being edited/drafted
   const [success, setSuccess] = useState("");
-  const [loadFilters, setLoadFilters] = useState({ status: "Tümü", search: "" });
+  const [loadFilters, setLoadFilters] = useState({ status: "ALL", search: "", sort: "newest" });
   const [confirmCancel, setConfirmCancel] = useState(null); // load object pending cancel
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(() => liveMarketplaceEnabled() ? 0 : totalUnread());
   const [loadRequest, setLoadRequest] = useState({
     loading: liveMarketplaceEnabled(),
     error: "",
@@ -1881,6 +1905,13 @@ export function ShipperPortal() {
 
   /** Publish an existing DRAFT load by id. */
   function publishDraft(load) {
+    const missing = missingDraftFields(load);
+    if (missing.length) {
+      setSuccess(`Taslak yayınlanamadı. Eksik alanlar: ${missing.join(", ")}.`);
+      setTimeout(() => setSuccess(""), 5000);
+      openEditModal(load);
+      return;
+    }
     const next = loads.map((x) =>
       x.id === load.id ? { ...x, status: "Teklif alıyor" } : x,
     );
@@ -1919,7 +1950,21 @@ export function ShipperPortal() {
     setLoads(updatedLoads);
     saveOffers(updatedOffers);
     saveLoads(updatedLoads);
-    if (action === "accepted") setSuccess(`${o.company || o.driver} ile eşleşme tamamlandı.`);
+    if (action === "accepted") {
+      const shipment = {
+        id: makeRecordId("SHP"), loadId: load.id, offerId: o.id, acceptedOfferId: o.id,
+        matchId: makeRecordId("MT"), status: "ASSIGNED", cargo: load.cargo,
+        route: `${load.from} → ${load.to}`, carrier: o.company || "Taşıyıcı",
+        driver: o.driver || "Atama bekleniyor", amount: o.amount, vehicle: o.vehicle,
+        vehicleId: o.vehicleId || null, driverProfileId: o.driverProfileId || null,
+        matchedAt: new Date().toISOString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        demo: true,
+      };
+      const nextMatches = [shipment, ...matches.filter((match) => match.loadId !== load.id)];
+      setMatches(nextMatches);
+      saveMatches(nextMatches);
+      setSuccess(`${o.company || o.driver} ile eşleşme tamamlandı; sevkiyat oluşturuldu.`);
+    }
     setTimeout(() => setSuccess(""), 3500);
   }
   async function cancelLoad(load) {
@@ -1972,21 +2017,44 @@ export function ShipperPortal() {
     ? selectedOfferLoad
     : offerLoads[0]?.id || "";
   const displayedOffers = marketOffers.filter((offer) => offer.load === activeOfferLoadId);
+  const demoMode = !liveMarketplaceEnabled();
+  const shipperPayments = demoMode ? getPayments() : [];
+  const shipperDocuments = demoMode ? getDocs() : [];
+  const shipperSearchItems = buildShipperSearchItems({ loads, offers: marketOffers, shipments, matches });
+  const shipperNotifications = buildShipperNotifications({
+    offers: marketOffers,
+    loads,
+    shipments,
+    unread: unreadMessages,
+    payments: shipperPayments,
+    documents: shipperDocuments,
+  });
+  const overviewActionCounts = {
+    dueSoonPayments: shipperPayments.filter((payment) => payment.status === "DUE_SOON").length,
+    missingDocuments: shipperPayments.filter((payment) => payment.documentStatus === "MISSING").length,
+    delayed: shipments.filter((shipment) => shipment.delayed || shipment.status === "DELAYED").length,
+  };
   return (
     <PortalShell
       role="yuk-veren"
       active={active}
       navCounts={{
-        loads: loads.length,
+        loads: loads.filter((x) => !["CANCELLED", "COMPLETED", "DELIVERED"].includes(
+          normalizeLoadStatus(x.status)
+        )).length,
         offers: marketOffers.filter((offer) =>
-          ["Bekliyor", "PENDING"].includes(offer.status),
+          ["Bekliyor", "PENDING", "COUNTERED", "Karşı teklif"].includes(offer.status),
         ).length,
-        shipments: matches.length,
+        shipments: matches.filter((m) =>
+          m.status !== "Tamamlandı" && m.status !== "COMPLETED" && m.status !== "DELIVERED",
+        ).length,
         messages: unreadMessages,
       }}
       onSelect={(next) =>
         next === "Yeni Yük" ? setModal(true) : setActive(next)
       }
+      searchItems={shipperSearchItems}
+      notifications={shipperNotifications}
     >
       {success && (
         <div className="success-banner portal-toast">
@@ -2002,6 +2070,8 @@ export function ShipperPortal() {
           onNewLoad={() => setModal(true)}
           onCancelLoad={cancelLoad}
           liveMode={liveMarketplaceEnabled()}
+          unreadMessages={unreadMessages}
+          actionCounts={overviewActionCounts}
         />
       )}
       {active === "Yük İlanlarım" && (
@@ -2024,6 +2094,7 @@ export function ShipperPortal() {
             onCopy={copyLoad}
             onEdit={openEditModal}
             onPublish={publishDraft}
+            onViewOffers={(load) => { setSelectedOfferLoad(load.id); setActive("Gelen Teklifler"); }}
             isDemo={!liveMarketplaceEnabled()}
             loading={loadRequest.loading}
             error={loadRequest.error}
@@ -2077,9 +2148,31 @@ export function ShipperPortal() {
           <OfferComparison
             key={activeOfferLoadId || "no-offers"}
             offers={displayedOffers}
-            targetBudget={loads.find((load) => load.id === activeOfferLoadId)?.expectedPrice}
+            targetBudget={(() => {
+              const load = loads.find((l) => l.id === activeOfferLoadId);
+              if (!load) return undefined;
+              if (load.expectedPrice != null) return Number(load.expectedPrice);
+              // parse from display string e.g. "4.850 €" → 4850
+              const raw = String(load.price || "").replace(/[^0-9,]/g, "").replace(",", ".");
+              const n = parseFloat(raw);
+              return Number.isFinite(n) ? n : undefined;
+            })()}
             onChange={handleOfferChange}
-            onMessage={() => setActive("Mesajlar")}
+            onMessage={(offer) => {
+              if (!liveMarketplaceEnabled()) {
+                const load = loads.find((item) => item.id === (offer.load || activeOfferLoadId));
+                ensureConversation({
+                  loadId: load?.id || activeOfferLoadId,
+                  loadRef: load?.reference || load?.id,
+                  route: load ? `${load.from || load.fromCity || ""} → ${load.to || load.toCity || ""}` : "",
+                  company: offer.company || offer.driver,
+                  amount: offer.amount,
+                  offerStatus: offer.status,
+                  offerId: offer.id,
+                });
+              }
+              setActive("Mesajlar");
+            }}
           />
         </>
       )}
@@ -2090,9 +2183,16 @@ export function ShipperPortal() {
             loads={loads}
             offers={marketOffers}
             onMessage={() => setActive("Mesajlar")}
+            onDocuments={() => setActive("Belgeler")}
           />
         ) : (
-          <ShipmentDetail onMessage={() => setActive("Mesajlar")} />
+          <ShipperShipmentList
+            shipments={matches.filter((match) => match.acceptedOfferId || match.offerId).map((match) => ({ ...match, acceptedOfferId: match.acceptedOfferId || match.offerId, updatedAt: match.updatedAt || match.matchedAt || match.createdAt }))}
+            loads={loads}
+            offers={marketOffers}
+            onMessage={() => setActive("Mesajlar")}
+            onDocuments={() => setActive("Belgeler")}
+          />
         ))}{" "}
       {active === "Mesajlar" && (
         <MessagesCenter
@@ -2106,7 +2206,7 @@ export function ShipperPortal() {
       {active === "Geçmiş" && (
         <MonthlyHistory role="yuk-veren" matches={matches} enableExport />
       )}{" "}
-      {active === "Belgeler" && <DocumentCenter role="yuk-veren" loads={loads} shipments={shipments} />}
+      {active === "Belgeler" && <DocumentCenter loads={loads} shipments={shipments} />}
       {active === "Ödemeler" &&
         (liveMarketplaceEnabled() ? (
           <EmptyState
@@ -2118,15 +2218,14 @@ export function ShipperPortal() {
           <PaymentCenter
             loads={loads}
             shipments={shipments}
+            matches={matches}
             onNavigate={setActive}
           />
         ))}
       {active === "Firma ve Ekip" && (
-        <EmptyState
-          icon={<Users />}
-          title="Firma ve ekip yönetimi"
-          text="Ekip üyeliği ve rol yetkileri için backend sözleşmesi bekleniyor."
-        />
+        liveMarketplaceEnabled() ? (
+          <EmptyState icon={<Users />} title="Firma ve ekip entegrasyonu hazırlanıyor" text="Firma profili ve ekip yetkileri, güvenli üyelik API'si tamamlandığında burada yönetilecek." />
+        ) : <ShipperCompanyTeam />
       )}
       {modal && (
         <LoadModal
@@ -2140,17 +2239,19 @@ export function ShipperPortal() {
   );
 }
 
-const SHIPMENT_STEPS = ["ASSIGNED", "PICKED_UP", "IN_TRANSIT", "DELIVERED"];
+const SHIPMENT_STEPS = ["ASSIGNED", "HEADING_TO_PICKUP", "PICKUP_PENDING", "PICKED_UP", "IN_TRANSIT", "DELIVERED"];
 const SHIPMENT_LABELS = {
   CREATED: "Oluşturuldu",
   ASSIGNED: "Araç ve şoför atandı",
+  HEADING_TO_PICKUP: "Yüklemeye gidiyor",
+  PICKUP_PENDING: "Yükleme bekleniyor",
   PICKED_UP: "Yük alındı",
   IN_TRANSIT: "Yolda",
   DELIVERED: "Teslim edildi",
   CANCELLED: "İptal edildi",
 };
 
-function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
+function ShipperShipmentList({ shipments, loads, offers, onMessage, onDocuments }) {
   const [expanded, setExpanded] = useState(null);
   const activeCount = shipments.filter((shipment) =>
     !["DELIVERED", "CANCELLED"].includes(shipment.status),
@@ -2174,8 +2275,8 @@ function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
       {!shipments.length ? (
         <EmptyState
           icon={<Route />}
-          title="Aktif sevkiyat bulunmuyor"
-          text="Bir taşıyıcı teklifini kabul ettiğinizde oluşan sevkiyat burada görünecek."
+          title="Henüz aktif sevkiyat yok"
+          text="Bir teklifi kabul ettiğinizde sevkiyat otomatik oluşacak ve burada takip edebileceksiniz."
         />
       ) : (
         <section className="shipper-shipments" aria-label="Sevkiyat listesi">
@@ -2210,6 +2311,9 @@ function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
                     <span><small>Yük</small><strong>{load?.cargo || shipment.loadId}</strong></span>
                     <span><small>Taşıyıcı</small><strong>{offer?.company || offer?.driver || "Kabul edilen taşıyıcı"}</strong></span>
                     <span><small>Teklif</small><strong>{offer?.amount || "—"}</strong></span>
+                    <span><small>Araç / şoför</small><strong>{offer?.vehicle || shipment.vehicle || "Atama bekleniyor"} · {offer?.driver || shipment.driver || "—"}</strong></span>
+                    <span><small>Planlanan yükleme</small><strong>{load?.pickupDate || "—"}</strong></span>
+                    <span><small>Planlanan teslim</small><strong>{load?.deliveryDate || "—"}</strong></span>
                     <span><small>Son güncelleme</small><strong>{new Date(shipment.updatedAt).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</strong></span>
                   </div>
                   {shipment.status !== "CANCELLED" && (
@@ -2228,6 +2332,9 @@ function ShipperShipmentList({ shipments, loads, offers, onMessage }) {
                     </button>
                     <button type="button" className="portal-primary" onClick={onMessage}>
                       <MessageCircle size={15} /> Mesajlar
+                    </button>
+                    <button type="button" className="portal-secondary" onClick={onDocuments}>
+                      <FileText size={15} /> Belgeler
                     </button>
                   </footer>
                   {isOpen && (
@@ -2284,31 +2391,23 @@ function statusLabel(status) {
     CANCELLED:        "İptal edildi",
     IN_TRANSIT:       "Yolda",
     DELIVERED:        "Teslim edildi",
+    COMPLETED:        "Tamamlandı",
     Planlandı:        "Planlandı",
   };
   return MAP[status] || status;
 }
 
-function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit, onPublish, isDemo, loading, error, onRetry }) {
+function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit, onPublish, onViewOffers, isDemo, loading, error, onRetry }) {
   const [expanded, setExpanded] = useState(null);
 
-  const STATUS_OPTIONS = ["Tümü", "DRAFT", "Teklif alıyor", "Şoför eşleşti", "CANCELLED"];
-
-  // Apply filters
-  const visible = loads.filter((x) => {
-    const statusOk = filters.status === "Tümü" || x.status === filters.status;
-    const q = filters.search.toLocaleLowerCase("tr");
-    const searchOk = !q || [x.cargo, x.from, x.to, x.id, x.vehicle].some(
-      (v) => String(v || "").toLocaleLowerCase("tr").includes(q)
-    );
-    return statusOk && searchOk;
-  });
+  const visible = filterAndSortLoads(loads, filters);
 
   function statusClass(status) {
     if (status === "Teklif alıyor" || status === "PUBLISHED") return "portal-status green";
     if (status === "Şoför eşleşti" || status === "MATCHED")   return "portal-status blue";
     if (status === "CANCELLED")                                return "portal-status cancelled";
     if (status === "DRAFT")                                    return "portal-status draft";
+    if (status === "DELIVERED" || status === "COMPLETED")     return "portal-status green";
     return "portal-status";
   }
 
@@ -2340,29 +2439,38 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit
           )}
         </label>
         <div className="llf-status-tabs" role="group" aria-label="Durum filtresi">
-          {STATUS_OPTIONS.map((s) => (
+          {LOAD_STATUS_FILTERS.map(([value, label]) => (
             <button
-              key={s}
-              className={filters.status === s ? "llf-tab active" : "llf-tab"}
-              onClick={() => onFilterChange({ ...filters, status: s })}
-              aria-pressed={filters.status === s}
+              key={value}
+              className={filters.status === value ? "llf-tab active" : "llf-tab"}
+              onClick={() => onFilterChange({ ...filters, status: value })}
+              aria-pressed={filters.status === value}
             >
-              {statusLabel(s)}
-              {s !== "Tümü" && (
+              {label}
+              {value !== "ALL" && (
                 <span className="llf-tab-count">
-                  {loads.filter((x) => x.status === s).length}
+                  {loads.filter((load) => normalizeLoadStatus(load.status) === value).length}
                 </span>
               )}
-              {s === "Tümü" && <span className="llf-tab-count">{loads.length}</span>}
+              {value === "ALL" && <span className="llf-tab-count">{loads.length}</span>}
             </button>
           ))}
         </div>
+        <label className="llf-sort">
+          <span>Sırala</span>
+          <select value={filters.sort} onChange={(event) => onFilterChange({ ...filters, sort: event.target.value })}>
+            <option value="newest">En yeni</option>
+            <option value="oldest">En eski</option>
+            <option value="pickup">Yükleme tarihi</option>
+            <option value="offers">En çok teklif</option>
+          </select>
+        </label>
       </div>
 
       {/* Export row */}
       {!loading && !error && (
         <div className="section-export-row">
-          <small>{visible.length} ilan{filters.search || filters.status !== "Tümü" ? " (filtrelenmiş)" : ""}</small>
+          <small>{visible.length} ilan{filters.search || filters.status !== "ALL" ? " (filtrelenmiş)" : ""}</small>
           <ExportButton
             onExport={handleLoadExport}
             disabled={visible.length === 0}
@@ -2394,12 +2502,12 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit
           <Package size={28} aria-hidden="true" />
           <h3>
             {loads.length === 0
-              ? "Henüz yük ilanınız bulunmuyor"
+              ? "Henüz yük ilanı oluşturmadınız"
               : "Filtreyle eşleşen ilan bulunamadı"}
           </h3>
           <p>
             {loads.length === 0
-              ? "İlk ilanınızı oluşturun ve taşıyıcı tekliflerini karşılaştırın."
+              ? "İlk ilanınızı oluşturun; doğrulanmış taşıyıcılar tekliflerini göndersin."
               : "Farklı bir arama veya durum filtresi deneyin."}
           </p>
         </div>
@@ -2459,6 +2567,11 @@ function LoadListFull({ loads, filters, onFilterChange, onCancel, onCopy, onEdit
               >
                 <ChevronRight size={15} className={expanded === x.id ? "llf-chevron open" : "llf-chevron"} />
               </button>
+              {Number(x.offers || 0) > 0 && onViewOffers && (
+                <button className="llf-action-btn llf-action-btn--offers" title="Teklifleri gör" aria-label={`${x.cargo || x.id} tekliflerini gör`} onClick={() => onViewOffers(x)}>
+                  <Wallet size={14} />
+                </button>
+              )}
               {x.status === "DRAFT" && onEdit && (
                 <button
                   className="llf-action-btn llf-action-btn--edit"
@@ -4018,14 +4131,40 @@ function MonthlyHistory({ role, matches, enableExport = false }) {
     .sort()
     .reverse();
   const [month, setMonth] = useState(months[0] || "all");
-  const visible =
+  const [archiveFilters, setArchiveFilters] = useState({ query: "", from: "", to: "", carrier: "ALL", status: "ALL", currency: "ALL" });
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  useEffect(() => {
+    if (!selectedRecord) return;
+    const close = (event) => event.key === "Escape" && setSelectedRecord(null);
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [selectedRecord]);
+  const monthRecords =
     month === "all"
       ? records
       : records.filter((x) => (x.matchedAt || "").startsWith(month));
-  const total = visible.reduce(
-    (sum, x) => sum + (Number(String(x.amount).replace(/[^0-9]/g, "")) || 0),
-    0,
-  );
+  const recordCurrency = (record) => record.currency || String(record.amount || "").match(/(EUR|GBP|TRY|NOK|USD|€|£|₺|\$)/)?.[1] || "—";
+  const carriers = [...new Set(records.map((record) => record.carrier).filter(Boolean))].sort();
+  const statuses = [...new Set(records.map((record) => record.status).filter(Boolean))].sort();
+  const currencies = [...new Set(records.map(recordCurrency).filter((value) => value !== "—"))].sort();
+  const visible = monthRecords.filter((record) => {
+    if (!enableExport) return true;
+    const date = String(record.matchedAt || "").slice(0, 10);
+    const query = archiveFilters.query.trim().toLocaleLowerCase("tr-TR");
+    return (!archiveFilters.from || date >= archiveFilters.from) &&
+      (!archiveFilters.to || date <= archiveFilters.to) &&
+      (archiveFilters.carrier === "ALL" || record.carrier === archiveFilters.carrier) &&
+      (archiveFilters.status === "ALL" || record.status === archiveFilters.status) &&
+      (archiveFilters.currency === "ALL" || recordCurrency(record) === archiveFilters.currency) &&
+      (!query || [record.id, record.loadId, record.cargo, record.route, record.carrier].some((value) => String(value || "").toLocaleLowerCase("tr-TR").includes(query)));
+  });
+  // Currency-aware totals — never mix EUR + GBP + NOK etc.
+  const currencyTotals = visible.reduce((acc, x) => {
+    const cur = x.currency || recordCurrency(x);
+    const amt = Number(String(x.amount).replace(/[^0-9,.]/g, "").replace(",", ".")) || 0;
+    acc[cur] = (acc[cur] || 0) + amt;
+    return acc;
+  }, {});
 
   async function handleHistoryExport(format) {
     const { headers, rows } = historyExportData(visible, role);
@@ -4072,6 +4211,16 @@ function MonthlyHistory({ role, matches, enableExport = false }) {
           </div>
         }
       />
+      {enableExport && (
+        <div className="history-filters">
+          <label className="history-search"><Search size={14}/><input value={archiveFilters.query} onChange={(event) => setArchiveFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Yük, rota, taşıyıcı veya sevkiyat ara" aria-label="Geçmişte ara" /></label>
+          <label><span>Başlangıç</span><input type="date" value={archiveFilters.from} onChange={(event) => setArchiveFilters((current) => ({ ...current, from: event.target.value }))}/></label>
+          <label><span>Bitiş</span><input type="date" value={archiveFilters.to} onChange={(event) => setArchiveFilters((current) => ({ ...current, to: event.target.value }))}/></label>
+          <label><span>Taşıyıcı</span><select value={archiveFilters.carrier} onChange={(event) => setArchiveFilters((current) => ({ ...current, carrier: event.target.value }))}><option value="ALL">Tümü</option>{carriers.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Durum</span><select value={archiveFilters.status} onChange={(event) => setArchiveFilters((current) => ({ ...current, status: event.target.value }))}><option value="ALL">Tümü</option>{statuses.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Para birimi</span><select value={archiveFilters.currency} onChange={(event) => setArchiveFilters((current) => ({ ...current, currency: event.target.value }))}><option value="ALL">Tümü</option>{currencies.map((value) => <option key={value}>{value}</option>)}</select></label>
+        </div>
+      )}
       <div className="history-summary">
         <article>
           <span>Toplam sefer</span>
@@ -4079,7 +4228,13 @@ function MonthlyHistory({ role, matches, enableExport = false }) {
         </article>
         <article>
           <span>{role === "sofor" ? "Toplam kazanç" : "Taşıma hacmi"}</span>
-          <strong>{total.toLocaleString("tr-TR")} €</strong>
+          {Object.entries(currencyTotals).length ? (
+            Object.entries(currencyTotals).map(([cur, val]) => (
+              <strong key={cur}>{val.toLocaleString("tr-TR")} {cur}</strong>
+            ))
+          ) : (
+            <strong>—</strong>
+          )}
         </article>
         <article>
           <span>Tamamlanma</span>
@@ -4107,7 +4262,7 @@ function MonthlyHistory({ role, matches, enableExport = false }) {
           <article key={x.id}>
             <span>
               <strong>{x.loadId}</strong>
-              <small>{new Date(x.matchedAt).toLocaleDateString("tr-TR")}</small>
+              <small>{x.matchedAt ? new Date(x.matchedAt).toLocaleDateString("tr-TR") : "—"}</small>
             </span>
             <span>
               <strong>{x.route || `${x.from} → ${x.to}`}</strong>
@@ -4119,9 +4274,18 @@ function MonthlyHistory({ role, matches, enableExport = false }) {
             </span>
             <b>{x.amount}</b>
             <em>{x.status}</em>
+            {enableExport && <button className="history-detail-btn" onClick={() => setSelectedRecord(x)} aria-label={`${x.id} taşıma detayını aç`}>Detay <ChevronRight size={13}/></button>}
           </article>
         ))}
       </div>
+      {enableExport && selectedRecord && (
+        <div className="history-detail-backdrop" role="presentation" onMouseDown={() => setSelectedRecord(null)}>
+          <section className="history-detail-modal" role="dialog" aria-modal="true" aria-labelledby="history-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header><div><span>TAŞIMA ARŞİVİ</span><h2 id="history-detail-title">{selectedRecord.id}</h2></div><button onClick={() => setSelectedRecord(null)} aria-label="Detayı kapat"><X/></button></header>
+            <dl><div><dt>Yük</dt><dd>{selectedRecord.cargo || selectedRecord.loadId}</dd></div><div><dt>Sevkiyat</dt><dd>{selectedRecord.id}</dd></div><div><dt>Rota</dt><dd>{selectedRecord.route}</dd></div><div><dt>Taşıyıcı</dt><dd>{selectedRecord.carrier}</dd></div><div><dt>Fiyat</dt><dd>{selectedRecord.amount}</dd></div><div><dt>Para birimi</dt><dd>{recordCurrency(selectedRecord)}</dd></div><div><dt>Tarih</dt><dd>{selectedRecord.matchedAt ? new Date(selectedRecord.matchedAt).toLocaleDateString("tr-TR") : "—"}</dd></div><div><dt>Durum</dt><dd>{selectedRecord.status}</dd></div></dl>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
@@ -4222,7 +4386,7 @@ function DocumentCenter({ loads = [], shipments = [] }) {
       <EmptyState
         icon={<FileText />}
         title="Belge yönetimi henüz etkin değil"
-        text="Belgeler yalnızca güvenli dosya depolama API'si bağlandıktan sonra kullanılabilir. Mevcut backend sözleşmesi: POST /api/v1/loads/{id}/documents"
+        text="Belge yönetimi entegrasyonu tamamlandığında burada sevk irsaliyesi, teslimat belgesi, fatura ve sözleşmelerinizi yöneteceksiniz."
       />
     );
   }
@@ -4498,12 +4662,22 @@ const EMPTY_PAYMENT_FILTERS = {
   query: "",
 };
 
-function PaymentCenter({ loads = [], shipments = [], onNavigate }) {
+function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate }) {
   const [payments, setPayments] = useState(() => getPayments());
   const [filters, setFilters] = useState(EMPTY_PAYMENT_FILTERS);
+  const [sortKey, setSortKey] = useState("newest"); // newest | oldest | amount-asc | amount-desc | due
   const [selected, setSelected] = useState(null);
 
   useEffect(() => subscribePayments(() => setPayments(getPayments())), []);
+
+  // Merge live shipments + demo matches for detail lookup
+  const allShipments = useMemo(
+    () => [
+      ...shipments,
+      ...matches.filter((m) => !shipments.some((s) => s.id === m.id)),
+    ],
+    [shipments, matches],
+  );
 
   const carriers = useMemo(
     () => [...new Set(payments.map((payment) => payment.carrier).filter(Boolean))].sort(),
@@ -4513,10 +4687,17 @@ function PaymentCenter({ loads = [], shipments = [], onNavigate }) {
     () => [...new Set(payments.map((payment) => payment.currency).filter(Boolean))].sort(),
     [payments],
   );
-  const visiblePayments = useMemo(
-    () => filterPayments(payments, filters),
-    [payments, filters],
-  );
+  const visiblePayments = useMemo(() => {
+    const filtered = filterPayments(payments, filters);
+    return [...filtered].sort((a, b) => {
+      if (sortKey === "oldest") return new Date(a.dueDate || 0) - new Date(b.dueDate || 0);
+      if (sortKey === "amount-asc") return Number(a.amount || 0) - Number(b.amount || 0);
+      if (sortKey === "amount-desc") return Number(b.amount || 0) - Number(a.amount || 0);
+      if (sortKey === "due") return new Date(a.dueDate || "9999") - new Date(b.dueDate || "9999");
+      // newest first (default)
+      return new Date(b.dueDate || 0) - new Date(a.dueDate || 0);
+    });
+  }, [payments, filters, sortKey]);
   const summary = useMemo(() => paymentSummary(payments), [payments]);
 
   const summaryCards = [
@@ -4541,7 +4722,7 @@ function PaymentCenter({ loads = [], shipments = [], onNavigate }) {
     ? loads.find((load) => load.id === selected.loadId)
     : null;
   const selectedShipment = selected
-    ? shipments.find((shipment) => shipment.id === selected.shipmentId)
+    ? allShipments.find((s) => s.id === selected.shipmentId)
     : null;
 
   return (
@@ -4577,11 +4758,23 @@ function PaymentCenter({ loads = [], shipments = [], onNavigate }) {
             <h2>Taşıma finans hareketleri</h2>
             <p>{visiblePayments.length} kayıt gösteriliyor</p>
           </div>
-          <ExportButton
-            formats={["xlsx", "pdf"]}
-            onExport={handlePaymentExport}
-            disabled={visiblePayments.length === 0}
-          />
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <label className="pay-sort-label">
+              <span>Sırala</span>
+              <select value={sortKey} onChange={(e) => setSortKey(e.target.value)} aria-label="Ödemeleri sırala">
+                <option value="newest">Vadeye göre (yakın önce)</option>
+                <option value="oldest">Vadeye göre (uzak önce)</option>
+                <option value="amount-desc">Tutara göre (yüksek)</option>
+                <option value="amount-asc">Tutara göre (düşük)</option>
+                <option value="due">En yakın vade</option>
+              </select>
+            </label>
+            <ExportButton
+              formats={["xlsx", "pdf"]}
+              onExport={handlePaymentExport}
+              disabled={visiblePayments.length === 0}
+            />
+          </div>
         </div>
 
         <div className="pay-filters">

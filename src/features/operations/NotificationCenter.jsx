@@ -2,21 +2,26 @@ import { useEffect, useState } from "react";
 import { isApiConfigured, isDemoMode } from "../../api/apiClient";
 import { listNotifications, markNotificationRead } from "../../api/operationsClient";
 
-export function NotificationCenter({ onNavigate, demo = !isApiConfigured() || isDemoMode() }) {
-  const demoItems = [
-    { title: "Yeni teklif geldi",  detail: "LW-3012 için ABC Logistics teklif verdi", target: "Teklifler",          time: "4 dk" },
-    { title: "Yeni mesaj geldi",   detail: "ABC Logistics size bir mesaj gönderdi",   target: "Mesajlar",           time: "18 dk" },
-    { title: "Şoför atandı",       detail: "SHP-2847 · Ahmet Yılmaz",                target: "Aktif Sevkiyatlar",  time: "1 sa" },
-  ];
+const LEGACY_DEMO_ITEMS = [
+  { id: "legacy-offer", title: "Yeni teklif geldi", detail: "Yeni bir teklif değerlendirme bekliyor", target: "Teklifler", time: "4 dk" },
+  { id: "legacy-message", title: "Yeni mesaj geldi", detail: "Yeni bir operasyon mesajınız var", target: "Mesajlar", time: "18 dk" },
+];
 
+export function NotificationCenter({ onNavigate, items: suppliedItems = null, onUnreadChange, onRead, demo = !isApiConfigured() || isDemoMode() }) {
+  const demoItems = suppliedItems ?? LEGACY_DEMO_ITEMS;
   const [state, setState] = useState({
-    items: demo ? demoItems : [],
+    items: [],
     loading: !demo,
     error: "",
   });
+  const [readDemoIds, setReadDemoIds] = useState([]);
+  const visibleItems = demo
+    ? demoItems.map((item) => readDemoIds.includes(item.id) ? { ...item, readAt: item.readAt || "read" } : item)
+    : state.items;
+  const unread = visibleItems.filter((item) => !item.readAt).length;
 
   useEffect(() => {
-    if (demo) return;
+    if (demo) return undefined;
     let active = true;
     listNotifications()
       .then((result) => active && setState({ items: result.items, loading: false, error: "" }))
@@ -24,18 +29,24 @@ export function NotificationCenter({ onNavigate, demo = !isApiConfigured() || is
     return () => { active = false; };
   }, [demo]);
 
+  useEffect(() => {
+    onUnreadChange?.(unread);
+  }, [unread, onUnreadChange]);
+
   async function open(item) {
     if (!demo && item.id && !item.readAt) {
       try { await markNotificationRead(item.id); } catch { return; }
     }
+    if (demo) {
+      setReadDemoIds((current) => current.includes(item.id) ? current : [...current, item.id]);
+    }
+    onRead?.(item);
     const payload = item.payloadJson || {};
     onNavigate(
       item.target ||
       ({ OFFER: "Teklifler", SHIPMENT: "Aktif Sevkiyatlar", MESSAGE: "Mesajlar" }[payload.entityType] || "Özet")
     );
   }
-
-  const unread = state.items.filter((i) => !i.readAt).length;
 
   return (
     <div className="notification-panel" role="dialog" aria-label="Bildirimler" aria-modal="true">
@@ -49,7 +60,7 @@ export function NotificationCenter({ onNavigate, demo = !isApiConfigured() || is
       {state.loading && <p className="panel-state">Bildirimler yükleniyor…</p>}
       {state.error  && <p className="panel-state error">{state.error}</p>}
 
-      {state.items.map((item) => (
+      {visibleItems.map((item) => (
         <button key={item.id || item.title} onClick={() => open(item)}>
           <i aria-hidden="true" />
           <span>
@@ -60,7 +71,7 @@ export function NotificationCenter({ onNavigate, demo = !isApiConfigured() || is
         </button>
       ))}
 
-      {!state.loading && !state.error && !state.items.length && (
+      {!state.loading && !state.error && !visibleItems.length && (
         <p className="panel-state">Yeni bildiriminiz yok.</p>
       )}
 

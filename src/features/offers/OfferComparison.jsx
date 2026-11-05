@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle, Check, ChevronDown, ChevronUp, MessageCircle, ShieldCheck, Truck, X, Zap,
 } from "lucide-react";
-import { acceptLiveOffer, counterLiveOffer, loadOfferRounds, rejectLiveOffer } from "../../api/marketplaceClient";
-import { liveMarketplaceEnabled } from "../../api/marketplaceClient";
+import { acceptLiveOffer, counterLiveOffer, liveMarketplaceEnabled, loadOfferRounds, rejectLiveOffer } from "../../api/marketplaceClient";
 import OfferTimeline from "./OfferTimeline";
 import ExportButton from "../../components/ExportButton";
 import { exportCSV, exportXLSX, exportPDF, offersExportData } from "../../services/exportService";
@@ -65,7 +64,9 @@ export default function OfferComparison({ offers = [], targetBudget, onChange, o
 
   const sortedOffers = [...offers].sort((a, b) => {
     if (sortBy === "price") return Number(a.amountValue ?? Number.MAX_VALUE) - Number(b.amountValue ?? Number.MAX_VALUE);
+    if (sortBy === "price-desc") return Number(b.amountValue ?? -1) - Number(a.amountValue ?? -1);
     if (sortBy === "availability") return new Date(a.availableAt || a.eta || 8640000000000000) - new Date(b.availableAt || b.eta || 8640000000000000);
+    if (sortBy === "transit") return Number(a.transitDays ?? a.durationHours ?? Number.MAX_VALUE) - Number(b.transitDays ?? b.durationHours ?? Number.MAX_VALUE);
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
   const comparing = sortedOffers.filter((o) => selected.includes(o.id));
@@ -108,7 +109,7 @@ export default function OfferComparison({ offers = [], targetBudget, onChange, o
       if (liveMarketplaceEnabled()) {
         await counterLiveOffer(offer.id, { amount: counterAmount, message: counterNote, expectedOfferVersion: offer.version });
       }
-      setNotice(`Karşı teklif gönderildi: ${Number(counterAmount).toLocaleString("tr-TR")} €`);
+      setNotice(`Karşı teklif gönderildi: ${Number(counterAmount).toLocaleString("tr-TR")} ${offer.currency || "TRY"}`);
       setCounterTarget(null);
       setCounterAmount("");
       setCounterNote("");
@@ -131,7 +132,7 @@ export default function OfferComparison({ offers = [], targetBudget, onChange, o
       <div className="oc-empty">
         <Truck size={32} aria-hidden="true" />
         <h3>Henüz teklif gelmedi</h3>
-        <p>Yük ilanınız aktif. Uygun taşıyıcıların teklifleri burada görünecek.</p>
+        <p>Yük ilanınız yayınlandıktan sonra taşıyıcı teklifleri burada görünecek. İlk teklifler genellikle birkaç saat içinde gelir.</p>
       </div>
     );
   }
@@ -153,7 +154,9 @@ export default function OfferComparison({ offers = [], targetBudget, onChange, o
               <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Teklifleri sırala">
                 <option value="newest">En yeni</option>
                 <option value="price">En düşük fiyat</option>
+                <option value="price-desc">En yüksek fiyat</option>
                 <option value="availability">En erken müsaitlik</option>
+                <option value="transit">En kısa taşıma süresi</option>
               </select>
             </label>
             <ExportButton
