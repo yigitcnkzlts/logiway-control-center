@@ -37,7 +37,7 @@ public class LoadService {
         if (request.readyTo().isBefore(request.readyFrom())) {
             throw DomainException.business("ready_to must be after ready_from");
         }
-        requireCompanyMember(request.shipperCompanyId(), userId);
+        requireCompanyOperator(request.shipperCompanyId(), userId);
 
         LoadEntity load = new LoadEntity();
         load.setShipperCompanyId(request.shipperCompanyId());
@@ -50,14 +50,15 @@ public class LoadService {
         return toResponse(saved);
     }
 
-    private void requireCompanyMember(UUID companyId, UUID userId) {
+    private void requireCompanyOperator(UUID companyId, UUID userId) {
         Number membership = (Number) entityManager.createNativeQuery(
-                "SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2")
+                "SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2 "
+                        + "AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')")
                 .setParameter(1, companyId)
                 .setParameter(2, userId)
                 .getSingleResult();
         if (membership.longValue() == 0) {
-            throw DomainException.forbidden("Only company members can create loads");
+            throw DomainException.forbidden("Only company operations members can manage loads");
         }
     }
 
@@ -71,18 +72,25 @@ public class LoadService {
     private LoadEntity requireCompanyLoad(UUID loadId, UUID userId) {
         LoadEntity load = loadRepository.findById(loadId)
                 .orElseThrow(() -> DomainException.notFound("Load not found"));
-        if (!load.getCreatedByUserId().equals(userId) && !isCompanyMember(load.getShipperCompanyId(), userId)) {
+        if (!isCompanyOperator(load.getShipperCompanyId(), userId)) {
             throw DomainException.forbidden("Load company access denied");
         }
         return load;
+    }
+
+    private boolean isCompanyOperator(UUID companyId, UUID userId) {
+        Number membership = (Number) entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2 "
+                        + "AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')")
+                .setParameter(1, companyId).setParameter(2, userId).getSingleResult();
+        return membership.longValue() > 0;
     }
 
     @Transactional(readOnly = true)
     public LoadResponse getById(UUID loadId, UUID userId) {
         LoadEntity load = loadRepository.findById(loadId)
                 .orElseThrow(() -> DomainException.notFound("Load not found"));
-        if (load.getStatus() != LoadStatus.PUBLISHED && !load.getCreatedByUserId().equals(userId)
-                && !isCompanyMember(load.getShipperCompanyId(), userId)) {
+        if (load.getStatus() != LoadStatus.PUBLISHED && !isCompanyMember(load.getShipperCompanyId(), userId)) {
             throw DomainException.forbidden("Access denied");
         }
         return toResponse(load);

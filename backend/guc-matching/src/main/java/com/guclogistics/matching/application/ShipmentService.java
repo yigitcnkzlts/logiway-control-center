@@ -110,7 +110,8 @@ public class ShipmentService {
                     WHERE cm.company_id = ?3 AND cm.user_id = ?2
                       AND cm.member_role IN ('OWNER','ADMIN')) THEN 'CARRIER_MANAGER'
                   WHEN ?3 IS NOT NULL AND EXISTS (SELECT 1 FROM company_members cm
-                    WHERE cm.company_id = ?3 AND cm.user_id = ?2) THEN 'CARRIER'
+                    WHERE cm.company_id = ?3 AND cm.user_id = ?2
+                      AND cm.member_role IN ('OPERATIONS','MEMBER')) THEN 'CARRIER'
                   WHEN EXISTS (SELECT 1 FROM company_members cm
                     WHERE cm.company_id = ?4 AND cm.user_id = ?2
                       AND cm.member_role IN ('OWNER','ADMIN')) THEN 'SHIPPER_MANAGER'

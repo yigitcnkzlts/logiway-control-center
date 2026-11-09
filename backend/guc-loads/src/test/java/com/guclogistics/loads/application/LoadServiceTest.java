@@ -80,7 +80,7 @@ class LoadServiceTest {
 
         assertThatThrownBy(() -> loadService.create(UUID.randomUUID(), createRequest(UUID.randomUUID())))
                 .isInstanceOf(DomainException.class)
-                .hasMessageContaining("Only company members");
+                .hasMessageContaining("operations members");
     }
 
     @Test
@@ -124,6 +124,7 @@ class LoadServiceTest {
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
         when(loadRepository.save(load)).thenReturn(load);
+        mockOperator(1L);
 
         var response = loadService.update(loadId, userId, new UpdateLoadRequest(
                 "Updated", null, "de", null, null, null, null, null, null, null, null, null,
@@ -141,6 +142,7 @@ class LoadServiceTest {
         load.setStatus(LoadStatus.PUBLISHED);
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
+        mockOperator(1L);
 
         assertThatThrownBy(() -> loadService.update(loadId, userId, new UpdateLoadRequest(
                 "Updated", null, null, null, null, null, null, null, null, null, null, null,
@@ -183,6 +185,7 @@ class LoadServiceTest {
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
         when(loadRepository.save(load)).thenReturn(load);
+        mockOperator(1L);
         mockCompanyStatus(load.getShipperCompanyId(), "VERIFIED");
 
         var response = loadService.publish(loadId, userId);
@@ -199,6 +202,7 @@ class LoadServiceTest {
         LoadEntity load = draftLoad(loadId, userId);
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
+        mockOperator(1L);
         mockCompanyStatus(load.getShipperCompanyId(), "PENDING");
 
         assertThatThrownBy(() -> loadService.publish(loadId, userId))
@@ -215,6 +219,7 @@ class LoadServiceTest {
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
         when(loadRepository.save(load)).thenReturn(load);
+        mockOperator(1L);
 
         var response = loadService.cancel(loadId, userId);
 
@@ -230,6 +235,7 @@ class LoadServiceTest {
         load.setStatus(LoadStatus.MATCHED);
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
+        mockOperator(1L);
 
         assertThatThrownBy(() -> loadService.cancel(loadId, userId))
                 .isInstanceOf(DomainException.class)
@@ -243,8 +249,9 @@ class LoadServiceTest {
         LoadEntity load = draftLoad(loadId, userId);
 
         when(loadRepository.findById(loadId)).thenReturn(Optional.of(load));
+        mockOperator(1L);
         Query query = mock(Query.class);
-        when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        when(entityManager.createNativeQuery("SELECT status FROM companies WHERE id = ?1")).thenReturn(query);
         when(query.setParameter(1, load.getShipperCompanyId())).thenReturn(query);
         when(query.getSingleResult()).thenThrow(new NoResultException());
 
@@ -295,6 +302,16 @@ class LoadServiceTest {
     private void mockMembership(long count) {
         Query query = mock(Query.class);
         when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+        when(query.setParameter(anyInt(), any())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(count);
+    }
+
+    private void mockOperator(long count) {
+        Query query = mock(Query.class);
+        when(entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2 "
+                        + "AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')"))
+                .thenReturn(query);
         when(query.setParameter(anyInt(), any())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(count);
     }

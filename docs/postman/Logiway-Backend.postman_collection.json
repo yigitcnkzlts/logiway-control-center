@@ -38,7 +38,15 @@
         { "name": "Create Company", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"type\":\"SHIPPER\",\"legalName\":\"Postman Test Shipper\",\"tradeName\":\"Postman\",\"vatNumber\":\"TEST-ONLY\",\"country\":\"TR\"}" }, "url": "{{baseUrl}}/api/v1/companies" } },
         { "name": "Get Company", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}" } },
         { "name": "Company Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/dashboard" } },
-        { "name": "Update Company", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"tradeName\":\"Postman Updated\"}" }, "url": "{{baseUrl}}/api/v1/companies/{{companyId}}" } }
+        { "name": "Update Company", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"tradeName\":\"Postman Updated\"}" }, "url": "{{baseUrl}}/api/v1/companies/{{companyId}}" } },
+        { "name": "List Company Members", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/members" } },
+        { "name": "List Company Invitations", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/invitations" } },
+        { "name": "List My Invitations", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/invitations/mine" } },
+        { "name": "Invite Company Member", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"{{inviteEmail}}\",\"role\":\"OPERATIONS\"}" }, "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/invitations" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) pm.environment.set('invitationId', pm.response.json().id);"] } }] },
+        { "name": "Accept My Invitation", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/companies/invitations/{{invitationId}}/accept" } },
+        { "name": "Update Member Role", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"role\":\"FINANCE\"}" }, "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/members/{{memberUserId}}/role" } },
+        { "name": "Remove Company Member", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/members/{{memberUserId}}" } },
+        { "name": "Revoke Company Invitation", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/invitations/{{invitationId}}" } }
       ]
     },
     {

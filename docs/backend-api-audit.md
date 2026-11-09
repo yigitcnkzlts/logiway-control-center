@@ -9,7 +9,7 @@ Hariç tutulan: frontend ve `guc-backend-worktree/`
 ## Doğrulama özeti
 
 - `mvn test`: **BUILD SUCCESS**.
-- Final koşu: **200 test**, 196 başarılı, 4 atlandı. Üç yeni shipment rol/yetki regression testi dahildir.
+- Final koşu: **207 test**, 203 başarılı, 4 atlandı. Şirket üyeliği/davet, rol yetkisi ve shipment regression testleri dahildir.
 - Atlanan 4 test `AuthFlowIntegrationTest` içindedir; `-Dguc.integration=true` ve çalışan Docker/PostgreSQL/Redis gerektirir. Bu makinede Docker daemon çalışmadığından gerçek kayıt → giriş → refresh → PostgreSQL/Redis E2E zinciri çalıştırılmadı.
 - Canlı `GET https://logiway-api.onrender.com/actuator/health`: **UP** (liveness/readiness grupları).
 - Render uygulama loglarına bu ortamdan erişim yoktur. Bu nedenle güncel production 500 hatasının Redis veya PostgreSQL kaynaklı olduğu iddia edilmemiştir.
@@ -35,7 +35,12 @@ Hariç tutulan: frontend ve `guc-backend-worktree/`
 | `/api/v1/companies/mine` | GET | Companies | Evet | Birim testli | — |
 | `/api/v1/companies/{id}` | GET/PATCH | Companies | Evet | Üyelik/yönetici kontrolü testli | — |
 | `/api/v1/companies/{id}/dashboard` | GET | Companies | Evet | Birim testli | Gerçek DB performans testi |
-| Şirket üyesi liste/davet/rol/pasifleştirme | — | Companies | **Hayır** | — | Company Members API tasarla ve audit trail ekle |
+| `/api/v1/companies/{id}/members` | GET | Companies | Evet | Üyelik kontrolü birim testli | Production tenant negatif smoke testi |
+| `/api/v1/companies/{id}/invitations` | GET/POST | Companies | Evet | OWNER/ADMIN kuralları birim testli | E-posta bildirim teslimatı |
+| `/api/v1/companies/invitations/mine` | GET | Companies | Evet | JWT e-posta eşleşmesi kodda var | E2E davet kabul testi |
+| `/api/v1/companies/invitations/{invitationId}/accept` | POST | Companies | Evet | E-posta bağlama/son kullanma birim testli | Eşzamanlı kabul DB testi |
+| `/api/v1/companies/{id}/members/{userId}/role` | PATCH | Companies | Evet | OWNER koruması birim testli | Audit event geçmişi |
+| `/api/v1/companies/{id}/members/{userId}` | DELETE | Companies | Evet | OWNER koruması birim testli | Audit event geçmişi |
 | `/api/v1/loads` | POST | Loads | Evet | Birim testli | E2E company membership testi |
 | `/api/v1/loads?mine=true` | GET | Loads | Evet | Repository/service testli | Büyük veri sayfalama testi |
 | `/api/v1/loads/{id}` | GET/PATCH | Loads | Evet | Sahiplik davranışı testli | — |
@@ -91,7 +96,7 @@ Bloker/iyileştirme:
 2. Eksik foreign key'ler V18 additive migration ile `NOT VALID` olarak eklendi; production orphan audit sonrasında validation tamamlanmalıdır.
 3. Payment hold gerçek ödeme değildir. Idempotency key, provider webhook doğrulaması, mutabakat ve iade/iptal modeli olmadan “ödendi” semantiği kullanılmamalı.
 4. Operasyon belgeleri için authorization, malware scan, object storage ve süreli indirme URL'si henüz yok.
-5. Company member yönetimi olmadığı için frontend ekip ekranı canlı API'ye bağlanamaz.
+5. Company member API'si artık mevcut; frontend ekip ekranının canlı moda bağlanması ve rol değişiklikleri için audit event geçmişi eklenmesi gerekiyor.
 
 ## Postman dosyaları
 
@@ -104,10 +109,10 @@ Environment gizli değer içermez. `accessToken`, `refreshToken`, `email` ve `pa
 
 1. Docker açık ortamda mevcut `AuthFlowIntegrationTest` ve Postman smoke akışını çalıştır; auth/Redis/PostgreSQL gerçek exception kanıtını al.
 2. V18 constraint'leri için production orphan audit ve ardından additive `VALIDATE CONSTRAINT` migration; tenant negatif entegrasyon testleri.
-3. Company Members liste/davet/rol/pasifleştirme API'si.
-4. Shipment role-based transition matrisi ve concurrency testleri.
+3. Company Members API'sini frontend canlı ekip ekranına bağla; davet bildirimi ve audit event geçmişi ekle.
+4. Shipment role-based transition matrisi için production smoke ve concurrency testleri.
 5. Operasyon belgeleri API'si.
 6. Ödeme ledger'ını provider/idempotency/webhook modeliyle tamamla.
 7. Mesajlarda sayfalama, okundu bilgisi ve güvenli ek dosya desteği.
 
-Bu çalışma toplu backend yeniden yazımı içermez; audit bulgularından yalnızca shipment geçiş yetkisi ve additive veri bütünlüğü constraint'leri güvenli remediation olarak uygulanmıştır.
+Bu çalışma toplu backend yeniden yazımı içermez; shipment geçiş yetkisi, additive veri bütünlüğü constraint'leri ve güvenli şirket üyeliği/davet API'si audit bulgularına yönelik sınırlı remediation olarak uygulanmıştır.

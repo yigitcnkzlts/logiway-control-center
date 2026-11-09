@@ -59,6 +59,7 @@ public class VehicleService {
     @Transactional
     public VehicleResponse update(UUID vehicleId, UUID userId, UpdateVehicleRequest request) {
         VehicleEntity vehicle = requireOwned(vehicleId, userId);
+        if (vehicle.getOwnerType() == OwnerType.COMPANY) requireCompanyOperator(vehicle.getOwnerId(), userId);
 
         if (request.plate() != null) {
             vehicle.setPlate(request.plate());
@@ -85,6 +86,7 @@ public class VehicleService {
     @Transactional
     public void delete(UUID vehicleId, UUID userId) {
         VehicleEntity vehicle = requireOwned(vehicleId, userId);
+        if (vehicle.getOwnerType() == OwnerType.COMPANY) requireCompanyOperator(vehicle.getOwnerId(), userId);
         repository.delete(vehicle);
     }
 
@@ -94,8 +96,13 @@ public class VehicleService {
     }
 
     private void requireCompanyMember(UUID companyId, UUID userId) {
+        requireCompanyOperator(companyId, userId);
+    }
+
+    private void requireCompanyOperator(UUID companyId, UUID userId) {
         Number count = (Number) entityManager.createNativeQuery(
-                "SELECT COUNT(*) FROM company_members WHERE company_id=?1 AND user_id=?2")
+                "SELECT COUNT(*) FROM company_members WHERE company_id=?1 AND user_id=?2 "
+                        + "AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')")
                 .setParameter(1, companyId).setParameter(2, userId).getSingleResult();
         if (count.longValue() == 0L) throw DomainException.forbidden("Company vehicle access denied");
     }

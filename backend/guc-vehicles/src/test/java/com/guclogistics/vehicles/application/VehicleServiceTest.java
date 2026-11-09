@@ -106,6 +106,7 @@ class VehicleServiceTest {
 
         when(repository.findAccessibleById(vehicleId, userId)).thenReturn(Optional.of(vehicle));
         when(repository.save(vehicle)).thenReturn(vehicle);
+        allowCompanyOperation();
 
         var response = vehicleService.update(vehicleId, userId,
                 new UpdateVehicleRequest("99XYZ999", null, "VAN", null, null, VehicleStatus.INACTIVE));
@@ -122,10 +123,18 @@ class VehicleServiceTest {
         VehicleEntity vehicle = vehicle(userId);
 
         when(repository.findAccessibleById(vehicleId, userId)).thenReturn(Optional.of(vehicle));
+        allowCompanyOperation();
 
         vehicleService.delete(vehicleId, userId);
 
         verify(repository).delete(vehicle);
+    }
+
+    private void allowCompanyOperation() {
+        Query query = org.mockito.Mockito.mock(Query.class);
+        when(entityManager.createNativeQuery(any())).thenReturn(query);
+        when(query.setParameter(org.mockito.ArgumentMatchers.anyInt(), any())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1L);
     }
 
     private static VehicleEntity vehicle(UUID userId) {

@@ -131,9 +131,9 @@ public class OfferService {
         if (offer.getVersion() != request.expectedOfferVersion()) throw DomainException.conflict("Offer changed; reload before countering");
         LoadSnapshot load = requireLoad(offer.getLoadId());
         String side;
-        if (load.createdByUserId().equals(userId) || isCompanyMember(load.shipperCompanyId(), userId)) side = "SHIPPER";
+        if (isCompanyOperator(load.shipperCompanyId(), userId)) side = "SHIPPER";
         else if (offer.getCreatedByUserId().equals(userId)
-                || (offer.getOffererType() == OffererType.COMPANY && isCompanyMember(offer.getOffererId(), userId))) side = "CARRIER";
+                || (offer.getOffererType() == OffererType.COMPANY && isCompanyOperator(offer.getOffererId(), userId))) side = "CARRIER";
         else throw DomainException.forbidden("Offer access denied");
         Object[] latest = latestRoundForUpdate(offerId);
         if (side.equals(latest[1].toString())) throw DomainException.business("The other party must respond before another counter offer");
@@ -239,8 +239,7 @@ public class OfferService {
         var loadIds = (java.util.List<UUID>) entityManager.createNativeQuery("""
                 SELECT l.id /* shipper accessible load ids */
                 FROM loads l
-                WHERE l.created_by_user_id = ?1
-                   OR EXISTS (
+                WHERE EXISTS (
                         SELECT 1 FROM company_members cm
                         WHERE cm.user_id = ?1 AND cm.company_id = l.shipper_company_id
                    )
@@ -259,7 +258,6 @@ public class OfferService {
     }
 
     private void requireLoadMember(LoadSnapshot load, UUID userId) {
-        if (load.createdByUserId().equals(userId)) return;
         Number membership = (Number) entityManager.createNativeQuery("""
                         SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2
                         """).setParameter(1, load.shipperCompanyId()).setParameter(2, userId).getSingleResult();
@@ -267,10 +265,10 @@ public class OfferService {
     }
 
     private void requireLoadManager(LoadSnapshot load, UUID userId) {
-        if (load.createdByUserId().equals(userId)) return;
         Number membership = (Number) entityManager.createNativeQuery("""
                         SELECT COUNT(*) FROM company_members
-                        WHERE company_id = ?1 AND user_id = ?2 AND member_role IN ('OWNER','ADMIN')
+                        WHERE company_id = ?1 AND user_id = ?2
+                          AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')
                         """)
                 .setParameter(1, load.shipperCompanyId())
                 .setParameter(2, userId)
@@ -296,6 +294,7 @@ public class OfferService {
         }
         Number membership = (Number) entityManager.createNativeQuery("""
                         SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2
+                          AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')
                         """)
                 .setParameter(1, request.offererId())
                 .setParameter(2, userId)
@@ -343,7 +342,7 @@ public class OfferService {
         }
         boolean vehicleOwned = "USER".equals(vehicle[1].toString())
                 ? userId.equals(vehicle[2])
-                : isCompanyMember((UUID) vehicle[2], userId);
+                : isCompanyOperator((UUID) vehicle[2], userId);
         if (!vehicleOwned || (request.offererType() == OffererType.COMPANY && !offererId.equals(vehicle[2]))) {
             throw DomainException.forbidden("Vehicle does not belong to the offering carrier");
         }
@@ -362,7 +361,7 @@ public class OfferService {
         }
         UUID driverCompanyId = (UUID) driver[2];
         boolean driverOwned = userId.equals(driver[1])
-                || (driverCompanyId != null && isCompanyMember(driverCompanyId, userId));
+                || (driverCompanyId != null && isCompanyOperator(driverCompanyId, userId));
         if (!driverOwned || (request.offererType() == OffererType.COMPANY && !offererId.equals(driverCompanyId))) {
             throw DomainException.forbidden("Driver does not belong to the offering carrier");
         }
@@ -372,9 +371,10 @@ public class OfferService {
                 vehicle[4].toString(), email.substring(0, email.indexOf('@')), phone);
     }
 
-    private boolean isCompanyMember(UUID companyId, UUID userId) {
+    private boolean isCompanyOperator(UUID companyId, UUID userId) {
         Number count = (Number) entityManager.createNativeQuery("""
                 SELECT COUNT(*) FROM company_members WHERE company_id = ?1 AND user_id = ?2
+                  AND member_role IN ('OWNER','ADMIN','OPERATIONS','MEMBER')
                 """).setParameter(1, companyId).setParameter(2, userId).getSingleResult();
         return count.longValue() > 0L;
     }

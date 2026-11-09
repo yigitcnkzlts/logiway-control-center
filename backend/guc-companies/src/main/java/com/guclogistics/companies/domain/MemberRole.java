@@ -3,5 +3,8 @@ package com.guclogistics.companies.domain;
 public enum MemberRole {
     OWNER,
     ADMIN,
-    MEMBER
+    MEMBER,
+    OPERATIONS,
+    FINANCE,
+    VIEWER
 }
