@@ -2223,9 +2223,7 @@ export function ShipperPortal() {
           />
         ))}
       {active === "Firma ve Ekip" && (
-        liveMarketplaceEnabled() ? (
-          <EmptyState icon={<Users />} title="Firma ve ekip entegrasyonu hazırlanıyor" text="Firma profili ve ekip yetkileri, güvenli üyelik API'si tamamlandığında burada yönetilecek." />
-        ) : <ShipperCompanyTeam />
+        <ShipperCompanyTeam live={liveMarketplaceEnabled()} />
       )}
       {modal && (
         <LoadModal
