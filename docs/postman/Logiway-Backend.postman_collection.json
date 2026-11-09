@@ -1,0 +1,101 @@
+{
+  "info": {
+    "_postman_id": "b4c1539f-b93d-4f11-a7de-logiwayaudit01",
+    "name": "Logiway Backend API",
+    "description": "Mevcut Spring Boot endpoint'lerinden üretilmiştir. Token veya kişisel veri içermez. Önce environment seçin, Login isteğini çalıştırın.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register Shipper",
+          "request": {
+            "auth": { "type": "noauth" }, "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"+905551112233\",\n  \"role\": \"SHIPPER\",\n  \"companyName\": \"Postman Test Shipper\",\n  \"companyCountry\": \"TR\",\n  \"deviceFingerprint\": \"postman-device\",\n  \"platform\": \"WEB\",\n  \"deviceName\": \"Postman\",\n  \"locale\": \"tr\",\n  \"timezone\": \"Europe/Istanbul\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) { const r = pm.response.json(); pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); pm.environment.set('userId', r.userId); }"] } }]
+        },
+        {
+          "name": "Login", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"deviceFingerprint\": \"postman-device\",\n  \"platform\": \"WEB\",\n  \"deviceName\": \"Postman\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (!r.mfaRequired) { pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); pm.environment.set('userId', r.userId); } }"] } }]
+        },
+        { "name": "Refresh Token", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refreshToken}}\"}" }, "url": "{{baseUrl}}/api/v1/auth/refresh" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); }"] } }] },
+        { "name": "Current Principal", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/me" } },
+        { "name": "Current User Profile", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/users/me" } },
+        { "name": "Active Sessions", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sessions" } },
+        { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refreshToken}}\"}" }, "url": "{{baseUrl}}/api/v1/auth/logout" } }
+      ]
+    },
+    {
+      "name": "Companies",
+      "item": [
+        { "name": "List My Companies", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/mine" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (r.length) pm.environment.set('companyId', r[0].id); }"] } }] },
+        { "name": "Create Company", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"type\":\"SHIPPER\",\"legalName\":\"Postman Test Shipper\",\"tradeName\":\"Postman\",\"vatNumber\":\"TEST-ONLY\",\"country\":\"TR\"}" }, "url": "{{baseUrl}}/api/v1/companies" } },
+        { "name": "Get Company", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}" } },
+        { "name": "Company Dashboard", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/companies/{{companyId}}/dashboard" } },
+        { "name": "Update Company", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"tradeName\":\"Postman Updated\"}" }, "url": "{{baseUrl}}/api/v1/companies/{{companyId}}" } }
+      ]
+    },
+    {
+      "name": "Loads",
+      "item": [
+        { "name": "Create Draft Load", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"shipperCompanyId\": \"{{companyId}}\",\n  \"title\": \"Postman test yükü\",\n  \"description\": \"Yalnızca local/test ortamı için\",\n  \"pickupCountry\": \"TR\",\n  \"pickupCity\": \"İstanbul\",\n  \"dropoffCountry\": \"DE\",\n  \"dropoffCity\": \"Berlin\",\n  \"readyFrom\": \"2026-12-01T08:00:00Z\",\n  \"readyTo\": \"2026-12-02T08:00:00Z\",\n  \"weightKg\": 12000,\n  \"vehicleRequirements\": \"Tenteli\",\n  \"currency\": \"EUR\",\n  \"expectedPrice\": 2400\n}" }, "url": "{{baseUrl}}/api/v1/loads" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) pm.environment.set('loadId', pm.response.json().id);"] } }] },
+        { "name": "List My Loads", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/loads?mine=true&page=0&size=20" } },
+        { "name": "List Visible Loads", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/loads?page=0&size=20" } },
+        { "name": "Get Load", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/loads/{{loadId}}" } },
+        { "name": "Publish Load", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/loads/{{loadId}}/publish" } },
+        { "name": "Cancel Load", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/loads/{{loadId}}/cancel" } }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        { "name": "Submit Offer", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"offererType\":\"COMPANY\",\"offererId\":\"{{carrierCompanyId}}\",\"amount\":2200,\"currency\":\"EUR\",\"message\":\"Postman test teklifi\",\"validUntil\":\"2026-12-05T12:00:00Z\",\"vehicleId\":\"{{vehicleId}}\",\"driverProfileId\":\"{{driverProfileId}}\",\"estimatedTransitHours\":36}" }, "url": "{{baseUrl}}/api/v1/loads/{{loadId}}/offers" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) pm.environment.set('offerId', pm.response.json().id);"] } }] },
+        { "name": "Incoming Offers", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/offers/incoming" } },
+        { "name": "Offers For Load", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/loads/{{loadId}}/offers" } },
+        { "name": "My Submitted Offers", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/offers/mine" } },
+        { "name": "Offer Rounds", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/offers/{{offerId}}/rounds" } },
+        { "name": "Counter Offer", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"amount\":2300,\"message\":\"Karşı teklif\",\"expectedOfferVersion\":0}" }, "url": "{{baseUrl}}/api/v1/offers/{{offerId}}/counter" } },
+        { "name": "Accept Offer", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/offers/{{offerId}}/accept" } },
+        { "name": "Reject Offer", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/offers/{{offerId}}/reject" } },
+        { "name": "Withdraw Offer", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/offers/{{offerId}}/withdraw" } }
+      ]
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        { "name": "List My Shipments", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/shipments" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (r.length) { pm.environment.set('shipmentId', r[0].id); pm.environment.set('matchId', r[0].matchId); } }"] } }] },
+        { "name": "List My Matches", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matches" } },
+        { "name": "Match Detail", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matches/{{matchId}}" } },
+        { "name": "Update Shipment Status", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"PICKED_UP\"}" }, "url": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}/status" } }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        { "name": "List Match Messages", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matches/{{matchId}}/messages" } },
+        { "name": "Send Match Message", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"body\":\"Postman test mesajı\"}" }, "url": "{{baseUrl}}/api/v1/matches/{{matchId}}/messages" } }
+      ]
+    },
+    {
+      "name": "Documents",
+      "description": "Operasyon/sevkiyat belgesi API'si yoktur. Bunlar yalnızca doğrulama başvurusu belgeleridir.",
+      "item": [
+        { "name": "List My Verification Applications", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/verification/applications/mine" } },
+        { "name": "Upload Verification Document", "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [{ "key": "type", "value": "COMPANY_REGISTRATION", "type": "text" }, { "key": "file", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/api/v1/verification/applications/{{verificationApplicationId}}/documents" } }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        { "name": "My Payment Ledger", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/ledger" } },
+        { "name": "Create Payment Hold", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"amount\":2200,\"currency\":\"EUR\",\"providerReference\":\"test-only\"}" }, "url": "{{baseUrl}}/api/v1/payments/matches/{{matchId}}/hold" } }
+      ]
+    }
+  ]
+}

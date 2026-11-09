@@ -49,8 +49,9 @@ public class ShipmentService {
     public ShipmentResponse transition(UUID shipmentId, UUID userId, ShipmentStatus target) {
         ShipmentEntity shipment = repository.findById(shipmentId)
                 .orElseThrow(() -> DomainException.notFound("Shipment not found"));
-        requireParticipant(shipment, userId);
+        TransitionActor actor = requireTransitionActor(shipment, userId);
         if (!allowed(shipment.getStatus(), target)) throw DomainException.business("Invalid shipment status transition");
+        requireTransitionPermission(actor, target);
         shipment.setStatus(target);
         return toResponse(repository.save(shipment));
     }
@@ -82,6 +83,51 @@ public class ShipmentService {
                 || (from == ShipmentStatus.IN_TRANSIT && to == ShipmentStatus.DELIVERED);
     }
 
+    /**
+     * Operational milestones belong to the assigned driver/carrier. A shipper can observe the
+     * journey, but cannot mark its own freight as picked up or delivered. Cancellation is a
+     * managerial action and is intentionally limited to OWNER/ADMIN members on either side.
+     */
+    private void requireTransitionPermission(TransitionActor actor, ShipmentStatus target) {
+        if (target == ShipmentStatus.CANCELLED) {
+            if (actor != TransitionActor.SHIPPER_MANAGER && actor != TransitionActor.CARRIER_MANAGER) {
+                throw DomainException.forbidden("Only a shipper or carrier manager can cancel a shipment");
+            }
+            return;
+        }
+        if (actor != TransitionActor.DRIVER && actor != TransitionActor.CARRIER
+                && actor != TransitionActor.CARRIER_MANAGER) {
+            throw DomainException.forbidden("Only the assigned driver or carrier can update shipment progress");
+        }
+    }
+
+    private TransitionActor requireTransitionActor(ShipmentEntity shipment, UUID userId) {
+        Object result = entityManager.createNativeQuery("""
+                SELECT CASE
+                  WHEN EXISTS (SELECT 1 FROM driver_profiles d
+                    WHERE d.id = ?1 AND d.user_id = ?2) THEN 'DRIVER'
+                  WHEN ?3 IS NOT NULL AND EXISTS (SELECT 1 FROM company_members cm
+                    WHERE cm.company_id = ?3 AND cm.user_id = ?2
+                      AND cm.member_role IN ('OWNER','ADMIN')) THEN 'CARRIER_MANAGER'
+                  WHEN ?3 IS NOT NULL AND EXISTS (SELECT 1 FROM company_members cm
+                    WHERE cm.company_id = ?3 AND cm.user_id = ?2) THEN 'CARRIER'
+                  WHEN EXISTS (SELECT 1 FROM company_members cm
+                    WHERE cm.company_id = ?4 AND cm.user_id = ?2
+                      AND cm.member_role IN ('OWNER','ADMIN')) THEN 'SHIPPER_MANAGER'
+                  WHEN EXISTS (SELECT 1 FROM company_members cm
+                    WHERE cm.company_id = ?4 AND cm.user_id = ?2) THEN 'SHIPPER'
+                  ELSE NULL
+                END
+                """)
+                .setParameter(1, shipment.getDriverProfileId())
+                .setParameter(2, userId)
+                .setParameter(3, shipment.getCarrierCompanyId())
+                .setParameter(4, shipment.getShipperCompanyId())
+                .getSingleResult();
+        if (result == null) throw DomainException.forbidden("Shipment access denied");
+        return TransitionActor.valueOf(result.toString());
+    }
+
     private void requireParticipant(ShipmentEntity shipment, UUID userId) {
         Number count = (Number) entityManager.createNativeQuery("""
                 SELECT COUNT(*) FROM company_members WHERE user_id = ?1
@@ -97,5 +143,13 @@ public class ShipmentService {
         return new ShipmentResponse(s.getId(), s.getLoadId(), s.getAcceptedOfferId(), s.getMatchId(),
                 s.getShipperCompanyId(), s.getCarrierCompanyId(), s.getVehicleId(), s.getDriverProfileId(),
                 s.getStatus(), s.getVersion(), s.getCreatedAt(), s.getUpdatedAt());
+    }
+
+    private enum TransitionActor {
+        SHIPPER,
+        SHIPPER_MANAGER,
+        CARRIER,
+        CARRIER_MANAGER,
+        DRIVER
     }
 }

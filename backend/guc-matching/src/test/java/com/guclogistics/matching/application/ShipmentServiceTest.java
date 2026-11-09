@@ -50,16 +50,48 @@ class ShipmentServiceTest {
         shipment.setCarrierCompanyId(UUID.randomUUID());shipment.setDriverProfileId(UUID.randomUUID());
         shipment.setStatus(ShipmentStatus.ASSIGNED);
         when(repository.findById(shipment.getId())).thenReturn(Optional.of(shipment));
-        Query membership=mock(Query.class);Query driver=mock(Query.class);
-        when(entityManager.createNativeQuery(contains("company_members"))).thenReturn(membership);
-        when(entityManager.createNativeQuery(contains("driver_profiles"))).thenReturn(driver);
-        when(membership.setParameter(anyInt(),any())).thenReturn(membership);
-        when(driver.setParameter(anyInt(),any())).thenReturn(driver);
-        when(membership.getSingleResult()).thenReturn(1L);
-        when(driver.getSingleResult()).thenReturn(UUID.randomUUID());
-
+        mockTransitionActor("CARRIER");
         assertThatThrownBy(()->service.transition(shipment.getId(),userId,ShipmentStatus.DELIVERED))
                 .isInstanceOf(DomainException.class).hasMessageContaining("Invalid shipment status");
+    }
+
+    @Test
+    void shipperMemberCannotAdvanceOperationalShipmentStatus() {
+        UUID userId = UUID.randomUUID();
+        ShipmentEntity shipment = shipmentAt(ShipmentStatus.ASSIGNED);
+        when(repository.findById(shipment.getId())).thenReturn(Optional.of(shipment));
+        mockTransitionActor("SHIPPER");
+
+        assertThatThrownBy(() -> service.transition(shipment.getId(), userId, ShipmentStatus.PICKED_UP))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("assigned driver or carrier");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void assignedDriverCanAdvanceOperationalShipmentStatus() {
+        UUID userId = UUID.randomUUID();
+        ShipmentEntity shipment = shipmentAt(ShipmentStatus.ASSIGNED);
+        when(repository.findById(shipment.getId())).thenReturn(Optional.of(shipment));
+        when(repository.save(shipment)).thenReturn(shipment);
+        mockTransitionActor("DRIVER");
+
+        service.transition(shipment.getId(), userId, ShipmentStatus.PICKED_UP);
+
+        org.assertj.core.api.Assertions.assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.PICKED_UP);
+        verify(repository).save(shipment);
+    }
+
+    @Test
+    void ordinaryCarrierMemberCannotCancelShipment() {
+        UUID userId = UUID.randomUUID();
+        ShipmentEntity shipment = shipmentAt(ShipmentStatus.ASSIGNED);
+        when(repository.findById(shipment.getId())).thenReturn(Optional.of(shipment));
+        mockTransitionActor("CARRIER");
+
+        assertThatThrownBy(() -> service.transition(shipment.getId(), userId, ShipmentStatus.CANCELLED))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("manager");
     }
 
     @Test
@@ -84,5 +116,22 @@ class ShipmentServiceTest {
 
         org.assertj.core.api.Assertions.assertThat(result).hasSize(1);
         verify(repository).findByMatchIdInOrderByUpdatedAtDesc(List.of(match.getId()));
+    }
+
+    private ShipmentEntity shipmentAt(ShipmentStatus status) {
+        ShipmentEntity shipment = new ShipmentEntity();
+        shipment.setId(UUID.randomUUID());
+        shipment.setShipperCompanyId(UUID.randomUUID());
+        shipment.setCarrierCompanyId(UUID.randomUUID());
+        shipment.setDriverProfileId(UUID.randomUUID());
+        shipment.setStatus(status);
+        return shipment;
+    }
+
+    private void mockTransitionActor(String actor) {
+        Query query = mock(Query.class);
+        when(entityManager.createNativeQuery(contains("CARRIER_MANAGER"))).thenReturn(query);
+        when(query.setParameter(anyInt(), any())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(actor);
     }
 }
