@@ -35,3 +35,7 @@ export async function publishMatchPosition(matchId, position) {
     body: JSON.stringify(position),
   });
 }
+
+export async function listPaymentLedger() {
+  return apiJson("/api/v1/payments/ledger");
+}

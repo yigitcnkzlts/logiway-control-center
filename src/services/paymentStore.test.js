@@ -10,6 +10,7 @@ import {
   formatPaymentAmount,
   filterPayments,
   paymentSummary,
+  mapPaymentLedger,
   paymentStatusLabel,
   paymentStatusClass,
   paymentDocumentLabel,
@@ -30,6 +31,23 @@ test("paymentSummary never mixes currencies", () => {
   assert.equal(summary.EUR.paid,    500);
   assert.equal(summary.GBP.paid,    0);
   assert.ok(!("USD" in summary), "no USD key should exist");
+});
+
+test("live ledger SECURED kaydını ödenmiş gibi göstermez", () => {
+  const [payment] = mapPaymentLedger([{
+    id: "pay-1", matchId: "match-1", amount: 2500, currency: "EUR",
+    kind: "HOLD", status: "SECURED", providerReference: "provider-1",
+    createdAt: "2026-11-09T12:00:00Z",
+  }], {
+    matches: [{ id: "match-1", loadId: "load-1", offerId: "offer-1", carrierName: "Taşıyıcı A", pickupCity: "İstanbul", dropoffCity: "Berlin" }],
+    shipments: [{ id: "shipment-1", matchId: "match-1", loadId: "load-1" }],
+    loads: [{ id: "load-1", cargo: "Makine" }],
+  });
+  assert.equal(payment.status, "SECURED");
+  assert.equal(payment.paidDate, null);
+  assert.equal(payment.paymentTerm, "Ödeme güvencesi");
+  assert.match(payment.note, /ödeme yapıldığı anlamına gelmez/);
+  assert.equal(payment.shipmentId, "shipment-1");
 });
 
 test("paymentSummary aggregates DUE_SOON and OVERDUE separately", () => {

@@ -17,6 +17,8 @@
 // ── Constants ──────────────────────────────────────────────────────
 export const PAYMENT_STATUSES = {
   PENDING:    "Bekliyor",
+  PENDING_PROVIDER: "Sağlayıcı onayı bekleniyor",
+  SECURED:    "Güvence altında",
   PAID:       "Ödendi",
   DUE_SOON:   "Vadesi yaklaşıyor",
   OVERDUE:    "Vadesi geçti",
@@ -212,7 +214,7 @@ export function paymentSummary(payments) {
     if (!totals[cur]) totals[cur] = { pending: 0, paid: 0, dueSoon: 0, overdue: 0 };
     const t = totals[cur];
     const amount = Number(p.amount) || 0;
-    if (["PENDING", "DUE_SOON", "OVERDUE"].includes(p.status)) t.pending += amount;
+    if (["PENDING", "PENDING_PROVIDER", "SECURED", "DUE_SOON", "OVERDUE"].includes(p.status)) t.pending += amount;
     if (p.status === "PAID")      t.paid     += amount;
     if (p.status === "DUE_SOON")  t.dueSoon  += amount;
     if (p.status === "OVERDUE")   t.overdue  += amount;
@@ -239,6 +241,8 @@ export function paymentStatusClass(status) {
   switch (status) {
     case "PAID":      return "pay-status pay-status--paid";
     case "PENDING":   return "pay-status pay-status--pending";
+    case "PENDING_PROVIDER": return "pay-status pay-status--pending";
+    case "SECURED":   return "pay-status pay-status--due-soon";
     case "DUE_SOON":  return "pay-status pay-status--due-soon";
     case "OVERDUE":   return "pay-status pay-status--overdue";
     case "CANCELLED": return "pay-status pay-status--cancelled";
@@ -257,7 +261,7 @@ export function filterPayments(payments, filters = {}) {
     if (filters.status && filters.status !== "ALL" && payment.status !== filters.status) return false;
     if (filters.currency && filters.currency !== "ALL" && payment.currency !== filters.currency) return false;
     if (filters.carrier && filters.carrier !== "ALL" && payment.carrier !== filters.carrier) return false;
-    if (filters.date && payment.dueDate !== filters.date && payment.paidDate !== filters.date) return false;
+    if (filters.date && payment.dueDate !== filters.date && payment.paidDate !== filters.date && payment.createdDate !== filters.date) return false;
     if (!query) return true;
     return [
       payment.id,
@@ -268,5 +272,42 @@ export function filterPayments(payments, filters = {}) {
       payment.carrier,
       payment.route,
     ].some((value) => String(value || "").toLocaleLowerCase("tr-TR").includes(query));
+  });
+}
+
+/** Maps the authorized payment ledger response without inventing settlement or due-date data. */
+export function mapPaymentLedger(rows = [], { matches = [], shipments = [], loads = [] } = {}) {
+  return rows.map((row) => {
+    const match = matches.find((item) => String(item.id) === String(row.matchId));
+    const shipment = shipments.find((item) => String(item.matchId) === String(row.matchId));
+    const loadId = match?.loadId || shipment?.loadId || null;
+    const load = loads.find((item) => String(item.id) === String(loadId));
+    const route = match?.pickupCity && match?.dropoffCity
+      ? `${match.pickupCity} → ${match.dropoffCity}`
+      : load?.from && load?.to ? `${load.from} → ${load.to}` : "—";
+    return {
+      id: row.id,
+      matchId: row.matchId,
+      loadId,
+      shipmentId: shipment?.id || match?.shipment?.id || null,
+      offerId: match?.offerId || null,
+      loadTitle: match?.loadTitle || load?.cargo || load?.title || "—",
+      carrier: match?.carrierName || "Taşıyıcı bilgisi yok",
+      amount: row.amount,
+      currency: row.currency,
+      paymentTerm: row.kind === "HOLD" ? "Ödeme güvencesi" : row.kind || "—",
+      dueDate: null,
+      paidDate: null,
+      createdDate: row.createdAt?.slice(0, 10) || null,
+      createdAt: row.createdAt,
+      status: row.status,
+      documentStatus: "NOT_REQUIRED",
+      providerReference: row.providerReference || null,
+      route,
+      note: row.status === "SECURED"
+        ? "Tutar güvence kaydındadır; bu durum taşıyıcıya ödeme yapıldığı anlamına gelmez."
+        : "Bu kayıt para transferi değil, ödeme sağlayıcısı hazırlık kaydıdır.",
+      demo: false,
+    };
   });
 }

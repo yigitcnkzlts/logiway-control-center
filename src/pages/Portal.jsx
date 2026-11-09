@@ -82,8 +82,10 @@ import {
   paymentStatusClass,
   paymentStatusLabel,
   paymentSummary,
+  mapPaymentLedger,
   subscribePayments,
 } from "../services/paymentStore";
+import { listPaymentLedger } from "../api/operationsClient";
 import {
   LOAD_STATUS_FILTERS,
   buildShipperNotifications,
@@ -2208,20 +2210,13 @@ export function ShipperPortal() {
       )}{" "}
       {active === "Belgeler" && <DocumentCenter loads={loads} shipments={shipments} />}
       {active === "Ödemeler" &&
-        (liveMarketplaceEnabled() ? (
-          <EmptyState
-            icon={<CreditCard />}
-            title="Ödeme entegrasyonu henüz etkin değil"
-            text="Gerçek ödeme sağlayıcısı bağlanmadan bakiye veya tahsilat işlemi gösterilmiyor."
-          />
-        ) : (
-          <PaymentCenter
-            loads={loads}
-            shipments={shipments}
-            matches={matches}
-            onNavigate={setActive}
-          />
-        ))}
+        <PaymentCenter
+          loads={loads}
+          shipments={shipments}
+          matches={matches}
+          onNavigate={setActive}
+          live={liveMarketplaceEnabled()}
+        />}
       {active === "Firma ve Ekip" && (
         <ShipperCompanyTeam live={liveMarketplaceEnabled()} />
       )}
@@ -4660,13 +4655,28 @@ const EMPTY_PAYMENT_FILTERS = {
   query: "",
 };
 
-function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate }) {
-  const [payments, setPayments] = useState(() => getPayments());
+function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate, live = false }) {
+  const [payments, setPayments] = useState(() => live ? [] : getPayments());
   const [filters, setFilters] = useState(EMPTY_PAYMENT_FILTERS);
   const [sortKey, setSortKey] = useState("newest"); // newest | oldest | amount-asc | amount-desc | due
   const [selected, setSelected] = useState(null);
+  const [loadingPayments, setLoadingPayments] = useState(live);
+  const [paymentError, setPaymentError] = useState("");
 
-  useEffect(() => subscribePayments(() => setPayments(getPayments())), []);
+  useEffect(() => {
+    if (live) return undefined;
+    return subscribePayments(() => setPayments(getPayments()));
+  }, [live]);
+
+  useEffect(() => {
+    if (!live) return undefined;
+    let cancelled = false;
+    listPaymentLedger()
+      .then((rows) => { if (!cancelled) { setPaymentError(""); setPayments(mapPaymentLedger(rows, { matches, shipments, loads })); } })
+      .catch((reason) => { if (!cancelled) setPaymentError(reason.message || "Finans kayıtları yüklenemedi."); })
+      .finally(() => { if (!cancelled) setLoadingPayments(false); });
+    return () => { cancelled = true; };
+  }, [live, loads, matches, shipments]);
 
   // Merge live shipments + demo matches for detail lookup
   const allShipments = useMemo(
@@ -4700,7 +4710,7 @@ function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate })
 
   const summaryCards = [
     { key: "pending", title: "Bekleyen ödeme", text: "Henüz tamamlanmamış toplam", icon: <Clock3 /> },
-    { key: "paid", title: "Ödenen toplam", text: "Tamamlanan demo kayıtları", icon: <Check /> },
+    { key: "paid", title: "Ödenen toplam", text: live ? "Yalnızca gerçek ödeme kayıtları" : "Tamamlanan demo kayıtları", icon: <Check /> },
     { key: "dueSoon", title: "Vadesi yaklaşan", text: "Yakında işlem gerektiriyor", icon: <Timer /> },
     { key: "overdue", title: "Vadesi geçen", text: "Öncelikli kontrol gerekli", icon: <TrendingDown /> },
   ];
@@ -4729,8 +4739,10 @@ function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate })
         kicker="FİNANSAL TAKİP"
         title="Ödemeler ve vadeler"
         text="Taşıma anlaşmalarınıza ait tutarları, vadeleri ve dekont durumlarını para birimlerini karıştırmadan izleyin."
-        action={<span className="pay-demo-badge">DEMO VERİLERİ</span>}
+        action={<span className="pay-demo-badge">{live ? "CANLI LEDGER" : "DEMO VERİLERİ"}</span>}
       />
+
+      {paymentError && <div className="pay-empty pay-empty--error" role="alert"><AlertTriangle/><h3>Finans kayıtları yüklenemedi</h3><p>{paymentError}</p></div>}
 
       <div className="pay-summary" aria-label="Ödeme özeti">
         {summaryCards.map((card) => {
@@ -4793,12 +4805,14 @@ function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate })
           <button className="pay-reset" type="button" onClick={() => setFilters(EMPTY_PAYMENT_FILTERS)}>Filtreleri temizle</button>
         </div>
 
-        {!visiblePayments.length ? (
+        {loadingPayments ? (
+          <div className="pay-empty" role="status"><Clock3/><h3>Finans kayıtları yükleniyor</h3><p>Yetkili ledger kayıtlarınız hazırlanıyor.</p></div>
+        ) : !visiblePayments.length ? (
           <div className="pay-empty" role="status">
             <CreditCard />
-            <h3>Filtrelerle eşleşen ödeme bulunamadı</h3>
-            <p>Arama ölçütlerini temizleyerek diğer demo kayıtlarını görüntüleyebilirsiniz.</p>
-            <button type="button" onClick={() => setFilters(EMPTY_PAYMENT_FILTERS)}>Filtreleri temizle</button>
+            <h3>{payments.length ? "Filtrelerle eşleşen ödeme bulunamadı" : "Henüz finans kaydı bulunmuyor"}</h3>
+            <p>{payments.length ? "Arama ölçütlerini temizleyerek diğer kayıtları görüntüleyebilirsiniz." : live ? "Bir ödeme güvence kaydı oluştuğunda burada gösterilecek; sahte production verisi üretilmez." : "Henüz demo ödeme kaydı bulunmuyor."}</p>
+            {payments.length > 0 && <button type="button" onClick={() => setFilters(EMPTY_PAYMENT_FILTERS)}>Filtreleri temizle</button>}
           </div>
         ) : (
           <div className="pay-table-wrap">
@@ -4813,8 +4827,9 @@ function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate })
                     <td data-label="Tutar"><strong>{formatPaymentAmount(payment.amount, payment.currency)}</strong><small>{payment.currency}</small></td>
                     <td data-label="Koşul ve tarihler">
                       <strong>{payment.paymentTerm}</strong>
-                      <small>Vade: {new Date(`${payment.dueDate}T00:00:00`).toLocaleDateString("tr-TR")}</small>
+                      <small>Vade: {payment.dueDate ? new Date(`${payment.dueDate}T00:00:00`).toLocaleDateString("tr-TR") : "Tanımlanmadı"}</small>
                       <small>Ödeme: {payment.paidDate ? new Date(`${payment.paidDate}T00:00:00`).toLocaleDateString("tr-TR") : "—"}</small>
+                      {payment.createdDate && <small>Kayıt: {new Date(`${payment.createdDate}T00:00:00`).toLocaleDateString("tr-TR")}</small>}
                     </td>
                     <td data-label="Durum"><span className={paymentStatusClass(payment.status)}>{paymentStatusLabel(payment.status)}</span></td>
                     <td data-label="Dekont"><span className={`pay-doc pay-doc--${String(payment.documentStatus || "missing").toLowerCase()}`}>{paymentDocumentLabel(payment.documentStatus)}</span></td>
@@ -4827,7 +4842,7 @@ function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate })
         )}
       </section>
 
-      <p className="pay-demo-note"><ShieldCheck size={14} /> Bu ekran yalnızca demo finans kayıtlarını gösterir; para transferi yapmaz ve banka/kart bilgisi istemez.</p>
+      <p className="pay-demo-note"><ShieldCheck size={14} /> {live ? "Canlı ledger yalnızca ödeme hazırlığı ve güvence durumunu gösterir; SECURED durumu taşıyıcıya ödeme yapıldığı anlamına gelmez." : "Bu ekran yalnızca demo finans kayıtlarını gösterir; para transferi yapmaz ve banka/kart bilgisi istemez."}</p>
 
       {selected && (
         <div className="pay-detail-backdrop" role="presentation" onMouseDown={() => setSelected(null)}>
@@ -4844,8 +4859,9 @@ function PaymentCenter({ loads = [], shipments = [], matches = [], onNavigate })
               <div><dt>Taşıyıcı</dt><dd>{selected.carrier}</dd></div>
               <div><dt>Güzergâh</dt><dd>{selectedLoad ? `${selectedLoad.from} → ${selectedLoad.to}` : selected.route}</dd></div>
               <div><dt>Ödeme koşulu</dt><dd>{selected.paymentTerm}</dd></div>
-              <div><dt>Vade tarihi</dt><dd>{new Date(`${selected.dueDate}T00:00:00`).toLocaleDateString("tr-TR")}</dd></div>
+              <div><dt>Vade tarihi</dt><dd>{selected.dueDate ? new Date(`${selected.dueDate}T00:00:00`).toLocaleDateString("tr-TR") : "Tanımlanmadı"}</dd></div>
               <div><dt>Ödeme tarihi</dt><dd>{selected.paidDate ? new Date(`${selected.paidDate}T00:00:00`).toLocaleDateString("tr-TR") : "Henüz ödenmedi"}</dd></div>
+              {selected.providerReference && <div><dt>Sağlayıcı referansı</dt><dd>{selected.providerReference}</dd></div>}
             </dl>
             <section className="pay-detail__document">
               <FileText />
