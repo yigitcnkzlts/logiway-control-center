@@ -8,14 +8,14 @@ Hariç tutulan: frontend ve `guc-backend-worktree/`
 
 ## Doğrulama özeti
 
-- `mvn test`: **BUILD SUCCESS**.
-- Final koşu: **207 test**, 203 başarılı, 4 atlandı. Şirket üyeliği/davet, rol yetkisi ve shipment regression testleri dahildir.
-- Atlanan 4 test `AuthFlowIntegrationTest` içindedir; `-Dguc.integration=true` ve çalışan Docker/PostgreSQL/Redis gerektirir. Bu makinede Docker daemon çalışmadığından gerçek kayıt → giriş → refresh → PostgreSQL/Redis E2E zinciri çalıştırılmadı.
-- Canlı `GET https://logiway-api.onrender.com/actuator/health`: **UP** (liveness/readiness grupları).
-- Render uygulama loglarına bu ortamdan erişim yoktur. Bu nedenle güncel production 500 hatasının Redis veya PostgreSQL kaynaklı olduğu iddia edilmemiştir.
-- Postman koleksiyonu JSON olarak parse edilerek doğrulandı; token ve parola değerleri boş bırakıldı.
+- `mvn -f backend/pom.xml -pl guc-identity-access -am test`: **BUILD SUCCESS**; `guc-identity-access` 43 testi ve `guc-shared` 23 testi geçti.
+- `mvn -f backend/pom.xml test`: **BUILD FAILURE**; `guc-companies` test derlemesi, `guc-shared` exception/event paketlerini çözemediği için duruyor. Bu nedenle devamındaki modüllerin testleri bu koşuda çalışmadı.
+- Docker daemon erişilebilir değil. `AuthFlowIntegrationTest` (`-Dguc.integration=true`) ve PostgreSQL/Redis E2E zinciri çalıştırılamadı.
+- İstenen kayıt → giriş → JWT → kullanıcı/şirket erişimi → yük oluşturma/listeleme → teklif/sevkiyat listeleme API senaryosu bu nedenle çalıştırılmış sayılmaz. Production'a yazma isteği gönderilmedi.
+- Render uygulama loglarına bu ortamdan erişim yoktur. Daha önceki HTTP 500 için gerçek production exception/log kanıtı bulunmadığından Redis veya PostgreSQL kaynaklı olduğu iddia edilmemiştir.
+- Postman koleksiyonu ve environment, API metot/yol/env değişkenleri ve JSON geçerliliği açısından statik olarak kontrol edilmiştir; canlı HTTP isteği çalıştırılmamıştır.
 
-`Çalışıyor mu?` sütununda “Birim testli” controller URL'sinin canlıda çağrıldığı anlamına gelmez; ilgili service davranışının Maven testlerinden geçtiğini belirtir. “E2E bekliyor” gerçek PostgreSQL/Redis zincirinin bu turda çalıştırılamadığını gösterir.
+`Çalışıyor mu?` sütunu kaynak kodu ve test kapsamı incelemesini gösterir; yalnızca yukarıdaki iki modülün testleri bu turda yeniden çalıştırılmıştır. Birim testinin bulunması API'nin canlıda veya gerçek PostgreSQL/Redis ile doğrulandığı anlamına gelmez.
 
 ## Endpoint envanteri
 
@@ -30,7 +30,10 @@ Hariç tutulan: frontend ve `guc-backend-worktree/`
 | `/api/v1/sessions` | GET | Identity | Evet | Birim testli | Postman negatif sahiplik testi |
 | `/api/v1/sessions/{sessionId}` | DELETE | Identity | Evet | Birim testli | E2E başka kullanıcı oturumu testi |
 | `/api/v1/devices` | GET | Identity | Evet | Birim testli | — |
-| `/api/v1/auth/mfa/*` | POST | Identity | Evet | Birim testli | Tam Postman MFA senaryosu |
+| `/api/v1/auth/mfa/enroll` | POST | Identity | Evet | Bu turda HTTP E2E yok | MFA secret/QR kurulumu |
+| `/api/v1/auth/mfa/enable` | POST | Identity | Evet | Bu turda HTTP E2E yok | MFA kodu ile aktivasyon |
+| `/api/v1/auth/mfa/disable` | POST | Identity | Evet | Bu turda HTTP E2E yok | MFA kodu ile kapatma |
+| `/api/v1/auth/mfa/verify` | POST | Identity | Evet | Birim testli; E2E bekliyor | MFA login zinciri |
 | `/api/v1/companies` | POST | Companies | Evet | Birim testli | Aynı kullanıcının mükerrer şirket politikasını netleştir |
 | `/api/v1/companies/mine` | GET | Companies | Evet | Birim testli | — |
 | `/api/v1/companies/{id}` | GET/PATCH | Companies | Evet | Üyelik/yönetici kontrolü testli | — |
@@ -64,21 +67,49 @@ Hariç tutulan: frontend ve `guc-backend-worktree/`
 | `/api/v1/payments/ledger` | GET | Matching | Evet | Kod denetlendi | Controller entegrasyon testi yok |
 | `/api/v1/payments/matches/{matchId}/hold` | POST | Matching | Evet | Sahiplik kontrolü kodda var | Provider/idempotency entegrasyonu |
 | `/api/v1/payments/{id}/confirm` | POST | Matching | Evet, ADMIN | Kod denetlendi | Webhook imzası/provider mutabakatı yok |
+| `/api/v1/auth/password/*` | — | Identity | **Hayır** | — | Şifre sıfırlama/değiştirme endpoint'i yok |
+| `/api/v1/auth/email/verify` | — | Identity | **Hayır** | — | E-posta doğrulama endpoint'i yok |
+
+### Diğer backend modülleri
+
+| Endpoint | HTTP | Modül | Mevcut mu? | Erişim/eksik iş |
+|---|---:|---|---|---|
+| `/api/v1/users/admin/ping` | GET | Users | Evet | Yalnız ADMIN |
+| `/api/v1/admin/overview` | GET | Companies/Admin dashboard | Evet | Yalnız ADMIN |
+| `/api/v1/drivers/profile` | POST | Drivers | Evet | Kimliği doğrulanmış kullanıcı; sahiplik/şirket E2E testi gerekli |
+| `/api/v1/drivers/me` | GET/PATCH | Drivers | Evet | Kullanıcının kendi sürücü profili |
+| `/api/v1/vehicles` | POST | Vehicles | Evet | Oluşturma; şirket sahipliği E2E testi gerekli |
+| `/api/v1/vehicles/mine` | GET | Vehicles | Evet | Kullanıcının araçları |
+| `/api/v1/vehicles/{id}` | GET/PATCH/DELETE | Vehicles | Evet | Sahiplik kuralları gerçek DB ile test edilmeli |
+| `/api/v1/notifications` | GET | Notifications | Evet | Sayfalı liste; okunmamış sayısı ve tümünü-okundu yok |
+| `/api/v1/notifications/{id}/read` | POST | Notifications | Evet | Tekil okundu |
+| `/api/v1/devices/push-token` | POST/DELETE | Matching/Devices | Evet | Push token ekle/devre dışı bırak |
+| `/api/v1/tracking/matches/{matchId}/positions` | POST | Matching/Tracking | Evet | Atanmış şoför konum yazar |
+| `/api/v1/tracking/matches/{matchId}/latest` | GET | Matching/Tracking | Evet | Eşleşme katılımcısı son konumu okur |
+| `/api/v1/verification/applications` | POST | Verification | Evet | Başvuru oluştur |
+| `/api/v1/verification/applications/mine` | GET | Verification | Evet | Kullanıcının başvuruları |
+| `/api/v1/verification/applications/{id}/submit` | POST | Verification | Evet | Başvuruyu gönder |
+| `/api/v1/verification/applications/{id}/approve` | POST | Verification | Evet | Yalnız MODERATOR/ADMIN |
+| `/api/v1/verification/applications/{id}/reject` | POST | Verification | Evet | Yalnız MODERATOR/ADMIN |
+| `/api/v1/verification/applications/{id}/documents` | POST | Verification | Evet | Yalnız doğrulama dosyası; sevkiyat belgesi değil |
 
 ## Authentication bulguları
 
 - Argon2id encoder kullanılıyor ve `bcprov-jdk18on` runtime bağımlılığı mevcut; encode/matches testi başarılı.
 - JWT access token, opaque refresh token hashleme, refresh rotasyonu, family reuse detection, session revoke, MFA ve hesap kilidi uygulanmış.
 - Kayıt rolleri: `SHIPPER`, `LOGISTICS_COMPANY`, `INDEPENDENT_DRIVER`, `FLEET_OWNER`.
+- Register DTO'su rolü bu dört rol ile sınırlar; ADMIN/MODERATOR self-registration kabul edilmez. Şirket kayıtları event listener ile şirket ve OWNER üyeliği oluşturur.
 - Şirket hesaplarında `companyName` ve iki harfli `companyCountry` zorunlu. Kayıt event'i şirket ve OWNER üyeliğini oluşturuyor.
-- Daha önceki event serialization ve Argon2 sınıf eksikliği için regression testleri geçiyor. Bu turda aynı 500 üretilemedi.
+- Argon2 encoder ve JWT/session davranışı hedefli auth testlerinden geçti. Gerçek register/login/refresh DB+Redis akışı Docker olmadığından sınanmadı.
 - `/api/v1/me` ile `/api/v1/users/me` iki ayrı “me” sözleşmesi sunuyor; frontend açısından sözleşme belirsizliği yaratabilir.
+- Controller'da password reset/change ve email verification route'u yok.
 
 ## Redis ve PostgreSQL
 
 - Redis yalnızca varsayım değil: login/register/MFA rate limit her istekte `StringRedisTemplate.increment` çağırıyor. Redis erişilemezse yakalama/fallback yok; exception 500'e dönüşebilir ve auth akışını kesebilir. En küçük güvenli düzeltme; bağlantı hatasını ayrı gözlemlemek, açık bir fail-closed/fail-open politikası seçmek ve bunun testini eklemektir. Güvenlik limiti kaldırılmamalıdır.
-- Production health yanıtı `UP`, ancak bileşen ayrıntıları yayınlanmadığı için PostgreSQL ve Redis ayrı ayrı doğrulanmış sayılmaz.
-- Flyway V1–V17 ve `ddl-auto=validate` doğru yöndeydi. Audit sonrasında V18 ile çapraz modül ilişkilerine `NOT VALID` foreign key'ler eklendi: mevcut satırlar ve kullanıcı verileri korunurken yeni yazımlar hemen denetlenir. Polimorfik `offers.offerer_id` ve `vehicles.owner_id` tek tabloya güvenli biçimde bağlanamadığı için uygulama kontrolünde kalır. Production orphan sorguları temiz çıktıktan sonra ayrı migration ile `VALIDATE CONSTRAINT` çalıştırılmalıdır.
+- PostgreSQL/Redis'e bu turda bağlantı kurulmadı; health ve Render loglarına erişim yok. PostgreSQL veya Redis tarafında gözlenen gerçek exception yok.
+- Login/register/MFA rate limit doğrudan Redis `INCR` kullanıyor, Redis hatasında fallback/catch yok. Bu hata üstteki generic exception handler tarafından 500'e çevrilebilir; mevcut production 500'ün nedeni olduğu kanıtlanmadı. Rate limit'i kaldırmak doğru çözüm değildir.
+- Flyway V1–V19 ve `ddl-auto=validate` kullanılıyor. V18 çapraz modül foreign key'lerini `NOT VALID` ekliyor: mevcut satırlar doğrulanmış değildir, fakat yeni/updated satırlar kısıta tabidir. Production orphan sorguları sonrası `VALIDATE CONSTRAINT` gerekir. Polimorfik `offers.offerer_id` ve `vehicles.owner_id` DB foreign key'i ile tek tabloya bağlanamıyor; uygulama sahiplik kontrolünde kalıyor.
 - `matches.load_id` ve `matches.offer_id` unique; shipment tarafında match/load/accepted offer unique ve aktif araç/şoför partial unique indeksleri çift atamayı engelliyor.
 
 ## Güvenlik ve veri izolasyonu
@@ -89,11 +120,12 @@ Olumlu:
 - Company get/update, load taslak yönetimi, gelen teklifler, match/chat/shipment ve ödeme hold işlemlerinde üyelik/katılımcı kontrolü var.
 - Refresh token veritabanında hashli; access ve MFA token tipleri ayrılmış.
 - CORS production ortamında Vercel originlerine sınırlandırılmış.
+- Match chat PostgreSQL `match_messages` tablosuna yazıyor ve okuma/yazmada match katılımcı kontrolü yapıyor; mesaj sayfalama, okunma durumu ve dosya desteği yok.
 
 Bloker/iyileştirme:
 
-1. Shipment geçişleri audit sonrasında role göre ayrıldı: operasyon adımlarını atanmış şoför/taşıyıcı, iptali yalnızca yük veren veya taşıyıcı OWNER/ADMIN yapabilir. Production smoke testi hâlâ gereklidir.
-2. Eksik foreign key'ler V18 additive migration ile `NOT VALID` olarak eklendi; production orphan audit sonrasında validation tamamlanmalıdır.
+1. Mevcut shipment geçişleri role göre ayrılmış: operasyon adımlarını atanmış şoför/taşıyıcı, iptali yalnızca yük veren veya taşıyıcı OWNER/ADMIN yapabilir. Production smoke testi hâlâ gereklidir.
+2. Eksik foreign key'ler V18 additive migration ile `NOT VALID` olarak eklenmiş; production orphan audit sonrasında validation tamamlanmalıdır.
 3. Payment hold gerçek ödeme değildir. Idempotency key, provider webhook doğrulaması, mutabakat ve iade/iptal modeli olmadan “ödendi” semantiği kullanılmamalı.
 4. Operasyon belgeleri için authorization, malware scan, object storage ve süreli indirme URL'si henüz yok.
 5. Company member API'si artık mevcut; frontend ekip ekranının canlı moda bağlanması ve rol değişiklikleri için audit event geçmişi eklenmesi gerekiyor.
@@ -115,4 +147,4 @@ Environment gizli değer içermez. `accessToken`, `refreshToken`, `email` ve `pa
 6. Ödeme ledger'ını provider/idempotency/webhook modeliyle tamamla.
 7. Mesajlarda sayfalama, okundu bilgisi ve güvenli ek dosya desteği.
 
-Bu çalışma toplu backend yeniden yazımı içermez; shipment geçiş yetkisi, additive veri bütünlüğü constraint'leri ve güvenli şirket üyeliği/davet API'si audit bulgularına yönelik sınırlı remediation olarak uygulanmıştır.
+Bu tur backend/frontend uygulama kodunu değiştirmedi; audit bulgularını ve Postman sözleşmesini güncelledi. Mevcut backend'de daha önce eklenmiş shipment yetki kontrolleri, V18 veri bütünlüğü constraint'leri ve şirket üyeliği/davet API'si incelendi.

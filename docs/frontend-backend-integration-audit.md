@@ -13,7 +13,7 @@ Audit date: 2026-10-02
 | Shipment status | Implemented | `POST /api/v1/shipments/{id}/status` |
 | Tracking | Implemented | `/api/v1/tracking/matches/{matchId}/positions|latest` |
 | Notifications | Partial | Paginated list and single mark-read exist. Unread count and mark-all-read are missing. |
-| Match chat | Development-only | In-memory GET/POST exists. It has no persistence, participant authorization, unread state, pagination, or attachments. |
+| Match chat | Implemented, partial | Persistent GET/POST exists per match and checks match participation. Read state, pagination, conversation listing, and attachments are missing. |
 | Verification documents | Implemented for verification scope | Not a shipment-document API. |
 | Payments | Partial | Ledger, hold and confirmation exist. Invoice domain is missing. |
 
@@ -21,7 +21,7 @@ Audit date: 2026-10-02
 
 ### Messaging
 
-The current `MatchChatController` must not be treated as a production messaging source. A persistent module needs conversations, participants, messages and attachments. Every lookup must authorize the current user through company membership plus load/offer/shipment relationship. Required operations: paginated conversation list, paginated messages, send, mark-read and unread count. Attachments must validate PDF/JPEG/PNG MIME and size server-side, generate storage keys independently of user filenames, and authorize both upload and download.
+The current `MatchChatController` stores messages in PostgreSQL and checks the caller's match participation. It exposes only per-match GET/POST; it has no conversation index, pagination, read state, or attachments. Add those operations only if required by the product. Attachment upload/download must validate MIME and size server-side, generate storage keys independently of user filenames, and authorize both directions.
 
 ### Notifications
 
@@ -45,7 +45,7 @@ Tracking exists at match level. Geocoding does not. Addresses remain the source 
 
 ### Team and finance
 
-Company membership exists, but the web team-management contract is incomplete. Payments are partial and invoices are missing. Do not show synthesized revenue, invoice or payment records in production.
+Company membership has member/invitation list, invite, accept, role update, removal, and invitation revocation endpoints. Frontend live wiring and production DB smoke coverage remain. Payments are partial and invoices are missing. Do not show synthesized revenue, invoice or payment records in production.
 
 ## Security and data rules
 

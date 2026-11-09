@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b4c1539f-b93d-4f11-a7de-logiwayaudit01",
     "name": "Logiway Backend API",
-    "description": "Mevcut Spring Boot endpoint'lerinden üretilmiştir. Token veya kişisel veri içermez. Önce environment seçin, Login isteğini çalıştırın.",
+    "description": "Mevcut Spring Boot endpoint'lerinden üretilmiştir. Token veya kişisel veri içermez. Yalnız local/test ortamında kullanın; Register ve veri değiştiren istekleri production üzerinde çalıştırmayın.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }] },
@@ -22,12 +22,18 @@
         },
         {
           "name": "Login", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"deviceFingerprint\": \"postman-device\",\n  \"platform\": \"WEB\",\n  \"deviceName\": \"Postman\"\n}" }, "url": "{{baseUrl}}/api/v1/auth/login" },
-          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (!r.mfaRequired) { pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); pm.environment.set('userId', r.userId); } }"] } }]
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (r.mfaRequired) { pm.environment.set('mfaToken', r.accessToken); } else { pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); pm.environment.set('userId', r.userId); } }"] } }]
         },
         { "name": "Refresh Token", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refreshToken}}\"}" }, "url": "{{baseUrl}}/api/v1/auth/refresh" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); }"] } }] },
+        { "name": "Verify MFA Login", "request": { "auth": { "type": "noauth" }, "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"mfaToken\":\"{{mfaToken}}\",\"code\":\"{{mfaCode}}\",\"deviceFingerprint\":\"postman-device\",\"platform\":\"WEB\",\"deviceName\":\"Postman\"}" }, "url": "{{baseUrl}}/api/v1/auth/mfa/verify" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); pm.environment.set('accessToken', r.accessToken); pm.environment.set('refreshToken', r.refreshToken); pm.environment.set('userId', r.userId); }"] } }] },
+        { "name": "Enroll MFA", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/auth/mfa/enroll" } },
+        { "name": "Enable MFA", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"code\":\"{{mfaCode}}\"}" }, "url": "{{baseUrl}}/api/v1/auth/mfa/enable" } },
+        { "name": "Disable MFA", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"code\":\"{{mfaCode}}\"}" }, "url": "{{baseUrl}}/api/v1/auth/mfa/disable" } },
         { "name": "Current Principal", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/me" } },
         { "name": "Current User Profile", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/users/me" } },
-        { "name": "Active Sessions", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sessions" } },
+        { "name": "Active Sessions", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sessions" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (r.length) pm.environment.set('sessionId', r[0].id); }"] } }] },
+        { "name": "Revoke Session", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/sessions/{{sessionId}}" } },
+        { "name": "List Known Devices", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/devices" } },
         { "name": "Logout", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"refreshToken\":\"{{refreshToken}}\"}" }, "url": "{{baseUrl}}/api/v1/auth/logout" } }
       ]
     },
@@ -80,7 +86,9 @@
         { "name": "List My Shipments", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/shipments" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { const r = pm.response.json(); if (r.length) { pm.environment.set('shipmentId', r[0].id); pm.environment.set('matchId', r[0].matchId); } }"] } }] },
         { "name": "List My Matches", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matches" } },
         { "name": "Match Detail", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/matches/{{matchId}}" } },
-        { "name": "Update Shipment Status", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"PICKED_UP\"}" }, "url": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}/status" } }
+        { "name": "Update Shipment Status", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"PICKED_UP\"}" }, "url": "{{baseUrl}}/api/v1/shipments/{{shipmentId}}/status" } },
+        { "name": "Add Tracking Position", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"latitude\":41.0082,\"longitude\":28.9784,\"accuracyM\":15,\"speedKmh\":0,\"heading\":0}" }, "url": "{{baseUrl}}/api/v1/tracking/matches/{{matchId}}/positions" } },
+        { "name": "Latest Tracking Position", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/tracking/matches/{{matchId}}/latest" } }
       ]
     },
     {
@@ -92,17 +100,22 @@
     },
     {
       "name": "Documents",
-      "description": "Operasyon/sevkiyat belgesi API'si yoktur. Bunlar yalnızca doğrulama başvurusu belgeleridir.",
+      "description": "Operasyon/sevkiyat belgesi API'si yoktur. Bu grup yalnızca doğrulama başvurusu belgelerini içerir.",
       "item": [
+        { "name": "Create Company Verification Application", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"subjectType\":\"COMPANY\",\"subjectId\":\"{{companyId}}\"}" }, "url": "{{baseUrl}}/api/v1/verification/applications" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) pm.environment.set('verificationApplicationId', pm.response.json().id);"] } }] },
         { "name": "List My Verification Applications", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/verification/applications/mine" } },
-        { "name": "Upload Verification Document", "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [{ "key": "type", "value": "COMPANY_REGISTRATION", "type": "text" }, { "key": "file", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/api/v1/verification/applications/{{verificationApplicationId}}/documents" } }
+        { "name": "Upload Verification Document", "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [{ "key": "docType", "value": "COMPANY_REGISTRATION", "type": "text" }, { "key": "file", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/api/v1/verification/applications/{{verificationApplicationId}}/documents" } },
+        { "name": "Submit Verification Application", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/verification/applications/{{verificationApplicationId}}/submit" } },
+        { "name": "Approve Verification (Moderator/Admin)", "request": { "method": "POST", "url": "{{baseUrl}}/api/v1/verification/applications/{{verificationApplicationId}}/approve" } },
+        { "name": "Reject Verification (Moderator/Admin)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"reason\":\"Test ortamı doğrulama reddi\"}" }, "url": "{{baseUrl}}/api/v1/verification/applications/{{verificationApplicationId}}/reject" } }
       ]
     },
     {
       "name": "Payments",
       "item": [
         { "name": "My Payment Ledger", "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/payments/ledger" } },
-        { "name": "Create Payment Hold", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"amount\":2200,\"currency\":\"EUR\",\"providerReference\":\"test-only\"}" }, "url": "{{baseUrl}}/api/v1/payments/matches/{{matchId}}/hold" } }
+        { "name": "Create Payment Hold", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"amount\":2200,\"currency\":\"EUR\",\"providerReference\":\"test-only\"}" }, "url": "{{baseUrl}}/api/v1/payments/matches/{{matchId}}/hold" }, "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 201) pm.environment.set('ledgerId', pm.response.json().id);"] } }] },
+        { "name": "Confirm Payment Hold (Admin)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"providerReference\":\"test-confirmation-only\"}" }, "url": "{{baseUrl}}/api/v1/payments/{{ledgerId}}/confirm" }, "description": "Requires an ADMIN token. Do not treat this local ledger operation as a real provider payment." }
       ]
     }
   ]
