@@ -1,3 +1,5 @@
+import { getAuthStorage } from "../api/apiClient.js";
+
 /**
  * paymentStore.js
  * Demo-mode local persistence for payment records.
@@ -155,7 +157,7 @@ export const DEMO_PAYMENTS = [
 function uid() {
   try {
     const raw = typeof localStorage !== "undefined"
-      ? localStorage.getItem("guc-session")
+      ? getAuthStorage()?.getItem("guc-session")
       : null;
     return (raw ? JSON.parse(raw) : null)?.userId || "anon";
   } catch { return "anon"; }

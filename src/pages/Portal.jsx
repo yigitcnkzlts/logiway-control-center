@@ -512,6 +512,7 @@ export function PortalLogin() {
   const [register, setRegister] = useState(false);
   const [error, setError] = useState("");
   const [mfaToken, setMfaToken] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [shipperPassword, setShipperPassword] = useState("");
   if (!info) return <Navigate to="/giris" replace />;
@@ -530,7 +531,7 @@ export function PortalLogin() {
     try {
       let authResult;
       if (mfaToken) {
-        authResult = await verifyMfa({ mfaToken, code: f.get("mfaCode") });
+        authResult = await verifyMfa({ mfaToken, code: f.get("mfaCode"), rememberMe });
       } else if (register) {
         authResult = await registerUser({
           email: submittedEmail,
@@ -577,6 +578,7 @@ export function PortalLogin() {
           email: submittedEmail,
           password: submittedPassword,
           role,
+          rememberMe,
         });
         if (authResult.mode === "mfa") {
           setMfaToken(authResult.mfaToken);
@@ -798,6 +800,10 @@ export function PortalLogin() {
                     </button>
                   </div>
                 </label>
+                <RememberMeCheckbox
+                  checked={rememberMe}
+                  onChange={setRememberMe}
+                />
               </>
             )}
             {error && (
@@ -1039,6 +1045,12 @@ export function PortalLogin() {
                   </small>
                 )}
               </label>
+              {!register && (
+                <RememberMeCheckbox
+                  checked={rememberMe}
+                  onChange={setRememberMe}
+                />
+              )}
             </>
           )}
           {error && (
@@ -1097,6 +1109,19 @@ export function PortalLogin() {
         </form>
       </main>
     </div>
+  );
+}
+
+function RememberMeCheckbox({ checked, onChange }) {
+  return (
+    <label className="remember-me">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span>Beni hatırla</span>
+    </label>
   );
 }
 

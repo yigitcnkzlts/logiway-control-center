@@ -1,4 +1,4 @@
-import { apiJson, isDemoMode } from "./apiClient";
+import { apiJson, getAuthStorage, isDemoMode } from "./apiClient";
 
 const demoMonths=[
   ["Eyl",18,12,48600],["Eki",21,15,59400],["Kas",24,17,66800],["Ara",27,19,74200],
@@ -32,7 +32,7 @@ export const demoCompanyDashboard={
 const api=path=>apiJson(path);
 
 export async function getCompanyDashboard(){
-  if(!isDemoMode()&&localStorage.getItem("guc-access-token")){
+  if(!isDemoMode()&&getAuthStorage()?.getItem("guc-access-token")){
     const companies=await api("/api/v1/companies/mine");
     const company=companies.find(x=>x.type==="LOGISTICS")||companies[0];
     if(!company)throw new Error("Bu hesap herhangi bir şirketin üyesi değil.");

@@ -1,3 +1,5 @@
+import { getAuthStorage } from "../api/apiClient.js";
+
 /**
  * documentStore.js
  * Demo-mode local persistence for shipment/load document metadata.
@@ -48,7 +50,7 @@ function uid() {
   try {
     // Dynamic import-like lazy resolution: check localStorage directly
     const raw = (typeof localStorage !== "undefined")
-      ? localStorage.getItem("guc-session")
+      ? getAuthStorage()?.getItem("guc-session")
       : null;
     const session = raw ? JSON.parse(raw) : null;
     return session?.userId || "anon";

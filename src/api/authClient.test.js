@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { hydrateCompany, panelPathForRoles } from "./authClient.js";
-import { saveSessionTokens } from "./apiClient.js";
+import { getAuthStorage, saveSessionTokens } from "./apiClient.js";
 
 function memoryStorage(initial = {}) {
   const values = new Map(Object.entries(initial));
@@ -83,6 +83,69 @@ test("rotated tokens refresh session expiry and keep roles", () => {
     assert.ok(session.expiresAt >= before + 899_000);
   } finally {
     globalThis.localStorage = previousStorage;
+  }
+});
+
+test("remember-me disabled stores tokens only for the current browser session", () => {
+  const previousLocalStorage = globalThis.localStorage;
+  const previousSessionStorage = globalThis.sessionStorage;
+  const persistentStorage = memoryStorage();
+  const tabStorage = memoryStorage();
+  globalThis.localStorage = persistentStorage;
+  globalThis.sessionStorage = tabStorage;
+  try {
+    saveSessionTokens({
+      accessToken: "tab-access",
+      refreshToken: "tab-refresh",
+      userId: "u-tab",
+      roles: ["INDEPENDENT_DRIVER"],
+      expiresInSeconds: 900,
+    }, { rememberMe: false });
+
+    assert.equal(getAuthStorage(), tabStorage);
+    assert.equal(tabStorage.getItem("guc-access-token"), "tab-access");
+    assert.equal(tabStorage.getItem("guc-refresh-token"), "tab-refresh");
+    assert.ok(tabStorage.getItem("guc-session"));
+    assert.equal(persistentStorage.getItem("guc-access-token"), null);
+    assert.equal(persistentStorage.getItem("guc-refresh-token"), null);
+    assert.equal(persistentStorage.getItem("guc-session"), null);
+  } finally {
+    globalThis.localStorage = previousLocalStorage;
+    globalThis.sessionStorage = previousSessionStorage;
+  }
+});
+
+test("remember-me enabled replaces tab tokens with persistent tokens", () => {
+  const previousLocalStorage = globalThis.localStorage;
+  const previousSessionStorage = globalThis.sessionStorage;
+  const persistentStorage = memoryStorage();
+  const tabStorage = memoryStorage({
+    "guc-access-token": "old-tab-access",
+    "guc-refresh-token": "old-tab-refresh",
+    "guc-session": JSON.stringify({ userId: "old-user" }),
+    "guc-session-only": "true",
+  });
+  globalThis.localStorage = persistentStorage;
+  globalThis.sessionStorage = tabStorage;
+  try {
+    saveSessionTokens({
+      accessToken: "persistent-access",
+      refreshToken: "persistent-refresh",
+      userId: "u-persistent",
+      roles: ["SHIPPER"],
+      expiresInSeconds: 900,
+    }, { rememberMe: true });
+
+    assert.equal(getAuthStorage(), persistentStorage);
+    assert.equal(persistentStorage.getItem("guc-access-token"), "persistent-access");
+    assert.equal(persistentStorage.getItem("guc-refresh-token"), "persistent-refresh");
+    assert.ok(persistentStorage.getItem("guc-session"));
+    assert.equal(tabStorage.getItem("guc-access-token"), null);
+    assert.equal(tabStorage.getItem("guc-refresh-token"), null);
+    assert.equal(tabStorage.getItem("guc-session"), null);
+  } finally {
+    globalThis.localStorage = previousLocalStorage;
+    globalThis.sessionStorage = previousSessionStorage;
   }
 });
 

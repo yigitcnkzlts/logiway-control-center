@@ -1,4 +1,4 @@
-import { apiJson, clearSession, isApiConfigured, isDemoMode, saveSessionTokens } from "./apiClient.js";
+import { apiJson, clearSession, getAuthStorage, isApiConfigured, isDemoMode, saveSessionTokens } from "./apiClient.js";
 import { createDemoSession, validateDemoCredentials } from "./demoAuth.js";
 import { registrationValidationMessage, validateRegistration } from "./authValidation.js";
 
@@ -19,7 +19,7 @@ export function panelPathForRoles(roles=[]){
   return "/giris";
 }
 
-export async function hydrateCompany({request=apiJson,storage=localStorage,maxAttempts=3,apiConfigured=isApiConfigured}={}){
+export async function hydrateCompany({request=apiJson,storage=getAuthStorage(),maxAttempts=3,apiConfigured=isApiConfigured}={}){
   const token=storage.getItem("guc-access-token");
   if(!apiConfigured()||!token)return;
   for(let attempt=1;attempt<=maxAttempts;attempt+=1){
@@ -53,11 +53,11 @@ function continueHydration(){
 const COUNTRY_CODES={"Almanya":"DE","Andorra":"AD","Arnavutluk":"AL","Avusturya":"AT","Azerbaycan":"AZ","Belarus":"BY","Belçika":"BE","Birleşik Krallık":"GB","Bosna-Hersek":"BA","Bulgaristan":"BG","Çekya":"CZ","Danimarka":"DK","Ermenistan":"AM","Estonya":"EE","Finlandiya":"FI","Fransa":"FR","Gürcistan":"GE","Hırvatistan":"HR","Hollanda":"NL","İrlanda":"IE","İspanya":"ES","İsveç":"SE","İsviçre":"CH","İtalya":"IT","İzlanda":"IS","Karadağ":"ME","Kazakistan":"KZ","Kıbrıs":"CY","Kosova":"XK","Kuzey Makedonya":"MK","Letonya":"LV","Lihtenştayn":"LI","Litvanya":"LT","Lüksemburg":"LU","Macaristan":"HU","Malta":"MT","Moldova":"MD","Monako":"MC","Norveç":"NO","Polonya":"PL","Portekiz":"PT","Romanya":"RO","Rusya":"RU","San Marino":"SM","Sırbistan":"RS","Slovakya":"SK","Slovenya":"SI","Türkiye":"TR","Ukrayna":"UA","Vatikan":"VA","Yunanistan":"GR"};
 
 export const isBackendConfigured=()=>isApiConfigured()&&!isDemoMode();
-export const getSession=()=>{try{return JSON.parse(localStorage.getItem("guc-session")||"null")}catch{return null}};
-export const isAuthenticated=()=>isDemoMode()?Boolean(getSession()?.demo):Boolean(localStorage.getItem("guc-access-token")&&getSession());
+export const getSession=()=>{try{return JSON.parse((isDemoMode()?localStorage:getAuthStorage())?.getItem("guc-session")||"null")}catch{return null}};
+export const isAuthenticated=()=>isDemoMode()?Boolean(getSession()?.demo):Boolean(getAuthStorage()?.getItem("guc-access-token")&&getSession());
 export const hasAnyRole=roles=>roles.some(role=>getSession()?.roles?.includes(role));
 
-export async function loginUser({email,password,role}){
+export async function loginUser({email,password,role,rememberMe=true}){
   if(isDemoMode()){
     if(!validateDemoCredentials(email,password))throw new Error("E-posta veya şifre hatalı.");
     const session=createDemoSession(role);
@@ -66,13 +66,13 @@ export async function loginUser({email,password,role}){
   }
   const tokens=await post("/api/v1/auth/login",{email,password,deviceFingerprint:fingerprint(),platform:"WEB",deviceName:navigator.userAgent.slice(0,120)});
   if(tokens.mfaRequired)return {...tokens,mode:"mfa"};
-  saveSessionTokens(tokens);continueHydration();return {...tokens,mode:"live",panelPath:panelPathForRoles(tokens.roles)};
+  saveSessionTokens(tokens,{rememberMe});continueHydration();return {...tokens,mode:"live",panelPath:panelPathForRoles(tokens.roles)};
 }
 
-export async function verifyMfa({mfaToken,code}){
+export async function verifyMfa({mfaToken,code,rememberMe=true}){
   if(isDemoMode())return {mode:"demo"};
   const tokens=await post("/api/v1/auth/mfa/verify",{mfaToken,code,deviceFingerprint:fingerprint(),platform:"WEB",deviceName:navigator.userAgent.slice(0,120)});
-  saveSessionTokens(tokens);continueHydration();return {...tokens,mode:"live",panelPath:panelPathForRoles(tokens.roles)};
+  saveSessionTokens(tokens,{rememberMe});continueHydration();return {...tokens,mode:"live",panelPath:panelPathForRoles(tokens.roles)};
 }
 
 export async function registerUser({email,password,phone,role,company,country}){
@@ -92,6 +92,6 @@ export async function registerUser({email,password,phone,role,company,country}){
 export async function currentUser(){return apiJson("/api/v1/me")}
 
 export async function logoutUser(){
-  const refreshToken=localStorage.getItem("guc-refresh-token");
+  const refreshToken=getAuthStorage()?.getItem("guc-refresh-token");
   try{if(isBackendConfigured())await post("/api/v1/auth/logout",refreshToken?{refreshToken}:null)}finally{clearSession()}
 }
